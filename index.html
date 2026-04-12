@@ -178,7 +178,9 @@ header {
   border-radius: 14px; padding: 3px 10px; font-size: 0.78rem; cursor: pointer; white-space: nowrap; flex-shrink: 0;
 }
 .tag-chip.active { background: var(--c5); color: white; font-weight: 600; }
+.tag-chip.exclude { background: #f1b7b7; color: #6d1d1d; font-weight: 600; }
 .tag-chip:hover:not(.active) { background: rgba(255,255,255,0.25); }
+.tag-chip.exclude:hover { background: #e89f9f; }
 .tag-chip.ghost { border: 1.5px dashed rgba(255,255,255,0.6) !important; }
 
 /* Toggle switch */
@@ -1509,7 +1511,7 @@ const IMG_PRESETS = [
   { id: 'orig', label: '原寸',   desc: 'リサイズなし',    maxPx: 0,    q: 0.95 },
 ];
 let roomId    = '';
-let activeTags = new Set();
+let activeTagFilters = new Map();
 let globalSearch = false;
 let tableTab  = 'grid';
 let savedRange = null;
@@ -2396,7 +2398,7 @@ function renderRooms() {
 }
 
 function switchRoom(id) {
-  roomId = id; activeTags.clear(); globalSearch = false;
+  roomId = id; activeTagFilters.clear(); globalSearch = false;
   document.getElementById('search').value = '';
   document.getElementById('global-search-btn').classList.remove('active');
   setRoomTitle();
@@ -2443,21 +2445,24 @@ document.getElementById('sidebar-backdrop').onclick = closeSidebar;
 function renderTagBar() {
   tagBarEl.innerHTML = '';
   const all = document.createElement('button');
-  all.className = 'tag-chip' + (activeTags.size===0 ? ' active' : '');
+  all.className = 'tag-chip' + (activeTagFilters.size===0 ? ' active' : '');
   all.textContent = 'すべて';
-  all.onclick = () => { activeTags.clear(); renderTagBar(); renderMemos(); };
+  all.onclick = () => { activeTagFilters.clear(); renderTagBar(); renderMemos(); };
   tagBarEl.appendChild(all);
   const hiddenSet = new Set(S.hiddenTags || []);
   allTags().forEach(t => {
     const isHidden = hiddenSet.has(t);
-    const isActive = activeTags.has(t);
+    const mode = activeTagFilters.get(t) || 0;
+    const isInclude = mode === 1;
+    const isExclude = mode === -1;
+    const isActive = mode !== 0;
     if (isHidden && !isActive) return; // 非表示かつ未選択はスキップ
     const c = document.createElement('button');
-    c.className = 'tag-chip' + (isActive ? ' active' : '') + (isHidden && isActive ? ' ghost' : '');
-    c.textContent = t;
+    c.className = 'tag-chip' + (isInclude ? ' active' : '') + (isExclude ? ' exclude' : '') + (isHidden && isActive ? ' ghost' : '');
+    c.textContent = (isInclude ? '+' : isExclude ? '-' : '') + t;
     if (isHidden && isActive) c.title = '（非表示タグ・現在選択中）';
     c.onclick = () => {
-      if (activeTags.has(t)) activeTags.delete(t); else activeTags.add(t);
+      cycleTagFilter(t);
       renderTagBar(); renderMemos();
     };
     tagBarEl.appendChild(c);
@@ -2465,6 +2470,18 @@ function renderTagBar() {
 }
 
 // ── Render memos ──────────────────────────────────────────────────
+function cycleTagFilter(tag) {
+  const cur = activeTagFilters.get(tag) || 0;
+  const next = cur === 1 ? -1 : cur === -1 ? 0 : 1;
+  if (next === 0) activeTagFilters.delete(tag);
+  else activeTagFilters.set(tag, next);
+}
+
+function setOnlyIncludedTag(tag) {
+  activeTagFilters.clear();
+  activeTagFilters.set(tag, 1);
+}
+
 function curMemos() { return S.memos.filter(m => m.roomId === roomId); }
 function stripHtml(h) { const d = document.createElement('div'); d.innerHTML=h; return d.textContent||''; }
 
@@ -2491,7 +2508,10 @@ function renderMemos() {
   msgs.innerHTML = '';
   const baseList = globalSearch ? S.memos : curMemos();
   const list = baseList.filter(m => {
-    const ok1 = activeTags.size===0 || [...activeTags].every(t => (m.tags||[]).includes(t));
+    const memoTags = m.tags || [];
+    const includedTags = [...activeTagFilters.entries()].filter(([, mode]) => mode === 1).map(([tag]) => tag);
+    const excludedTags = [...activeTagFilters.entries()].filter(([, mode]) => mode === -1).map(([tag]) => tag);
+    const ok1 = includedTags.every(t => memoTags.includes(t)) && excludedTags.every(t => !memoTags.includes(t));
     const ok2 = !q || stripHtml(m.html).toLowerCase().includes(q) || (m.tags||[]).some(t => ('#'+t).toLowerCase().includes(q) || t.toLowerCase().includes(q));
     const mDate = new Date(m.createdAt).toLocaleDateString('sv');
     const ok3 = (!dateFrom || mDate >= dateFrom) && (!dateTo || mDate <= dateTo);
@@ -2722,7 +2742,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
     const tg = document.createElement('div'); tg.className = 'bubble-tags';
     m.tags.forEach(tag => {
       const s = document.createElement('button'); s.className='b-tag'; s.textContent=tag;
-      s.onclick = () => { activeTags.clear(); activeTags.add(tag); renderTagBar(); renderMemos(); };
+      s.onclick = () => { setOnlyIncludedTag(tag); renderTagBar(); renderMemos(); };
       tg.appendChild(s);
     });
     bubble.appendChild(tg);
@@ -3150,7 +3170,7 @@ document.getElementById('import-file').addEventListener('change', function() {
       } else {
         // 全データインポート: 置き換え
         if (!confirm('現在のデータはすべて置き換えられます。続けますか？')) { this.value = ''; return; }
-        S = d; roomId = S.rooms[0]?.id; activeTags.clear(); selectedMemoIds.clear(); persist();
+  S = d; roomId = S.rooms[0]?.id; activeTagFilters.clear(); selectedMemoIds.clear(); persist();
         setRoomTitle();
         renderRooms(); renderTagBar(); renderMemos(); renderExistingTags(); closeOv('import-ov');
         alert('インポートしました');
