@@ -849,6 +849,11 @@ body.theme-dark .fb-thumb,body.theme-sepia .fb-thumb{background:var(--th-bubble)
 .g-filter-hd button{font-size:.7rem;padding:2px 8px;border:1px solid var(--th-tbdr);background:none;border-radius:5px;cursor:pointer;color:var(--c3)}
 .g-filter-hd button:first-of-type{margin-left:auto}
 #g-filter-list{overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+#g-settings{position:absolute;right:10px;top:52px;z-index:6;background:var(--th-bubble);border:1px solid var(--th-tbdr);border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.18);padding:12px;width:235px;max-height:72%;overflow-y:auto;display:none;flex-direction:column;gap:11px}
+#g-settings.show{display:flex}
+#g-settings .gs-row{display:flex;flex-direction:column;gap:3px;font-size:.78rem;color:var(--c3)}
+#g-settings .gs-row input[type=range]{width:100%;accent-color:var(--c1)}
+#g-settings .gs-val{color:#888;font-size:.72rem;font-weight:700}
 .g-filter-item{display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--th-text);padding:3px 4px;cursor:pointer;border-radius:5px}
 .g-filter-item:hover{background:rgba(76,124,157,.08)}
 .g-filter-item input{accent-color:var(--c1)}
@@ -1429,13 +1434,20 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
     <span id="g-hint">ホバー/タップでプレビュー・クリックで開く／ドラッグで移動（離すと固定）</span>
     <label id="g-spread-wrap" style="display:flex;align-items:center;gap:5px;color:#dcebf2;font-size:.78rem;white-space:nowrap">距離<input type="range" id="g-spread" min="0.5" max="8" step="0.1" value="1" style="width:84px;accent-color:#fff"></label>
     <button id="g-reset" title="配置をリセット（固定解除）">↻ 整列</button>
+    <button id="g-settings-btn" title="ノードの大きさ設定">⚙ 設定</button>
     <button id="g-filter-btn">🏷 フィルター</button>
     <button id="g-close">✕ 閉じる</button>
   </div>
   <div id="g-filter">
     <div class="g-filter-hd">表示するタグ<button id="g-filter-all">全</button><button id="g-filter-none">無</button></div>
-    <label style="display:flex;align-items:center;gap:6px;padding:6px 2px;font-size:.82rem;color:#456;cursor:pointer;border-top:1px solid #e3edf2;margin-top:4px"><input type="checkbox" id="g-show-memos" checked style="width:auto;margin:0;accent-color:var(--c1)">メモも個別に表示（オフでタグだけの相関図）</label>
+    <label style="display:flex;align-items:center;gap:6px;padding:6px 2px;font-size:.82rem;color:#456;cursor:pointer;border-top:1px solid #e3edf2;margin-top:4px"><input type="checkbox" id="g-and-filter" style="width:auto;margin:0;accent-color:var(--c1)">絞り込み（選択タグを<b style="margin:0 2px">すべて</b>満たすメモだけ）</label>
     <div id="g-filter-list"></div>
+  </div>
+  <div id="g-settings">
+    <div class="g-filter-hd">⚙ ノードの大きさ</div>
+    <div class="gs-row"><label>タグ●のベースの大きさ <span class="gs-val" id="gs-base-val"></span></label><input type="range" id="gs-base" min="2" max="24" step="1"></div>
+    <div class="gs-row"><label>ノート数による差（最大タグの追加分） <span class="gs-val" id="gs-range-val"></span></label><input type="range" id="gs-range" min="0" max="40" step="1"></div>
+    <div style="font-size:.72rem;color:#aaa;line-height:1.5">●＝ベース＋（そのタグの数÷最も多いタグの数）×差。ノート数が最多のタグが最大になります。</div>
   </div>
   <svg id="g-svg"><g id="g-zoom"></g></svg>
   <div id="g-thumb-pop"></div>
@@ -3338,9 +3350,12 @@ function isMobile(){
 function applyDisplayMode(){
   const vp = document.querySelector('meta[name="viewport"]');
   if (!vp) return;
-  vp.setAttribute('content', (typeof S !== 'undefined' && S && S.displayMode === 'pc')
-    ? 'width=1100, viewport-fit=cover'                                  // PC表示: 広いレイアウト
-    : 'width=device-width, initial-scale=1.0, viewport-fit=cover');
+  const m = (typeof S !== 'undefined' && S && S.displayMode) || 'auto';
+  let content;
+  if (m === 'pc')          content = 'width=1100, viewport-fit=cover';                  // PC表示: 広いレイアウト
+  else if (m === 'mobile') content = 'width=420, viewport-fit=cover';                   // スマホ表示: 狭幅固定でモバイルCSSを強制
+  else                     content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+  vp.setAttribute('content', content);
 }
 
 function openSidebar() {
@@ -5803,6 +5818,7 @@ async function initApp() {
   if (!S.noteColumns)      S.noteColumns      = 3;
   if (!S.noteColumnsMobile) S.noteColumnsMobile = 2;
   if (!S.displayMode)      S.displayMode      = 'auto';
+  if (!S.graph)            S.graph            = { tagBase: 7, tagRange: 14 };
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
 
@@ -6242,7 +6258,7 @@ function renderBoardBubble(m, q, showRoom, container){
 // ── タグ・グラフ（力学シミュレーションでゆらゆら配置） ───────────────
 const G_NS = 'http://www.w3.org/2000/svg';
 let gNodes = [], gEdges = [], gRAF = null, gView = { x: 0, y: 0, scale: 1 }, gPinned = null, gTime = 0;
-let gVisibleTags = new Set(), gThumbMemoId = null, gHideTimer = null, gPreviewMemoId = null, gShowMemos = true, gSpread = 1;
+let gVisibleTags = new Set(), gThumbMemoId = null, gHideTimer = null, gPreviewMemoId = null, gShowMemos = true, gSpread = 1, gMaxDeg = 1, gAndFilter = false;
 function gLabel(m){ if (m.board) return m.board.title || '無題のボード'; const s = memoFirstLine(m); return s || '無題'; }
 function gAllRoomTags(){ const s = new Set(); S.memos.filter(m => m.roomId === roomId).forEach(m => (m.tags || []).forEach(t => s.add(t))); return [...s]; }
 function gBuild(){
@@ -6250,11 +6266,25 @@ function gBuild(){
   gNodes = []; gEdges = [];
   const tagMap = {};
   const ensureTag = t => { if (gVisibleTags.has(t) && !tagMap[t]){ tagMap[t] = { id: 't:' + t, type: 'tag', label: t, deg: 0, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 }; gNodes.push(tagMap[t]); } };
+  if (gAndFilter && gVisibleTags.size > 0) {
+    // 絞り込み: 中心を1つにまとめ、選択タグを全て満たすメモだけをそこへ集める
+    const sel = [...gVisibleTags];
+    const center = { id: 't:__and__', type: 'tag', label: sel.map(t => '#' + t).join(' '), deg: 0, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+    gNodes.push(center);
+    memos.forEach(m => {
+      if (!sel.every(t => (m.tags || []).includes(t))) return;
+      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+      gNodes.push(n); gEdges.push({ a: n, b: center }); center.deg++;
+    });
+    gMaxDeg = Math.max(1, center.deg);
+    return;
+  }
   memos.forEach(m => (m.tags || []).forEach(ensureTag));
   if (gShowMemos){
     // 従来表示: メモ1件ずつをノードにしてタグへ接続（件数が多いと密集する）
     memos.forEach(m => {
       const mt = (m.tags || []).filter(t => gVisibleTags.has(t)); if (!mt.length) return;
+      if (gAndFilter && mt.length < gVisibleTags.size) return;   // 絞り込み: 選択タグを全て持つメモのみ
       const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
       gNodes.push(n); mt.forEach(t => { gEdges.push({ a: n, b: tagMap[t] }); tagMap[t].deg++; });
     });
@@ -6271,6 +6301,9 @@ function gBuild(){
     });
     pair.forEach((w, key) => { const ab = key.split(' '); if (tagMap[ab[0]] && tagMap[ab[1]]) gEdges.push({ a: tagMap[ab[0]], b: tagMap[ab[1]], w }); });
   }
+  // タグ●の大きさを「最大ノート数に対する割合」で出すため、最大数を記録
+  gMaxDeg = 1;
+  gNodes.forEach(n => { if (n.type === 'tag' && n.deg > gMaxDeg) gMaxDeg = n.deg; });
 }
 function gSize(){ const r = document.getElementById('g-svg').getBoundingClientRect(); return { w: r.width, h: r.height, left: r.left, top: r.top }; }
 function gInitPositions(){
@@ -6279,7 +6312,25 @@ function gInitPositions(){
   tags.forEach((n, i) => { const a = i / Math.max(1, tags.length) * 6.283, rad = Math.min(w, h) * 0.22; n.x = cx + Math.cos(a) * rad; n.y = cy + Math.sin(a) * rad; });
   gNodes.filter(n => n.type === 'memo').forEach(n => { n.x = cx + (Math.random() - 0.5) * w * 0.6; n.y = cy + (Math.random() - 0.5) * h * 0.6; });
 }
-function gTagR(nd){ return Math.min(26, 9 + nd.deg * 1.6); }
+function gTagR(nd){
+  const g = S.graph || {};
+  const base  = (g.tagBase  != null ? g.tagBase  : 7);    // 下限（ノート数が少ないタグもこの大きさは保つ）
+  const range = (g.tagRange != null ? g.tagRange : 14);   // 最大ノート数のタグに足す分
+  const ratio = (gMaxDeg > 0) ? (nd.deg / gMaxDeg) : 0;
+  return base + ratio * range;
+}
+function gApplySizes(){
+  gNodes.forEach(nd => { if (nd.type === 'tag' && nd._c) nd._c.setAttribute('r', gTagR(nd)); });
+  gDraw();
+}
+function renderGraphSettings(){
+  const g = S.graph || {};
+  const b = g.tagBase != null ? g.tagBase : 7, r = g.tagRange != null ? g.tagRange : 14;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  const txt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('gs-base', b); txt('gs-base-val', b);
+  set('gs-range', r); txt('gs-range-val', r);
+}
 function gBuildSVG(){
   const g = document.getElementById('g-zoom'); g.innerHTML = '';
   if (!gNodes.length){ const t = document.createElementNS(G_NS, 'text'); const s = gSize(); t.setAttribute('x', s.w / 2); t.setAttribute('y', s.h / 2); t.setAttribute('text-anchor', 'middle'); t.setAttribute('fill', '#9bb0bc'); t.textContent = 'タグ付きのメモがありません'; g.appendChild(t); return; }
@@ -6345,7 +6396,7 @@ function gShowThumb(nd){
   let left = sx + 14, top = sy + 14; if (left + 290 > window.innerWidth) left = sx - 304; if (top + 340 > window.innerHeight) top = window.innerHeight - 350;
   pop.style.left = Math.max(8, left) + 'px'; pop.style.top = Math.max(56, top) + 'px'; pop.classList.add('show');
 }
-function gHideThumbSoon(){ clearTimeout(gHideTimer); gHideTimer = setTimeout(() => document.getElementById('g-thumb-pop').classList.remove('show'), 240); }
+function gHideThumbSoon(){ if (isMobile()) return; clearTimeout(gHideTimer); gHideTimer = setTimeout(() => document.getElementById('g-thumb-pop').classList.remove('show'), 240); }
 function gOpenPreview(memoId){
   const m = S.memos.find(x => x.id === memoId); if (!m) return;
   gPreviewMemoId = memoId;
@@ -6361,7 +6412,8 @@ function gClosePreview(){ document.getElementById('g-preview').classList.remove(
 function gAttachNode(nd){
   [nd._c, nd._t].forEach(elem => {
     elem.style.cursor = 'grab';
-    if (nd.type === 'memo'){
+    if (nd.type === 'memo' && !isMobile()){
+      // ホバー用サムネイルはPCのみ。スマホはタッチで一瞬出て消える（ちらつき）ため付けない。
       elem.addEventListener('mouseenter', () => { if (!nd._drag) gShowThumb(nd); });
       elem.addEventListener('mouseleave', () => gHideThumbSoon());
     }
@@ -6369,21 +6421,28 @@ function gAttachNode(nd){
     elem.addEventListener('pointerdown', e => {
       e.stopPropagation(); e.preventDefault();
       const sx = e.clientX, sy = e.clientY, ox = nd.x, oy = nd.y; let moved = false;
-      document.getElementById('g-thumb-pop').classList.remove('show');
       nd._drag = true;
       const mv = ev => {
-        if (Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 3) moved = true;
-        nd.x = ox + (ev.clientX - sx) / gView.scale;
-        nd.y = oy + (ev.clientY - sy) / gView.scale;
-        nd.vx = 0; nd.vy = 0;
+        if (!moved && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 3) {
+          moved = true;
+          document.getElementById('g-thumb-pop').classList.remove('show');   // ドラッグ開始時のみ隠す
+        }
+        if (moved) { nd.x = ox + (ev.clientX - sx) / gView.scale; nd.y = oy + (ev.clientY - sy) / gView.scale; nd.vx = 0; nd.vy = 0; }
       };
       const up = () => {
         document.removeEventListener('pointermove', mv);
         document.removeEventListener('pointerup', up);
         nd._drag = false;
-        if (moved) { nd.fixed = true; }                       // 動かしたら固定
-        else if (nd.type === 'memo') gOpenPreview(nd.memoId);  // クリック＝従来動作
-        else gPin(nd.label);
+        if (moved) { nd.fixed = true; return; }               // 動かしたら固定
+        if (nd.type === 'memo') {
+          if (isMobile()) {
+            // 1回目/別メモ → サムネイル表示、同じメモをもう一度 → 拡大プレビュー
+            if (gThumbMemoId === nd.memoId) { gOpenPreview(nd.memoId); gThumbMemoId = null; }
+            else gShowThumb(nd);
+          } else {
+            gOpenPreview(nd.memoId);
+          }
+        } else if (nd.id !== 't:__and__') gPin(nd.label);
       };
       document.addEventListener('pointermove', mv);
       document.addEventListener('pointerup', up);
@@ -6412,6 +6471,9 @@ function gOpen(){
   gVisibleTags = new Set(gAllRoomTags()); gPinned = null; gView = { x: 0, y: 0, scale: 1 };
   document.getElementById('g-room').textContent = '（' + ((curRoom() && curRoom().name) || '') + '）';
   document.getElementById('g-filter').classList.remove('show');
+  const gs = document.getElementById('g-settings'); if (gs) gs.classList.remove('show');
+  gAndFilter = false; { const af = document.getElementById('g-and-filter'); if (af) af.checked = false; }
+  renderGraphSettings();
   document.getElementById('g-ov').classList.add('open');
   gRenderFilter(); gBuild(); gInitPositions(); gBuildSVG(); gHighlight(); applyGView();
   if (gRAF) cancelAnimationFrame(gRAF); gLoop();
@@ -6424,9 +6486,13 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
   $('g-filter-btn').onclick = () => $('g-filter').classList.toggle('show');
   $('g-filter-all').onclick = () => { gVisibleTags = new Set(gAllRoomTags()); gRenderFilter(); gRebuild(); };
   $('g-filter-none').onclick = () => { gVisibleTags = new Set(); gRenderFilter(); gRebuild(); };
-  if ($('g-show-memos')) $('g-show-memos').onclick = () => { gShowMemos = $('g-show-memos').checked; gRebuild(); };
+  if ($('g-and-filter')) $('g-and-filter').onclick = () => { gAndFilter = $('g-and-filter').checked; gRebuild(); };
   if ($('g-spread')) $('g-spread').oninput = () => { gSpread = parseFloat($('g-spread').value) || 1; };
   if ($('g-reset')) $('g-reset').onclick = () => { gNodes.forEach(n => { n.fixed = false; }); gInitPositions(); };
+  if ($('g-settings-btn')) $('g-settings-btn').onclick = () => $('g-settings').classList.toggle('show');
+  const gsBind = (id, key, valId) => { const el = $(id); if (!el) return; el.oninput = () => { if (!S.graph) S.graph = {}; S.graph[key] = parseFloat(el.value); const v = $(valId); if (v) v.textContent = el.value; gApplySizes(); persist(); }; };
+  gsBind('gs-base', 'tagBase', 'gs-base-val');
+  gsBind('gs-range', 'tagRange', 'gs-range-val');
   const pop = $('g-thumb-pop');
   pop.addEventListener('mouseenter', () => clearTimeout(gHideTimer));
   pop.addEventListener('mouseleave', gHideThumbSoon);
