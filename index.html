@@ -4848,9 +4848,14 @@ function openSnipPop(btn, targetEl){
   document.getElementById('snip-help').style.display = 'none';
   document.getElementById('snip-add-toggle').textContent = '＋ 追加';
   const rect = btn.getBoundingClientRect();
-  snipPop.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
-  snipPop.style.left = Math.min(rect.left, window.innerWidth - 310) + 'px';
-  snipPop.style.top = '';
+  snipPop.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 310)) + 'px';
+  if (rect.top < window.innerHeight / 2) {           // 上半分のボタン → ボタンの下に表示
+    snipPop.style.top = (rect.bottom + 6) + 'px';
+    snipPop.style.bottom = '';
+  } else {                                            // 下半分 → ボタンの上に表示
+    snipPop.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+    snipPop.style.top = '';
+  }
   snipPop.classList.add('open');
 }
 document.getElementById('snip-help-toggle').onclick = () => {
