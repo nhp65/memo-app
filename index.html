@@ -1571,7 +1571,6 @@ body.force-mobile #search { flex: 1 1 100%; }
   <div class="fmt-bar" id="fb-fmt-bar" data-for="fb-editing" style="display:none"></div>
   <div id="fb-canvas"><div id="fb-world"></div></div>
   <div id="fb-el-actions">
-    <button id="fbe-lock" title="縦横比を固定">📐</button>
     <button id="fbe-front" title="前面へ">⬆</button>
     <button id="fbe-back" title="背面へ">⬇</button>
     <button id="fbe-dup" title="複製">📋</button>
@@ -6217,8 +6216,6 @@ function fbSyncOrderBtns(){
   const el = i >= 0 ? fbEls[i] : null;
   const f = document.getElementById('fbe-front'); if (f) f.disabled = (i < 0) || (i === fbEls.length - 1);  // 既に最前面なら無効
   const b = document.getElementById('fbe-back');  if (b) b.disabled = (i < 0) || (i === 0);                 // 既に最背面なら無効
-  const lk = document.getElementById('fbe-lock');
-  if (lk){ const isLine = el && (el.type === 'line' || el.type === 'arrow'); lk.style.display = isLine ? 'none' : ''; lk.classList.toggle('active', !!(el && el.lockAspect)); }
   fbPositionElActions();
 }
 function fbPositionElActions(){
@@ -6249,8 +6246,7 @@ function fbResizeDrag(h, el, node){
   h.addEventListener('pointerdown', e => {
     e.stopPropagation();
     const sx = e.clientX, sy = e.clientY, ow = el.w, oh = el.h;
-    const ratio = oh > 0 ? oh / ow : 1;
-    const mv = ev => { if (fbPinch) return; let nw = Math.max(20, ow + (ev.clientX - sx) / fbView.scale), nh = Math.max(20, oh + (ev.clientY - sy) / fbView.scale); if (el.lockAspect) nh = Math.max(20, nw * ratio); el.w = nw; el.h = nh; fbPositionNode(node, el); fbPositionElActions(); };
+    const mv = ev => { if (fbPinch) return; el.w = Math.max(20, ow + (ev.clientX - sx) / fbView.scale); el.h = Math.max(20, oh + (ev.clientY - sy) / fbView.scale); fbPositionNode(node, el); fbPositionElActions(); };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
@@ -6311,7 +6307,7 @@ function fbCreate(type){
   if (type === 'image'){ document.getElementById('fb-img-input').click(); return; }
   const { cx, cy } = fbCenterWorld(); const id = fbNewId(); let el;
   if (type === 'text') el = { id, type, x: cx - 80, y: cy - 22, w: 160, h: 44, html: 'テキスト', fontSize: 16, color: '#2D3B45' };
-  else if (type === 'boxtext') el = { id, type, x: cx - 90, y: cy - 50, w: 180, h: 100, html: '文字', color: '#2D3B45', lockAspect: false };
+  else if (type === 'boxtext') el = { id, type, x: cx - 90, y: cy - 50, w: 180, h: 100, html: '文字', color: '#2D3B45' };
   else if (type === 'note') el = { id, type, x: cx - 80, y: cy - 60, w: 160, h: 120, html: 'メモ', fill: '#FFF9C4', fontSize: 16, color: '#3a3220' };
   else if (type === 'rect') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: fbFaint(fbColor), stroke: fbColor };
   else if (type === 'ellipse') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: fbFaint(fbColor), stroke: fbColor };
@@ -6527,7 +6523,6 @@ function renderBoardBubble(m, q, showRoom, container){
   if ($('fb-back')) $('fb-back').onclick = () => fbClose(false);
   if ($('fbe-del')) $('fbe-del').onclick = fbDeleteSel;
   if ($('fbe-dup')) $('fbe-dup').onclick = fbDuplicateSel;
-  if ($('fbe-lock')) $('fbe-lock').onclick = () => { if (!fbSel) return; const el = fbEls.find(e => e.id === fbSel); if (el){ el.lockAspect = !el.lockAspect; fbSyncOrderBtns(); } };
   if ($('fbe-front')) $('fbe-front').onclick = fbBringFront;
   if ($('fbe-back')) $('fbe-back').onclick = fbSendBack;
   $('fb-zoom-in').onclick = () => fbZoomBy(1.2);
