@@ -6113,7 +6113,8 @@ function fbStartEdit(el, t){
   if (fbEditingId && fbEditingId !== el.id) fbEndEdit();
   fbEditingId = el.id;
   t.id = 'fb-editing';
-  t.setAttribute('contenteditable', 'true'); t.focus();
+  t.setAttribute('contenteditable', 'true');
+  try { t.focus({ preventScroll: true }); } catch (e) { t.focus(); }   // 自動スクロールで上部メニューが消えないように
   const r = document.createRange(); r.selectNodeContents(t); r.collapse(false);
   const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
   const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'flex';
@@ -6155,23 +6156,31 @@ function fbCreate(type){
   fbEls.push(el); fbRender(); fbSelect(id);
 }
 function fbDeleteSel(){ if (!fbSel) return; if (fbEditingId === fbSel) fbEditingId = null; const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'none'; fbEls = fbEls.filter(e => e.id !== fbSel); fbSel = null; fbRender(); fbSyncOrderBtns(); }
+function fbLighten(hex, amt){   // 色を白方向へ amt(0〜1) 混ぜて薄くする
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex || ''); if (!m) return hex;
+  const n = parseInt(m[1], 16); let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt);
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+function fbColorApply(c, noteFill){   // c=線/文字/枠用の色, noteFill=付箋の背景色
+  const el = fbEls.find(e => e.id === fbSel); if (!el) return;
+  const node = document.querySelector('#fb-world [data-id="' + el.id + '"]');
+  if (el.type === 'text'){ el.color = c; const t = node && node.querySelector('.fb-text'); if (t) t.style.color = c; }
+  else if (el.type === 'note'){ el.fill = noteFill; if (node) node.style.background = noteFill; }
+  else if (el.type === 'rect' || el.type === 'ellipse'){ el.stroke = c; if (node) node.style.borderColor = c; }
+  else { el.stroke = c; if (node) fbDrawLine(node, el); }
+}
 function fbBuildColors(){
   const row = document.getElementById('fb-colors'); row.innerHTML = '';
   FB_PALETTE.forEach(c => {
     const s = document.createElement('div'); s.className = 'fb-color'; s.style.background = c; s.title = c;
-    s.onclick = () => {
-      fbColor = c;
-      const el = fbEls.find(e => e.id === fbSel);
-      if (el){
-        const node = document.querySelector('#fb-world [data-id="' + el.id + '"]');
-        if (el.type === 'text'){ el.color = c; const t = node && node.querySelector('.fb-text'); if (t) t.style.color = c; }
-        else if (el.type === 'note'){ el.fill = c; if (node) node.style.background = c; }
-        else if (el.type === 'rect' || el.type === 'ellipse'){ el.stroke = c; if (node) node.style.borderColor = c; }
-        else { el.stroke = c; if (node) fbDrawLine(node, el); }
-      }
-    };
+    s.onclick = () => { fbColor = c; fbColorApply(c, fbLighten(c, 0.66)); };   // 付箋は薄めの色で適用
     row.appendChild(s);
   });
+  // デフォルトの黄色（付箋を初期色に戻す）
+  const y = document.createElement('div'); y.className = 'fb-color'; y.style.background = '#FFF9C4'; y.title = 'デフォルトの黄色（付箋）';
+  y.onclick = () => { fbColorApply('#E0A85B', '#FFF9C4'); };
+  row.appendChild(y);
 }
 function fbZoomBy(f){ const rect = document.getElementById('fb-canvas').getBoundingClientRect(); const px = rect.width / 2, py = rect.height / 2; const ns = Math.min(4, Math.max(0.2, fbView.scale * f)); const wx = (px - fbView.x) / fbView.scale, wy = (py - fbView.y) / fbView.scale; fbView.scale = ns; fbView.x = px - wx * ns; fbView.y = py - wy * ns; fbApplyView(); }
 function fbBBox(){ let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity; fbEls.forEach(e => { const x2 = e.x2 !== undefined ? e.x2 : e.x + (e.w || 0), y2 = e.y2 !== undefined ? e.y2 : e.y + (e.h || 0); minx = Math.min(minx, e.x, x2); miny = Math.min(miny, e.y, y2); maxx = Math.max(maxx, e.x, x2); maxy = Math.max(maxy, e.y, y2); }); return { minx, miny, maxx, maxy }; }
