@@ -865,7 +865,7 @@ body.theme-dark .fb-thumb,body.theme-sepia .fb-thumb{background:var(--th-bubble)
 #g-thumb-pop{position:fixed;display:none;z-index:8;background:var(--th-bubble);border:1px solid var(--th-tbdr);border-radius:12px;box-shadow:0 6px 28px rgba(0,0,0,.24);padding:12px;width:290px;max-height:340px;overflow:hidden;cursor:pointer}
 #g-thumb-pop.show{display:block}
 #g-thumb-pop:hover{border-color:var(--c1)}
-.g-thumb-title{font-weight:700;color:#1e3a5f;margin-bottom:6px;font-size:.95rem;padding-right:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-thumb-title{font-weight:700;color:#1e3a5f;margin-bottom:6px;font-size:.95rem;padding-right:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .g-thumb-acts{position:absolute;top:8px;right:8px;display:flex;gap:5px;z-index:3}
 .g-thumb-act{width:30px;height:30px;border:none;border-radius:8px;background:rgba(76,124,157,.92);color:#fff;font-size:1rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .g-thumb-act:active,.g-thumb-act:hover{background:var(--c1)}
@@ -1466,6 +1466,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
   <div id="g-preview-card">
     <div id="g-preview-head">
       <span id="g-preview-title"></span>
+      <button id="g-preview-edit">✏️ 編集</button>
       <button id="g-preview-jump">↗ メモへジャンプ</button>
       <button id="g-preview-close" title="閉じる">✕</button>
     </div>
@@ -4167,12 +4168,15 @@ async function openEdit(id) {
 document.getElementById('edit-save').onclick = async () => {
   const m = S.memos.find(m => m.id===editId);
   if (m) {
+    const oldTags = (m.tags || []).join(',');
     syncCheckboxAttrs(editEd);
     m.html = await externalizeAndStore(editEd.innerHTML);   // 画像を分離してから保存
     m.tags = parseTags(document.getElementById('edit-tag-input').value);
     m.titleLine = document.getElementById('edit-title-line-chk').checked;
     m.updatedAt = new Date().toISOString();
     persist(); renderTagBar(); renderMemos(); renderExistingTags();
+    // グラフ表示中にタグが変わったらグラフも更新
+    if ((m.tags || []).join(',') !== oldTags && document.getElementById('g-ov') && document.getElementById('g-ov').classList.contains('open')) gRebuild();
   }
   closeOv('edit-ov');
 };
@@ -4183,6 +4187,7 @@ document.getElementById('edit-delete').onclick = () => {
   S.memos = S.memos.filter(m => m.id !== editId);
   persist(); closeOv('edit-ov');
   renderTagBar(); renderMemos(); renderExistingTags(); renderRooms();
+  if (document.getElementById('g-ov') && document.getElementById('g-ov').classList.contains('open')) gRebuild();
 };
 document.getElementById('edit-ov').addEventListener('click', e => { if (e.target===document.getElementById('edit-ov')) closeOv('edit-ov'); });
 
@@ -6444,7 +6449,9 @@ function gThumb(m){
   zb.onclick = (e) => { e.stopPropagation(); if (Date.now() - gThumbShownAt < 400) return; gOpenPreview(m.id); };
   const jb = document.createElement('button'); jb.className = 'g-thumb-act'; jb.title = 'メモにジャンプ'; jb.textContent = '↪';
   jb.onclick = (e) => { e.stopPropagation(); if (Date.now() - gThumbShownAt < 400) return; gJump(m.id); };
-  acts.appendChild(zb); acts.appendChild(jb); card.appendChild(acts);
+  const eb = document.createElement('button'); eb.className = 'g-thumb-act'; eb.title = '編集'; eb.textContent = '✏️';
+  eb.onclick = (e) => { e.stopPropagation(); if (Date.now() - gThumbShownAt < 400) return; document.getElementById('g-thumb-pop').classList.remove('show'); openEdit(m.id); };
+  acts.appendChild(zb); acts.appendChild(jb); acts.appendChild(eb); card.appendChild(acts);
   const title = document.createElement('div'); title.className = 'g-thumb-title'; title.textContent = gLabel(m); card.appendChild(title);
   if (m.board){ card.appendChild(fbThumb(m)); }
   else { const bc = document.createElement('div'); bc.className = 'bc g-thumb-bc'; bc.innerHTML = m.html || '（空）'; hydrateImages(bc); card.appendChild(bc); }
@@ -6563,6 +6570,7 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
   pop.addEventListener('mouseenter', () => clearTimeout(gHideTimer));
   pop.addEventListener('mouseleave', gHideThumbSoon);
   pop.addEventListener('click', () => { if (gCoarse) return; if (Date.now() - gThumbShownAt < 500) return; if (gThumbMemoId) gOpenPreview(gThumbMemoId); });
+  $('g-preview-edit').onclick = () => { const id = gPreviewMemoId; gClosePreview(); openEdit(id); };
   $('g-preview-jump').onclick = () => { const id = gPreviewMemoId; gClosePreview(); gJump(id); };
   $('g-preview-close').onclick = gClosePreview;
   $('g-preview').addEventListener('click', e => { if (e.target === $('g-preview')) gClosePreview(); });
