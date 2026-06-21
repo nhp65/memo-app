@@ -851,7 +851,9 @@ body.theme-dark .fb-bubble-title,body.theme-sepia .fb-bubble-title{color:var(--t
 body.theme-dark .fb-thumb,body.theme-sepia .fb-thumb{background:var(--th-bubble)}
 
 /* ── タグ・グラフ ── */
-#g-ov{display:none;position:fixed;inset:0;z-index:610;background:var(--c4);flex-direction:column}
+#g-ov{display:none;position:fixed;inset:0;z-index:610;background:var(--c4);flex-direction:column;touch-action:none;overscroll-behavior:none}
+#g-ov input[type="range"]{touch-action:auto}
+#g-filter,#g-filter-list,#g-settings{touch-action:pan-y}
 #g-ov.open{display:flex}
 #g-head{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--c1);color:#fff;flex-shrink:0;flex-wrap:wrap}
 #g-head .g-title{white-space:nowrap}
