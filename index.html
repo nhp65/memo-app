@@ -612,8 +612,8 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 .tag-ac-item:hover, .tag-ac-item.active { background: #e8f4fb; color: var(--c1); }
 
 .input-bottom { display: flex; align-items: center; gap: 7px; }
-#collapse-editor-btn { font-size: 0.7rem; color: #888; background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; line-height: 1; }
-#collapse-editor-btn:hover { background: rgba(0,0,0,0.07); }
+#collapse-editor-btn { flex-shrink: 0; width: 26px; height: 26px; padding: 0; margin-right: 3px; font-size: 0.72rem; line-height: 1; color: #5a7d92; background: #eef5f9; border: 1px solid #cfe0ea; border-radius: 7px; cursor: pointer; }
+#collapse-editor-btn:hover { background: #dceaf2; }
 .input-wrapper { transition: opacity 0.15s; }
 .input-wrapper.collapsed { display: none; }
 #send-btn.open-mode { background: #aaa; font-size: 1.1rem; }
@@ -1004,7 +1004,6 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
     <span id="room-title">—</span>
     <button class="hbtn" id="import-btn">↑ 取込</button>
     <button class="hbtn" id="export-btn">↓ 書出</button>
-    <button class="hbtn" id="scroll-bottom-btn" title="最新チャットへジャンプ">⬇ 最新</button>
     <button class="hbtn" id="bulk-edit-btn">編集</button>
     <button class="hbtn" id="tag-manage-btn" title="設定">設定</button>
     <button class="hbtn" id="corkboard-btn">📌 ピン止め</button>
@@ -1062,7 +1061,6 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
       <button class="sbtn" id="snip-btn" title="スニペット挿入">✂️</button>
       <button class="sbtn" id="fb-new-btn" title="フリーボードを追加">🧩</button>
       <span class="char-count" id="char-count">0</span>
-      <button id="collapse-editor-btn" title="入力エリアを折りたたむ">▼</button>
       <button id="send-btn" title="送信">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="20" height="20"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
       </button>
@@ -1089,6 +1087,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
       <label for="edit-title-line-chk">1行目をタイトル表示</label>
     </div>
     <div class="mact">
+      <button class="bcl" id="edit-delete" style="background:#fdeaea;color:#c0392b;border-color:#f1c0c0;margin-right:auto">🗑 削除</button>
       <button class="bcl" id="edit-cancel">キャンセル</button>
       <button class="bpr" id="edit-save">保存</button>
     </div>
@@ -2423,6 +2422,16 @@ function buildToolbar(barId) {
 buildToolbar('main-fmt-bar');
 buildToolbar('edit-fmt-bar');
 if (document.getElementById('fb-fmt-bar')) buildToolbar('fb-fmt-bar');
+// 入力エリア折りたたみボタンを書式バーの左端（太字の左）へ。角丸デザイン、矢印は表示モードで切替。
+(function(){
+  const bar = document.getElementById('main-fmt-bar');
+  if (bar && !document.getElementById('collapse-editor-btn')){
+    const b = document.createElement('button');
+    b.id = 'collapse-editor-btn'; b.type = 'button';
+    b.title = '入力エリアを折りたたむ'; b.textContent = '▼';
+    bar.insertBefore(b, bar.firstChild);
+  }
+})();
 // ジャンプ・全解除ボタン（メインツールバーのみ）
 { const s = document.createElement('div'); s.className = 'fs';
   const b = document.createElement('button');
@@ -4141,6 +4150,13 @@ document.getElementById('edit-save').onclick = async () => {
   closeOv('edit-ov');
 };
 document.getElementById('edit-cancel').onclick = () => closeOv('edit-ov');
+document.getElementById('edit-delete').onclick = () => {
+  if (!editId) return;
+  if (!confirm('このメモを削除しますか？')) return;
+  S.memos = S.memos.filter(m => m.id !== editId);
+  persist(); closeOv('edit-ov');
+  renderTagBar(); renderMemos(); renderExistingTags(); renderRooms();
+};
 document.getElementById('edit-ov').addEventListener('click', e => { if (e.target===document.getElementById('edit-ov')) closeOv('edit-ov'); });
 
 // ── Jump link ────────────────────────────────────────────────────
@@ -5026,7 +5042,6 @@ document.getElementById('room-bg-swatches').addEventListener('click', e => {
   document.querySelectorAll('#room-bg-swatches .rc-swatch').forEach(s => s.classList.remove('active'));
   sw.classList.add('active');
 });
-document.getElementById('scroll-bottom-btn').onclick = () => msgs.scrollTo({ top: msgs.scrollHeight, behavior: 'smooth' });
 
 // ── Robust inline formatting ─────────────────────────────────────
 // Recursively strip a CSS property from a node/fragment tree.
@@ -5330,6 +5345,8 @@ function applyLayout() {
   msgs.classList.toggle('layout-note', mode === 'note');
   document.getElementById('main').classList.toggle('note-mode', mode === 'note');
   document.documentElement.style.setProperty('--note-cols', S.noteColumns || 2);
+  const ceb = document.getElementById('collapse-editor-btn');
+  if (ceb) ceb.textContent = (mode === 'note') ? '▲' : '▼';   // メモ一覧は上向き / チャットは下向き
   const sec = document.getElementById('note-cols-section');
   if (sec) sec.style.display = (mode === 'note') ? '' : 'none';
 }
