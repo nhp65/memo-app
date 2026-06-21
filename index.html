@@ -823,6 +823,8 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 .fb-ellipse{border:2px solid #4C7C9D;border-radius:50%}
 .fb-note{border-radius:4px;box-shadow:2px 3px 8px rgba(0,0,0,.18);padding:6px}
 .fb-note .fb-text{padding:0}
+.fb-boxtext{display:flex;align-items:center;justify-content:center;padding:5px}
+.fb-boxtext .fb-text{height:auto;width:100%;text-align:center;white-space:normal;line-height:1.15}
 .fb-image img{width:100%;height:100%;object-fit:contain;pointer-events:none;display:block}
 .fb-el:hover{outline:1.5px solid rgba(76,124,157,.4)}
 .fb-el.fb-selected,.fb-line.fb-selected{outline:2px solid var(--c1)}
@@ -833,6 +835,7 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 #fb-el-actions button{width:32px;height:32px;border:none;background:none;border-radius:7px;cursor:pointer;font-size:.95rem;line-height:1;color:var(--c3)}
 #fb-el-actions button:hover{background:rgba(76,124,157,.18)}
 #fb-el-actions button:disabled{opacity:.3;cursor:default}
+#fb-el-actions button.active{background:rgba(76,124,157,.28);color:var(--c1)}
 .fb-handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid var(--c1);border-radius:50%;pointer-events:auto;z-index:5}
 .fb-handle.fb-br{right:-7px;bottom:-7px;cursor:nwse-resize}
 .fb-handle.fb-p1,.fb-handle.fb-p2{transform:translate(-50%,-50%);cursor:move}
@@ -1555,6 +1558,7 @@ body.force-mobile #search { flex: 1 1 100%; }
   </div>
   <div id="fb-toolbar">
     <button data-add="text">📝 テキスト</button>
+    <button data-add="boxtext">🔠 ボックス文字</button>
     <button data-add="note">🗒 付箋</button>
     <button data-add="rect">▭ 四角</button>
     <button data-add="ellipse">⬭ 円</button>
@@ -1567,6 +1571,7 @@ body.force-mobile #search { flex: 1 1 100%; }
   <div class="fmt-bar" id="fb-fmt-bar" data-for="fb-editing" style="display:none"></div>
   <div id="fb-canvas"><div id="fb-world"></div></div>
   <div id="fb-el-actions">
+    <button id="fbe-lock" title="縦横比を固定">📐</button>
     <button id="fbe-front" title="前面へ">⬆</button>
     <button id="fbe-back" title="背面へ">⬇</button>
     <button id="fbe-dup" title="複製">📋</button>
@@ -2475,10 +2480,11 @@ function buildToolbar(barId) {
     <div class="fs"></div>
     <select class="fsel" title="文字サイズ">
       <option value="">サイズ</option>
-      <option value="0.75em">小</option>
-      <option value="1em">普通</option>
-      <option value="1.3em">大</option>
-      <option value="1.8em">特大</option>
+      <option value="0.67rem">小 70%</option>
+      <option value="0.95rem">標準 100%</option>
+      <option value="1.24rem">大 130%</option>
+      <option value="1.62rem">特大 170%</option>
+      <option value="2.38rem">極大 250%</option>
     </select>
     <div class="fs"></div>
     <button class="fb" data-c="code"      title="コード">&lt;/&gt;</button>
@@ -6103,6 +6109,7 @@ function fbRender(){
   const world = document.getElementById('fb-world');
   world.innerHTML = '';
   fbEls.forEach(el => world.appendChild(fbCreateNode(el)));
+  requestAnimationFrame(() => world.querySelectorAll('.fb-boxtext').forEach(n => fbFitBoxText(n)));
   if (fbSel) fbSelect(fbSel);
   fbSyncOrderBtns();
 }
@@ -6117,9 +6124,10 @@ function fbCreateNode(el){
     node.style.left = el.x + 'px'; node.style.top = el.y + 'px'; node.style.width = el.w + 'px'; node.style.height = el.h + 'px';
     if (el.type === 'rect' || el.type === 'ellipse'){ node.style.background = el.fill || 'transparent'; node.style.borderColor = el.stroke || '#4C7C9D'; }
     if (el.type === 'note'){ node.style.background = el.fill || '#FFF9C4'; }
-    if (el.type === 'text' || el.type === 'note'){
+    if (el.type === 'text' || el.type === 'note' || el.type === 'boxtext'){
       const t = document.createElement('div'); t.className = 'fb-text bc';
-      t.style.fontSize = (el.fontSize || 16) + 'px'; t.style.color = el.color || (el.type === 'note' ? '#3a3220' : '#2D3B45');
+      t.style.color = el.color || (el.type === 'note' ? '#3a3220' : '#2D3B45');
+      if (el.type !== 'boxtext') t.style.fontSize = (el.fontSize || 16) + 'px';   // boxtextは枠に合わせて自動
       t.innerHTML = el.html || '';
       node.appendChild(t);
       t.addEventListener('dblclick', e => { e.stopPropagation(); fbStartEdit(el, t); });
@@ -6156,9 +6164,20 @@ function fbDrawLine(node, el){
   if (p1){ p1.style.left = x1 + 'px'; p1.style.top = y1 + 'px'; }
   if (p2){ p2.style.left = x2 + 'px'; p2.style.top = y2 + 'px'; }
 }
+function fbFitBoxText(node){
+  const t = node && node.querySelector('.fb-text'); if (!t) return;
+  const H = node.clientHeight - 10; if (H <= 0) return;   // 上下paddingを除いた高さ
+  let lo = 6, hi = 240, best = 6;
+  for (let i = 0; i < 14; i++){
+    const mid = (lo + hi) / 2;
+    t.style.fontSize = mid + 'px';
+    if (t.scrollHeight <= H) { best = mid; lo = mid; } else hi = mid;   // 枠の高さに収まる最大サイズ
+  }
+  t.style.fontSize = best + 'px';
+}
 function fbPositionNode(node, el){
   if (el.type === 'line' || el.type === 'arrow') fbDrawLine(node, el);
-  else { node.style.left = el.x + 'px'; node.style.top = el.y + 'px'; node.style.width = el.w + 'px'; node.style.height = el.h + 'px'; }
+  else { node.style.left = el.x + 'px'; node.style.top = el.y + 'px'; node.style.width = el.w + 'px'; node.style.height = el.h + 'px'; if (el.type === 'boxtext') fbFitBoxText(node); }
 }
 function fbAttachDrag(node, el){
   node.addEventListener('pointerdown', e => {
@@ -6195,8 +6214,11 @@ function fbSelect(id){
 }
 function fbSyncOrderBtns(){
   const i = fbSel ? fbEls.findIndex(e => e.id === fbSel) : -1;
+  const el = i >= 0 ? fbEls[i] : null;
   const f = document.getElementById('fbe-front'); if (f) f.disabled = (i < 0) || (i === fbEls.length - 1);  // 既に最前面なら無効
   const b = document.getElementById('fbe-back');  if (b) b.disabled = (i < 0) || (i === 0);                 // 既に最背面なら無効
+  const lk = document.getElementById('fbe-lock');
+  if (lk){ const isLine = el && (el.type === 'line' || el.type === 'arrow'); lk.style.display = isLine ? 'none' : ''; lk.classList.toggle('active', !!(el && el.lockAspect)); }
   fbPositionElActions();
 }
 function fbPositionElActions(){
@@ -6227,7 +6249,8 @@ function fbResizeDrag(h, el, node){
   h.addEventListener('pointerdown', e => {
     e.stopPropagation();
     const sx = e.clientX, sy = e.clientY, ow = el.w, oh = el.h;
-    const mv = ev => { if (fbPinch) return; el.w = Math.max(20, ow + (ev.clientX - sx) / fbView.scale); el.h = Math.max(20, oh + (ev.clientY - sy) / fbView.scale); fbPositionNode(node, el); fbPositionElActions(); };
+    const ratio = oh > 0 ? oh / ow : 1;
+    const mv = ev => { if (fbPinch) return; let nw = Math.max(20, ow + (ev.clientX - sx) / fbView.scale), nh = Math.max(20, oh + (ev.clientY - sy) / fbView.scale); if (el.lockAspect) nh = Math.max(20, nw * ratio); el.w = nw; el.h = nh; fbPositionNode(node, el); fbPositionElActions(); };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
@@ -6250,6 +6273,7 @@ let fbEditingId = null;
 function fbStartEdit(el, t){
   if (fbEditingId && fbEditingId !== el.id) fbEndEdit();
   fbEditingId = el.id;
+  t.innerHTML = el.html || '';   // 検索ハイライトのmarkを除いた素のHTMLで編集
   t.id = 'fb-editing';
   t.setAttribute('contenteditable', 'true');
   try { t.focus({ preventScroll: true }); } catch (e) { t.focus(); }   // 自動スクロールで上部メニューが消えないように
@@ -6266,6 +6290,7 @@ function fbEndEdit(){
     if (el) el.html = t.innerHTML;
     t.removeAttribute('contenteditable'); t.removeAttribute('id');
     if (el) fbWireRichText(t, el);
+    if (el && el.type === 'boxtext'){ const node = t.closest('.fb-el'); if (node) fbFitBoxText(node); }   // 編集後に再フィット
   }
   const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'none';
   fbEditingId = null;
@@ -6286,6 +6311,7 @@ function fbCreate(type){
   if (type === 'image'){ document.getElementById('fb-img-input').click(); return; }
   const { cx, cy } = fbCenterWorld(); const id = fbNewId(); let el;
   if (type === 'text') el = { id, type, x: cx - 80, y: cy - 22, w: 160, h: 44, html: 'テキスト', fontSize: 16, color: '#2D3B45' };
+  else if (type === 'boxtext') el = { id, type, x: cx - 90, y: cy - 50, w: 180, h: 100, html: '文字', color: '#2D3B45', lockAspect: false };
   else if (type === 'note') el = { id, type, x: cx - 80, y: cy - 60, w: 160, h: 120, html: 'メモ', fill: '#FFF9C4', fontSize: 16, color: '#3a3220' };
   else if (type === 'rect') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: fbFaint(fbColor), stroke: fbColor };
   else if (type === 'ellipse') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: fbFaint(fbColor), stroke: fbColor };
@@ -6386,14 +6412,39 @@ function fbInitCanvas(){
     fbView.scale = ns; fbView.x = e.clientX - rect.left - wx * ns; fbView.y = e.clientY - rect.top - wy * ns; fbApplyView();
   }, { passive: false });
 }
+function fbHighlightInNode(node, q, re){
+  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+  const tns = []; let n; while ((n = walker.nextNode())) tns.push(n);
+  const rx = re ? new RegExp(re.source, 'gi') : null;
+  tns.forEach(tn => {
+    const text = tn.textContent; const ranges = [];
+    if (rx){ rx.lastIndex = 0; let m; while ((m = rx.exec(text))){ if (m[0] === ''){ rx.lastIndex++; continue; } ranges.push([m.index, m.index + m[0].length]); } }
+    else { const low = text.toLowerCase(); let i = 0, idx; while ((idx = low.indexOf(q, i)) !== -1){ ranges.push([idx, idx + q.length]); i = idx + q.length; } }
+    if (!ranges.length) return;
+    const frag = document.createDocumentFragment(); let last = 0;
+    ranges.forEach(([s, e]) => { if (s > last) frag.appendChild(document.createTextNode(text.slice(last, s))); const mk = document.createElement('mark'); mk.className = 'search-hl'; mk.textContent = text.slice(s, e); frag.appendChild(mk); last = e; });
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    tn.parentNode.replaceChild(frag, tn);
+  });
+}
 function fbDoSearch(q){
   const raw = (q || '').trim();
   q = raw.toLowerCase();
   fbMatch = []; fbMatchIdx = -1;
   document.querySelectorAll('#fb-world .fb-match').forEach(n => n.classList.remove('fb-match'));
+  // 既存のハイライトを消す（テキストを元HTMLに戻す。編集中は触らない）
+  fbEls.forEach(el => { if (el.html == null) return; const node = document.querySelector('#fb-world [data-id="' + el.id + '"]'); const t = node && node.querySelector('.fb-text'); if (t && el.id !== fbEditingId) { t.innerHTML = el.html; if (el.type === 'boxtext') fbFitBoxText(node); } });
   if (!q){ document.getElementById('fb-search-count').textContent = ''; return; }
   const re = (S.searchRegex && raw) ? (() => { try { return new RegExp(raw, 'i'); } catch (e) { return null; } })() : null;
-  fbEls.forEach(el => { const t = el.html ? stripHtml(el.html) : ''; if (t && (re ? re.test(t) : t.toLowerCase().includes(q))) fbMatch.push(el.id); });
+  fbEls.forEach(el => {
+    const txt = el.html ? stripHtml(el.html) : '';
+    if (txt && (re ? re.test(txt) : txt.toLowerCase().includes(q))){
+      fbMatch.push(el.id);
+      const node = document.querySelector('#fb-world [data-id="' + el.id + '"]');
+      const t = node && node.querySelector('.fb-text');
+      if (t && el.id !== fbEditingId){ fbHighlightInNode(t, q, re); if (el.type === 'boxtext') fbFitBoxText(node); }
+    }
+  });
   if (fbMatch.length){ fbMatchIdx = 0; fbFocusMatch(); } else document.getElementById('fb-search-count').textContent = '0件';
 }
 function fbFocusMatch(){
@@ -6476,6 +6527,7 @@ function renderBoardBubble(m, q, showRoom, container){
   if ($('fb-back')) $('fb-back').onclick = () => fbClose(false);
   if ($('fbe-del')) $('fbe-del').onclick = fbDeleteSel;
   if ($('fbe-dup')) $('fbe-dup').onclick = fbDuplicateSel;
+  if ($('fbe-lock')) $('fbe-lock').onclick = () => { if (!fbSel) return; const el = fbEls.find(e => e.id === fbSel); if (el){ el.lockAspect = !el.lockAspect; fbSyncOrderBtns(); } };
   if ($('fbe-front')) $('fbe-front').onclick = fbBringFront;
   if ($('fbe-back')) $('fbe-back').onclick = fbSendBack;
   $('fb-zoom-in').onclick = () => fbZoomBy(1.2);
