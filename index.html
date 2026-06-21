@@ -3929,6 +3929,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
     { i: '✏️', t: '編集', f: ()=>openEdit(m.id) },
     { i: '📋', t: '複製', f: ()=>duplicateMemo(m.id) },
     { i: '🎨', t: '背景色', f: (e)=>showColorPicker(m.id, e), action:'color' },
+    { i: '🗑', t: '削除', f: ()=>delMemo(m.id) },
   ].forEach(({i,t,f,action,cls}) => {
     const b = document.createElement('button');
     b.className = cls || 'abtn'; b.title = t; b.textContent = i;
@@ -6258,7 +6259,7 @@ function renderBoardBubble(m, q, showRoom, container){
 // ── タグ・グラフ（力学シミュレーションでゆらゆら配置） ───────────────
 const G_NS = 'http://www.w3.org/2000/svg';
 let gNodes = [], gEdges = [], gRAF = null, gView = { x: 0, y: 0, scale: 1 }, gPinned = null, gTime = 0;
-let gVisibleTags = new Set(), gThumbMemoId = null, gHideTimer = null, gPreviewMemoId = null, gShowMemos = true, gSpread = 1, gMaxDeg = 1, gAndFilter = false;
+let gVisibleTags = new Set(), gThumbMemoId = null, gHideTimer = null, gPreviewMemoId = null, gShowMemos = true, gSpread = 1, gMaxDeg = 1, gAndFilter = false, gThumbShownAt = 0;
 function gLabel(m){ if (m.board) return m.board.title || '無題のボード'; const s = memoFirstLine(m); return s || '無題'; }
 function gAllRoomTags(){ const s = new Set(); S.memos.filter(m => m.roomId === roomId).forEach(m => (m.tags || []).forEach(t => s.add(t))); return [...s]; }
 function gBuild(){
@@ -6395,6 +6396,7 @@ function gShowThumb(nd){
   const s = gSize(); const sx = s.left + gView.x + nd.x * gView.scale, sy = s.top + gView.y + nd.y * gView.scale;
   let left = sx + 14, top = sy + 14; if (left + 290 > window.innerWidth) left = sx - 304; if (top + 340 > window.innerHeight) top = window.innerHeight - 350;
   pop.style.left = Math.max(8, left) + 'px'; pop.style.top = Math.max(56, top) + 'px'; pop.classList.add('show');
+  gThumbShownAt = Date.now();   // 表示直後の合成クリック誤爆を防ぐための時刻
 }
 function gHideThumbSoon(){ if (isMobile()) return; clearTimeout(gHideTimer); gHideTimer = setTimeout(() => document.getElementById('g-thumb-pop').classList.remove('show'), 240); }
 function gOpenPreview(memoId){
@@ -6496,7 +6498,7 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
   const pop = $('g-thumb-pop');
   pop.addEventListener('mouseenter', () => clearTimeout(gHideTimer));
   pop.addEventListener('mouseleave', gHideThumbSoon);
-  pop.addEventListener('click', () => { if (gThumbMemoId) gOpenPreview(gThumbMemoId); });
+  pop.addEventListener('click', () => { if (Date.now() - gThumbShownAt < 500) return; if (gThumbMemoId) gOpenPreview(gThumbMemoId); });
   $('g-preview-jump').onclick = () => { const id = gPreviewMemoId; gClosePreview(); gJump(id); };
   $('g-preview-close').onclick = gClosePreview;
   $('g-preview').addEventListener('click', e => { if (e.target === $('g-preview')) gClosePreview(); });
