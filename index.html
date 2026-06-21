@@ -588,7 +588,8 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 #tag-input:focus { border-color: var(--c1); }
 .exist-tags { flex: 1; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; align-items: center; padding-bottom: 4px; }
 .exist-tags::-webkit-scrollbar { display: none; height: 4px; }
-.et-list { display: flex; flex-wrap: wrap; gap: 5px; max-height: 108px; overflow-y: auto; margin-top: 2px; }
+.et-list { display: flex; gap: 5px; overflow-x: auto; overflow-y: hidden; align-items: center; padding-bottom: 4px; margin-top: 2px; scrollbar-width: thin; }
+.et-list .et-chip { flex: 0 0 auto; }
 .exist-tags:hover { scrollbar-width: thin; scrollbar-color: rgba(76,124,157,0.5) transparent; }
 .exist-tags:hover::-webkit-scrollbar { display: block; }
 .exist-tags:hover::-webkit-scrollbar-thumb { background: rgba(76,124,157,0.5); border-radius: 2px; }
@@ -613,6 +614,22 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 .tag-ac-item:hover, .tag-ac-item.active { background: #e8f4fb; color: var(--c1); }
 
 .input-bottom { display: flex; align-items: center; gap: 7px; }
+/* 大きい画面で入力（入力部を一時的に全画面へ移動して流用） */
+#compose-ov { display: none; position: fixed; inset: 0; z-index: 740; background: var(--c4); flex-direction: column; }
+#compose-ov.open { display: flex; }
+#compose-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--c1); color: #fff; flex-shrink: 0; font-weight: 700; }
+#compose-head button { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: .85rem; }
+#compose-head button:hover { background: rgba(255,255,255,.32); }
+#compose-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 10px; }
+#compose-foot { flex-shrink: 0; padding: 8px 12px; border-top: 1px solid var(--th-tbdr); }
+#compose-ov .input-wrapper { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
+#compose-ov #editor { flex: 1; min-height: 0; max-height: none; }
+#compose-ov #collapse-editor-btn, #compose-ov #expand-input-btn { display: none; }
+/* 入力エリア常時表示=オフ: 入力欄を隠し ✏️ と 🧩 だけ残す */
+body.input-collapsed .input-area .input-wrapper { display: none; }
+body.input-collapsed .input-area #char-count,
+body.input-collapsed .input-area #send-btn { display: none; }
+body.input-collapsed .input-area { border-top: 1px solid #e8ddc8; }
 #collapse-editor-btn { flex-shrink: 0; width: 26px; height: 26px; padding: 0; margin-right: 3px; font-size: 0.72rem; line-height: 1; color: #5a7d92; background: #eef5f9; border: 1px solid #cfe0ea; border-radius: 7px; cursor: pointer; }
 #collapse-editor-btn:hover { background: #dceaf2; }
 .input-wrapper { transition: opacity 0.15s; }
@@ -669,7 +686,7 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 
 /* Edit editor */
 #edit-ed {
-  min-height: 110px; max-height: 260px; overflow-y: auto;
+  min-height: 200px; max-height: 56vh; overflow-y: auto;
   border: 1.5px solid #b5d5e5; border-radius: 9px; padding: 9px 11px;
   line-height: 1.6; font-size: 0.95rem; outline: none;
   color: var(--th-text); background: var(--th-edit);
@@ -678,7 +695,7 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 /* PCでは編集画面を大きく */
 @media (min-width: 720px) {
   #edit-ov .modal { max-width: 820px; width: 88%; }
-  #edit-ov #edit-ed { min-height: 320px; max-height: 62vh; }
+  #edit-ov #edit-ed { min-height: 360px; max-height: 70vh; }
 }
 #edit-ed pre { background: #2c2c2c; color: #f0e8d8; padding: 9px; border-radius: 7px; font-family: 'Consolas', monospace; font-size: 0.88em; white-space: pre-wrap; }
 #edit-ed blockquote { border-left: 4px solid var(--c5); background: rgba(94,155,181,0.09); padding: 8px 12px 8px 14px; margin: 5px 0; border-radius: 0 6px 6px 0; color: var(--c3); }
@@ -965,6 +982,10 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
   .bubble-wrap.tapped .bubble-actions { display: flex !important; flex-wrap: wrap; width: 66px; gap: 2px; }
   .bubble-wrap.selected .bubble-actions { display: flex !important; flex-wrap: wrap; width: 66px; gap: 2px; }
   .abtn { width: 32px; height: 32px; font-size: 0.85rem; }
+  /* アクションメニューが左で見切れる時は左寄せにする */
+  #messages.layout-note .bubble-wrap.acts-left .bubble-actions { left: 6px; right: auto; }
+  #messages:not(.layout-note) .bubble-wrap.acts-left { justify-content: flex-start; }
+  #messages:not(.layout-note) .bubble-wrap.acts-left .bubble-actions { order: -1; }
 
   /* Toolbar: single scrollable row */
   .fmt-bar {
@@ -993,7 +1014,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
   /* Modals: full-width */
   .modal { width: 98%; max-width: none; padding: 14px; border-radius: 12px; }
   .modal h3 { font-size: 0.92rem; }
-  #edit-ed { min-height: 90px; max-height: 200px; }
+  #edit-ed { min-height: 240px; max-height: 64vh; }
 }
 </style>
 </head>
@@ -1071,9 +1092,8 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
       </div>
     </div>
     <div class="input-bottom">
-      <button class="sbtn" id="img-btn" title="画像添付">🖼</button>
       <input type="file" id="file-input" accept="image/*" multiple style="display:none">
-      <button class="sbtn" id="snip-btn" title="スニペット挿入">✂️</button>
+      <button class="sbtn" id="expand-input-btn" title="大きい画面で入力">✏️</button>
       <button class="sbtn" id="fb-new-btn" title="フリーボードを追加">🧩</button>
       <span class="char-count" id="char-count">0</span>
       <button id="send-btn" title="送信">
@@ -1084,6 +1104,12 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
 </div>
 
 <!-- Edit modal -->
+<div id="compose-ov">
+  <div id="compose-head"><span>📝 入力</span><button id="compose-close">✕ 閉じる</button></div>
+  <div id="compose-body"></div>
+  <div id="compose-foot"></div>
+</div>
+
 <div class="ov" id="edit-ov">
   <div class="modal">
     <h3>メモを編集</h3>
@@ -1315,6 +1341,8 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
         <input type="range" id="mobile-scale" min="70" max="200" step="5" style="width:100%;accent-color:var(--c1)">
         <div style="font-size:.72rem;color:#aaa">「スマホ」表示のときの文字・画像の大きさ。大きいほど拡大（ブラウザでズームできない時用）。</div>
       </div>
+      <div class="cfg-label">⌨️ 入力エリア</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;color:#555;cursor:pointer;margin-bottom:10px"><input type="checkbox" id="always-input-chk" style="width:auto;margin:0;accent-color:var(--c1)">入力エリアを常時表示する<span style="color:#aaa;font-size:.72rem">（オフ: ✏️から大きい画面で入力）</span></label>
       <div class="cfg-label">🧱 レイアウト</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="layout-mode-row">
         <button class="rm-h-btn" data-layout="chat">💬 チャット</button>
@@ -2451,6 +2479,11 @@ function buildToolbar(barId) {
     <button class="fb" data-c="tmpl" title="テンプレートを挿入">📄</button>
     <div class="fs"></div>
     <button class="fb" data-c="emoji" title="絵文字">😊</button>`;
+  // 画像・スニペットはツールバーへ（新規入力・編集の両方／フリーボードのテキストには付けない）
+  if (barId !== 'fb-fmt-bar') {
+    document.getElementById(barId).insertAdjacentHTML('beforeend',
+      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button>');
+  }
 }
 buildToolbar('main-fmt-bar');
 buildToolbar('edit-fmt-bar');
@@ -2679,6 +2712,8 @@ document.querySelectorAll('.fmt-bar').forEach(bar => {
       const cmd = btn.dataset.c;
       if (cmd === 'hl-pick') { showMiniPal('hl-picker', e, getTarget()); return; }
       if (cmd === 'tc-pick') { showMiniPal('tc-picker', e, getTarget()); return; }
+      if (cmd === 'image') { fmtImgTarget = getTarget(); document.getElementById('file-input').click(); return; }
+      if (cmd === 'snippet') { e.stopPropagation(); openSnipPop(btn, getTarget()); return; }
       applyFmt(cmd, getTarget(), e); return;
     }
   });
@@ -2907,15 +2942,16 @@ function looksLikeMarkdown(text) {
 });
 
 // ── Image upload ──────────────────────────────────────────────────
-document.getElementById('img-btn').onclick = () => document.getElementById('file-input').click();
+let fmtImgTarget = null;   // ツールバーの画像ボタンが対象とするエディタ
 document.getElementById('file-input').addEventListener('change', async function() {
+  const tgt = fmtImgTarget || editor;
   for (const f of [...this.files]) {
     const src = await resizeImg(f);
-    editor.focus();
+    tgt.focus();
     document.execCommand('insertHTML', false,
       `<img src="${src}" style="max-width:260px;border-radius:8px;display:block;margin:3px 0;">`);
   }
-  this.value = '';
+  this.value = ''; fmtImgTarget = null;
 });
 
 // ── Map modal ─────────────────────────────────────────────────────
@@ -3188,6 +3224,30 @@ function setEditorCollapsed(collapsed) {
 }
 
 collapseEditorBtn.onclick = () => setEditorCollapsed(true);
+
+// 大きい画面で入力（入力部を全画面オーバーレイへ一時移動して、既存機能をそのまま使う）
+const inputArea = document.querySelector('.input-area');
+const inputBottom = document.querySelector('.input-bottom');
+function openCompose(){
+  if (inputWrapper.classList.contains('collapsed')) setEditorCollapsed(false);
+  document.getElementById('compose-body').appendChild(inputWrapper);
+  document.getElementById('compose-foot').appendChild(inputBottom);
+  document.getElementById('compose-ov').classList.add('open');
+  setTimeout(() => { try { editor.focus({ preventScroll: true }); } catch(e){ editor.focus(); } }, 50);
+}
+function closeCompose(){
+  inputArea.appendChild(inputWrapper);
+  inputArea.appendChild(inputBottom);
+  document.getElementById('compose-ov').classList.remove('open');
+}
+document.getElementById('expand-input-btn').onclick = openCompose;
+document.getElementById('compose-close').onclick = closeCompose;
+// 入力エリア常時表示の切り替え（オフ=既定: ✏️で大画面入力）
+function applyInputMode(){
+  document.body.classList.toggle('input-collapsed', !S.alwaysShowInput);
+  const ai = document.getElementById('always-input-chk'); if (ai) ai.checked = !!S.alwaysShowInput;
+}
+{ const ai = document.getElementById('always-input-chk'); if (ai) ai.onchange = () => { S.alwaysShowInput = ai.checked; persist(); applyInputMode(); }; }
 
 // ── Send ──────────────────────────────────────────────────────────
 sendBtn.onclick = () => {
@@ -4144,8 +4204,12 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
       if (wrap.classList.contains('tapped')) {
         openQuickLook(m.id);                 // 2回目 → 拡大表示
       } else {
-        document.querySelectorAll('.bubble-wrap.tapped').forEach(w => w.classList.remove('tapped'));
+        document.querySelectorAll('.bubble-wrap.tapped').forEach(w => { w.classList.remove('tapped'); w.classList.remove('acts-left'); });
         wrap.classList.add('tapped');        // 1回目 → 表示（保持）
+        requestAnimationFrame(() => {        // メニューが左で見切れるなら左寄せに
+          const acts = wrap.querySelector('.bubble-actions');
+          if (acts) wrap.classList.toggle('acts-left', acts.getBoundingClientRect().left < 4);
+        });
       }
     }, true);
   }
@@ -4775,21 +4839,20 @@ function renderSnipList() {
   });
 }
 
-document.getElementById('snip-btn').onclick = e => {
-  e.stopPropagation();
+function openSnipPop(btn, targetEl){
   savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
-  snipTargetEl = editor;
+  snipTargetEl = targetEl || editor;
   if (snipPop.classList.contains('open')) { snipPop.classList.remove('open'); return; }
   renderSnipList();
   document.getElementById('snip-form').style.display = 'none';
   document.getElementById('snip-help').style.display = 'none';
   document.getElementById('snip-add-toggle').textContent = '＋ 追加';
-  const rect = e.currentTarget.getBoundingClientRect();
+  const rect = btn.getBoundingClientRect();
   snipPop.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
   snipPop.style.left = Math.min(rect.left, window.innerWidth - 310) + 'px';
   snipPop.style.top = '';
   snipPop.classList.add('open');
-};
+}
 document.getElementById('snip-help-toggle').onclick = () => {
   const el = document.getElementById('snip-help');
   el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
@@ -4820,7 +4883,7 @@ document.getElementById('snip-save-btn').onclick = () => {
   renderSnipList();
 };
 document.addEventListener('click', e => {
-  if (!e.target.closest('#snip-pop') && !e.target.closest('#snip-btn')) snipPop.classList.remove('open');
+  if (!e.target.closest('#snip-pop') && !e.target.closest('[data-c="snippet"]')) snipPop.classList.remove('open');
 });
 
 // ── Template ──────────────────────────────────────────────────────
@@ -5884,6 +5947,7 @@ async function initApp() {
   if (!S.noteColumnsMobile) S.noteColumnsMobile = 2;
   if (!S.displayMode)      S.displayMode      = 'auto';
   if (!S.mobileScale)      S.mobileScale      = 100;
+  if (S.alwaysShowInput === undefined) S.alwaysShowInput = false;
   if (!S.graph)            S.graph            = { tagBase: 7, tagRange: 14 };
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
@@ -5910,6 +5974,7 @@ async function initApp() {
   applyTitleColor(S.titleColor ?? '#1e3a5f');
   applyTheme(S.theme);
   applyDisplayMode();
+  applyInputMode();
   { const _sr = document.getElementById('search-regex'); if (_sr) _sr.checked = !!S.searchRegex; }
   applyLayout();
 
