@@ -1288,6 +1288,13 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
 
     <!-- 表示 -->
     <div class="stab-panel" id="stab-display">
+      <div class="cfg-label">📱 表示モード</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="display-mode-row">
+        <button class="rm-h-btn" data-dm="auto">自動</button>
+        <button class="rm-h-btn" data-dm="mobile">スマホ</button>
+        <button class="rm-h-btn" data-dm="pc">PC</button>
+      </div>
+      <div style="font-size:.72rem;color:#aaa;margin:4px 0 10px">PCにすると広い画面向けレイアウトになります（折り畳みが見切れる時の対策）。切替後にズームで調整できます。</div>
       <div class="cfg-label">🧱 レイアウト</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="layout-mode-row">
         <button class="rm-h-btn" data-layout="chat">💬 チャット</button>
@@ -3312,7 +3319,20 @@ document.getElementById('add-room-btn').onclick = () => {
   const r = { id: Date.now().toString(), name: n.trim(), createdAt: new Date().toISOString() };
   S.rooms.push(r); persist(); switchRoom(r.id);
 };
-const isMobile = () => window.matchMedia('(max-width: 640px)').matches;
+function isMobile(){
+  if (typeof S !== 'undefined' && S){
+    if (S.displayMode === 'pc') return false;       // 設定でPC表示を強制
+    if (S.displayMode === 'mobile') return true;     // 設定でスマホ表示を強制
+  }
+  return window.matchMedia('(max-width: 640px)').matches;
+}
+function applyDisplayMode(){
+  const vp = document.querySelector('meta[name="viewport"]');
+  if (!vp) return;
+  vp.setAttribute('content', (typeof S !== 'undefined' && S && S.displayMode === 'pc')
+    ? 'width=1100, viewport-fit=cover'                                  // PC表示: 広いレイアウト
+    : 'width=device-width, initial-scale=1.0, viewport-fit=cover');
+}
 
 function openSidebar() {
   document.getElementById('sidebar').classList.add('sp-open');
@@ -4050,7 +4070,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   // capture で先に処理し、内側の画像ライトボックス等の割り込み（ちらつき）を防ぐ。
   if (isMobile()) {
     wrap.addEventListener('click', e => {
-      if (e.target.closest('.abtn, a, button, input, .tg-head, .b-tag, .copy-btn, .read-more-btn')) return;
+      if (e.target.closest('.abtn, a, button, input, summary, .tg-head, .b-tag, .copy-btn, .read-more-btn')) return;
       e.stopPropagation();
       if (wrap.classList.contains('tapped')) {
         openQuickLook(m.id);                 // 2回目 → 拡大表示
@@ -4393,7 +4413,7 @@ document.querySelectorAll('.stab-btn').forEach(btn => {
 });
 
 document.getElementById('tag-manage-btn').onclick = () => {
-  renderImgQuality(); renderTagManage(); renderReadMoreSettings(); renderBubbleWidthSettings(); renderLayoutSettings(); renderTitleFontSize(); renderTitleColor(); renderBackupSettings();
+  renderImgQuality(); renderTagManage(); renderReadMoreSettings(); renderBubbleWidthSettings(); renderLayoutSettings(); renderDisplayMode(); renderTitleFontSize(); renderTitleColor(); renderBackupSettings();
   if ('showDirectoryPicker' in window) renderSyncSettings();
   renderPdfSettings();
   openOv('tag-manage-ov');
@@ -5339,6 +5359,17 @@ document.querySelectorAll('#note-cols-row .rm-h-btn').forEach(b => {
     applyLayout(); renderLayoutSettings(); renderMemos();
   };
 });
+function renderDisplayMode(){
+  const m = S.displayMode || 'auto';
+  document.querySelectorAll('#display-mode-row .rm-h-btn').forEach(b => b.classList.toggle('active', b.dataset.dm === m));
+}
+document.querySelectorAll('#display-mode-row .rm-h-btn').forEach(b => {
+  b.onclick = () => {
+    S.displayMode = b.dataset.dm; persist();
+    applyDisplayMode(); renderDisplayMode();
+    applyLayout(); renderLayoutSettings(); renderMemos(); renderRooms();
+  };
+});
 
 const TITLE_COLORS = [
   { label: '自動', value: null },
@@ -5754,6 +5785,7 @@ async function initApp() {
   if (!S.layoutMode)       S.layoutMode       = 'note';
   if (!S.noteColumns)      S.noteColumns      = 3;
   if (!S.noteColumnsMobile) S.noteColumnsMobile = 2;
+  if (!S.displayMode)      S.displayMode      = 'auto';
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
 
@@ -5778,6 +5810,7 @@ async function initApp() {
   applyTitleBold(S.titleBold !== false);
   applyTitleColor(S.titleColor ?? '#1e3a5f');
   applyTheme(S.theme);
+  applyDisplayMode();
   applyLayout();
 
   roomId = S.rooms[0]?.id || '1';
@@ -5890,6 +5923,13 @@ function fbCreateNode(el){
       t.innerHTML = el.html || '';
       node.appendChild(t);
       t.addEventListener('dblclick', e => { e.stopPropagation(); fbStartEdit(el, t); });
+      // iOSはdblclickが発火しないため、ダブルタップを自前検出して編集開始
+      let _lastTap = 0;
+      t.addEventListener('click', e => {
+        const now = Date.now();
+        if (now - _lastTap < 350) { e.stopPropagation(); _lastTap = 0; fbStartEdit(el, t); }
+        else _lastTap = now;
+      });
       fbWireRichText(t, el);
     }
     if (el.type === 'image'){ const img = document.createElement('img'); img.src = el.src || ''; img.draggable = false; node.appendChild(img); }
