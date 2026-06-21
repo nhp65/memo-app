@@ -811,6 +811,11 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 .fb-handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid var(--c1);border-radius:50%;pointer-events:auto;z-index:5}
 .fb-handle.fb-br{right:-7px;bottom:-7px;cursor:nwse-resize}
 .fb-handle.fb-p1,.fb-handle.fb-p2{transform:translate(-50%,-50%);cursor:move}
+/* タッチ機ではハンドルを大きくして操作しやすく */
+@media (pointer: coarse){
+  .fb-handle{width:26px;height:26px;border-width:3px}
+  .fb-handle.fb-br{right:-14px;bottom:-14px}
+}
 .fb-el.fb-match,.fb-line.fb-match{outline:3px solid #ffcc33;box-shadow:0 0 0 6px rgba(255,204,51,.3)}
 .fb-bubble-title{font-weight:700;color:#1e3a5f;font-size:1.05em;margin-bottom:6px}
 .fb-thumb{background:#fff;border:1px solid #d6e6ee;border-radius:8px;height:150px;overflow:hidden;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -1496,6 +1501,9 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
     <button data-add="image">🖼 画像</button>
     <span class="fb-tb-sep"></span>
     <span id="fb-colors"></span>
+    <span class="fb-tb-sep"></span>
+    <button id="fb-front" title="最前面へ" disabled>⬆ 前面</button>
+    <button id="fb-back" title="最背面へ" disabled>⬇ 背面</button>
     <span class="fb-tb-sep"></span>
     <button id="fb-del" title="選択を削除" disabled>🗑 削除</button>
   </div>
@@ -5938,7 +5946,7 @@ function fbRender(){
   world.innerHTML = '';
   fbEls.forEach(el => world.appendChild(fbCreateNode(el)));
   if (fbSel) fbSelect(fbSel);
-  document.getElementById('fb-del').disabled = !fbSel;
+  fbSyncOrderBtns();
 }
 function fbCreateNode(el){
   let node;
@@ -6024,8 +6032,11 @@ function fbSelect(id){
     n.querySelectorAll('.fb-handle').forEach(x => x.remove());
     if (sel) fbAddHandles(n);
   });
-  document.getElementById('fb-del').disabled = !id;
+  fbSyncOrderBtns();
 }
+function fbSyncOrderBtns(){ const dis = !fbSel; ['fb-del', 'fb-front', 'fb-back'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = dis; }); }
+function fbBringFront(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.push(fbEls.splice(i, 1)[0]); fbRender(); }   // 最前面へ
+function fbSendBack(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.unshift(fbEls.splice(i, 1)[0]); fbRender(); }   // 最背面へ
 function fbAddHandles(node){
   const el = fbEls.find(e => e.id === node.dataset.id); if (!el) return;
   if (el.type === 'line' || el.type === 'arrow'){
@@ -6103,7 +6114,7 @@ function fbCreate(type){
   else if (type === 'arrow') el = { id, type, x: cx - 80, y: cy, x2: cx + 80, y2: cy, stroke: fbColor };
   fbEls.push(el); fbRender(); fbSelect(id);
 }
-function fbDeleteSel(){ if (!fbSel) return; if (fbEditingId === fbSel) fbEditingId = null; const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'none'; fbEls = fbEls.filter(e => e.id !== fbSel); fbSel = null; fbRender(); document.getElementById('fb-del').disabled = true; }
+function fbDeleteSel(){ if (!fbSel) return; if (fbEditingId === fbSel) fbEditingId = null; const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'none'; fbEls = fbEls.filter(e => e.id !== fbSel); fbSel = null; fbRender(); fbSyncOrderBtns(); }
 function fbBuildColors(){
   const row = document.getElementById('fb-colors'); row.innerHTML = '';
   FB_PALETTE.forEach(c => {
@@ -6133,14 +6144,48 @@ function fbZoomFit(){
 }
 function fbInitCanvas(){
   const canvas = document.getElementById('fb-canvas');
+  // 1本指=パン、2本指=ピンチでズーム（＋ホイール）
+  const fbPtrs = new Map();
+  let fbGesture = null;
+  const fbSnap = () => {
+    const pts = [...fbPtrs.values()];
+    if (pts.length === 1) return { mode: 'pan', sx: pts[0].x, sy: pts[0].y, vx: fbView.x, vy: fbView.y };
+    if (pts.length >= 2) {
+      const r = canvas.getBoundingClientRect(), a = pts[0], b = pts[1];
+      const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+      const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      return { mode: 'pinch', dist, scale: fbView.scale, wx: (mx - fbView.x) / fbView.scale, wy: (my - fbView.y) / fbView.scale };
+    }
+    return null;
+  };
   canvas.addEventListener('pointerdown', e => {
     if (e.target !== canvas && e.target.id !== 'fb-world') return;
-    fbSelect(null);
-    const sx = e.clientX, sy = e.clientY, ox = fbView.x, oy = fbView.y;
-    const mv = ev => { fbView.x = ox + (ev.clientX - sx); fbView.y = oy + (ev.clientY - sy); fbApplyView(); };
-    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
-    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+    if (fbPtrs.size === 0) fbSelect(null);
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    fbPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    fbGesture = fbSnap();
   });
+  canvas.addEventListener('pointermove', e => {
+    if (!fbPtrs.has(e.pointerId)) return;
+    fbPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!fbGesture) return;
+    e.preventDefault();
+    const pts = [...fbPtrs.values()];
+    if (fbGesture.mode === 'pan' && pts.length === 1) {
+      fbView.x = fbGesture.vx + (pts[0].x - fbGesture.sx);
+      fbView.y = fbGesture.vy + (pts[0].y - fbGesture.sy);
+      fbApplyView();
+    } else if (fbGesture.mode === 'pinch' && pts.length >= 2) {
+      const r = canvas.getBoundingClientRect(), a = pts[0], b = pts[1];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+      const ns = Math.min(4, Math.max(0.2, fbGesture.scale * (dist / fbGesture.dist)));
+      fbView.scale = ns; fbView.x = mx - fbGesture.wx * ns; fbView.y = my - fbGesture.wy * ns; fbApplyView();
+    }
+  });
+  const fbPtrEnd = e => { fbPtrs.delete(e.pointerId); fbGesture = fbPtrs.size ? fbSnap() : null; };
+  canvas.addEventListener('pointerup', fbPtrEnd);
+  canvas.addEventListener('pointercancel', fbPtrEnd);
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect(), factor = e.deltaY < 0 ? 1.1 : 1 / 1.1, ns = Math.min(4, Math.max(0.2, fbView.scale * factor));
@@ -6235,6 +6280,8 @@ function renderBoardBubble(m, q, showRoom, container){
   $('fb-close').onclick = () => fbClose(true);
   if ($('fb-back')) $('fb-back').onclick = () => fbClose(false);
   $('fb-del').onclick = fbDeleteSel;
+  if ($('fb-front')) $('fb-front').onclick = fbBringFront;
+  if ($('fb-back')) $('fb-back').onclick = fbSendBack;
   $('fb-zoom-in').onclick = () => fbZoomBy(1.2);
   $('fb-zoom-out').onclick = () => fbZoomBy(1 / 1.2);
   $('fb-zoom-fit').onclick = fbZoomFit;
@@ -6261,6 +6308,7 @@ function renderBoardBubble(m, q, showRoom, container){
 const G_NS = 'http://www.w3.org/2000/svg';
 let gNodes = [], gEdges = [], gRAF = null, gView = { x: 0, y: 0, scale: 1 }, gPinned = null, gTime = 0;
 let gVisibleTags = new Set(), gThumbMemoId = null, gHideTimer = null, gPreviewMemoId = null, gShowMemos = true, gSpread = 1, gMaxDeg = 1, gAndFilter = false, gThumbShownAt = 0;
+const gCoarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);   // タッチ主体の機器か
 function gLabel(m){ if (m.board) return m.board.title || '無題のボード'; const s = memoFirstLine(m); return s || '無題'; }
 function gAllRoomTags(){ const s = new Set(); S.memos.filter(m => m.roomId === roomId).forEach(m => (m.tags || []).forEach(t => s.add(t))); return [...s]; }
 function gBuild(){
@@ -6399,7 +6447,7 @@ function gShowThumb(nd){
   pop.style.left = Math.max(8, left) + 'px'; pop.style.top = Math.max(56, top) + 'px'; pop.classList.add('show');
   gThumbShownAt = Date.now();   // 表示直後の合成クリック誤爆を防ぐための時刻
 }
-function gHideThumbSoon(){ if (isMobile()) return; clearTimeout(gHideTimer); gHideTimer = setTimeout(() => document.getElementById('g-thumb-pop').classList.remove('show'), 240); }
+function gHideThumbSoon(){ if (gCoarse) return; clearTimeout(gHideTimer); gHideTimer = setTimeout(() => document.getElementById('g-thumb-pop').classList.remove('show'), 240); }
 function gOpenPreview(memoId){
   const m = S.memos.find(x => x.id === memoId); if (!m) return;
   gPreviewMemoId = memoId;
@@ -6415,14 +6463,15 @@ function gClosePreview(){ document.getElementById('g-preview').classList.remove(
 function gAttachNode(nd){
   [nd._c, nd._t].forEach(elem => {
     elem.style.cursor = 'grab';
-    if (nd.type === 'memo' && !isMobile()){
-      // ホバー用サムネイルはPCのみ。スマホはタッチで一瞬出て消える（ちらつき）ため付けない。
+    if (nd.type === 'memo' && !gCoarse){
+      // ホバー用サムネイルはマウス機のみ。タッチ機では合成イベントでちらつくため付けない。
       elem.addEventListener('mouseenter', () => { if (!nd._drag) gShowThumb(nd); });
       elem.addEventListener('mouseleave', () => gHideThumbSoon());
     }
-    // ドラッグで任意の位置へ移動（離すとその場に固定）。動かさなければクリック扱い。
+    // ドラッグで任意の位置へ移動（離すとその場に固定）。動かさなければタップ扱い。
     elem.addEventListener('pointerdown', e => {
       e.stopPropagation(); e.preventDefault();
+      const touch = (e.pointerType === 'touch' || e.pointerType === 'pen');
       const sx = e.clientX, sy = e.clientY, ox = nd.x, oy = nd.y; let moved = false;
       nd._drag = true;
       const mv = ev => {
@@ -6438,8 +6487,8 @@ function gAttachNode(nd){
         nd._drag = false;
         if (moved) { nd.fixed = true; return; }               // 動かしたら固定
         if (nd.type === 'memo') {
-          if (isMobile()) {
-            // 1回目/別メモ → サムネイル表示、同じメモをもう一度 → 拡大プレビュー
+          if (touch) {
+            // タッチ: 1回目/別メモ → サムネイル、同じメモをもう一度 → 拡大プレビュー
             if (gThumbMemoId === nd.memoId) { gOpenPreview(nd.memoId); gThumbMemoId = null; }
             else gShowThumb(nd);
           } else {
@@ -6499,7 +6548,7 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
   const pop = $('g-thumb-pop');
   pop.addEventListener('mouseenter', () => clearTimeout(gHideTimer));
   pop.addEventListener('mouseleave', gHideThumbSoon);
-  pop.addEventListener('click', () => { if (Date.now() - gThumbShownAt < 500) return; if (gThumbMemoId) gOpenPreview(gThumbMemoId); });
+  pop.addEventListener('click', () => { if (gCoarse) return; if (Date.now() - gThumbShownAt < 500) return; if (gThumbMemoId) gOpenPreview(gThumbMemoId); });
   $('g-preview-jump').onclick = () => { const id = gPreviewMemoId; gClosePreview(); gJump(id); };
   $('g-preview-close').onclick = gClosePreview;
   $('g-preview').addEventListener('click', e => { if (e.target === $('g-preview')) gClosePreview(); });
