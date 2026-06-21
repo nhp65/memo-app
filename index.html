@@ -865,7 +865,10 @@ body.theme-dark .fb-thumb,body.theme-sepia .fb-thumb{background:var(--th-bubble)
 #g-thumb-pop{position:fixed;display:none;z-index:8;background:var(--th-bubble);border:1px solid var(--th-tbdr);border-radius:12px;box-shadow:0 6px 28px rgba(0,0,0,.24);padding:12px;width:290px;max-height:340px;overflow:hidden;cursor:pointer}
 #g-thumb-pop.show{display:block}
 #g-thumb-pop:hover{border-color:var(--c1)}
-.g-thumb-title{font-weight:700;color:#1e3a5f;margin-bottom:6px;font-size:.95rem}
+.g-thumb-title{font-weight:700;color:#1e3a5f;margin-bottom:6px;font-size:.95rem;padding-right:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-thumb-acts{position:absolute;top:8px;right:8px;display:flex;gap:5px;z-index:3}
+.g-thumb-act{width:30px;height:30px;border:none;border-radius:8px;background:rgba(76,124,157,.92);color:#fff;font-size:1rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.g-thumb-act:active,.g-thumb-act:hover{background:var(--c1)}
 .g-thumb-bc{font-size:.82rem;max-height:230px;overflow:hidden;color:var(--th-text);line-height:1.5}
 .g-thumb-bc img{max-width:100%;max-height:120px}
 .g-thumb-meta{margin-top:7px;font-size:.7rem;color:#9bb0bc;border-top:1px solid var(--th-sep);padding-top:5px}
@@ -1502,8 +1505,8 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
     <span class="fb-tb-sep"></span>
     <span id="fb-colors"></span>
     <span class="fb-tb-sep"></span>
-    <button id="fb-front" title="最前面へ" disabled>⬆ 前面</button>
-    <button id="fb-back" title="最背面へ" disabled>⬇ 背面</button>
+    <button id="fb-zfront" title="最前面へ" disabled>⬆ 前面</button>
+    <button id="fb-zback" title="最背面へ" disabled>⬇ 背面</button>
     <span class="fb-tb-sep"></span>
     <button id="fb-del" title="選択を削除" disabled>🗑 削除</button>
   </div>
@@ -6034,7 +6037,12 @@ function fbSelect(id){
   });
   fbSyncOrderBtns();
 }
-function fbSyncOrderBtns(){ const dis = !fbSel; ['fb-del', 'fb-front', 'fb-back'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = dis; }); }
+function fbSyncOrderBtns(){
+  const i = fbSel ? fbEls.findIndex(e => e.id === fbSel) : -1;
+  const del = document.getElementById('fb-del'); if (del) del.disabled = !fbSel;
+  const f = document.getElementById('fb-zfront'); if (f) f.disabled = (i < 0) || (i === fbEls.length - 1);  // 既に最前面なら無効
+  const b = document.getElementById('fb-zback');  if (b) b.disabled = (i < 0) || (i === 0);                 // 既に最背面なら無効
+}
 function fbBringFront(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.push(fbEls.splice(i, 1)[0]); fbRender(); }   // 最前面へ
 function fbSendBack(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.unshift(fbEls.splice(i, 1)[0]); fbRender(); }   // 最背面へ
 function fbAddHandles(node){
@@ -6280,8 +6288,8 @@ function renderBoardBubble(m, q, showRoom, container){
   $('fb-close').onclick = () => fbClose(true);
   if ($('fb-back')) $('fb-back').onclick = () => fbClose(false);
   $('fb-del').onclick = fbDeleteSel;
-  if ($('fb-front')) $('fb-front').onclick = fbBringFront;
-  if ($('fb-back')) $('fb-back').onclick = fbSendBack;
+  if ($('fb-zfront')) $('fb-zfront').onclick = fbBringFront;
+  if ($('fb-zback')) $('fb-zback').onclick = fbSendBack;
   $('fb-zoom-in').onclick = () => fbZoomBy(1.2);
   $('fb-zoom-out').onclick = () => fbZoomBy(1 / 1.2);
   $('fb-zoom-fit').onclick = fbZoomFit;
@@ -6431,6 +6439,12 @@ function gHighlight(){
 function gPin(tag){ gPinned = (gPinned === tag) ? null : tag; gHighlight(); }
 function gThumb(m){
   const card = document.createElement('div');
+  const acts = document.createElement('div'); acts.className = 'g-thumb-acts';
+  const zb = document.createElement('button'); zb.className = 'g-thumb-act'; zb.title = '拡大表示'; zb.textContent = '⤢';
+  zb.onclick = (e) => { e.stopPropagation(); if (Date.now() - gThumbShownAt < 400) return; gOpenPreview(m.id); };
+  const jb = document.createElement('button'); jb.className = 'g-thumb-act'; jb.title = 'メモにジャンプ'; jb.textContent = '↪';
+  jb.onclick = (e) => { e.stopPropagation(); if (Date.now() - gThumbShownAt < 400) return; gJump(m.id); };
+  acts.appendChild(zb); acts.appendChild(jb); card.appendChild(acts);
   const title = document.createElement('div'); title.className = 'g-thumb-title'; title.textContent = gLabel(m); card.appendChild(title);
   if (m.board){ card.appendChild(fbThumb(m)); }
   else { const bc = document.createElement('div'); bc.className = 'bc g-thumb-bc'; bc.innerHTML = m.html || '（空）'; hydrateImages(bc); card.appendChild(bc); }
