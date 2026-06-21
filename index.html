@@ -98,7 +98,7 @@ header { padding-top: max(10px, env(safe-area-inset-top)); padding-left: max(14p
 .rc-swatch.rc-none::after { content: '×'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #bbb; }
 #room-cfg-pop .mact { margin-top: 4px; }
 /* Snippet popup */
-.snip-pop { display:none; position:fixed; z-index:350; background:white; border-radius:11px; box-shadow:0 4px 22px rgba(0,0,0,0.18); padding:11px 13px; min-width:220px; max-width:300px; }
+.snip-pop { display:none; position:fixed; z-index:760; background:white; border-radius:11px; box-shadow:0 4px 22px rgba(0,0,0,0.18); padding:11px 13px; min-width:220px; max-width:300px; }
 .snip-pop.open { display:block; }
 .snip-pop-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:.82rem; font-weight:700; color:var(--c1); }
 .snip-list { max-height:190px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; }
@@ -6461,19 +6461,26 @@ let gVisibleTags = new Set(), gThumbMemoId = null, gHideTimer = null, gPreviewMe
 const gCoarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);   // タッチ主体の機器か
 function gLabel(m){ if (m.board) return m.board.title || '無題のボード'; const s = memoFirstLine(m); return s || '無題'; }
 function gAllRoomTags(){ const s = new Set(); S.memos.filter(m => m.roomId === roomId).forEach(m => (m.tags || []).forEach(t => s.add(t))); return [...s]; }
+// タグごとの色（文字列ハッシュ→色相）。メモはタグ色の平均で表現。
+function gHashHue(s){ let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h % 360; }
+function gHslRgb(h, s, l){ s /= 100; l /= 100; const a = s * Math.min(l, 1 - l); const f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)]; }
+function gTagRgb(tag){ return gHslRgb(gHashHue(tag), 62, 55); }
+function gRgbHex(r, g, b){ return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); }
+function gTagHex(tag){ const c = gTagRgb(tag); return gRgbHex(c[0], c[1], c[2]); }
+function gBlendHex(tags){ if (!tags || !tags.length) return '#9bb0bc'; let R = 0, G = 0, B = 0; tags.forEach(t => { const c = gTagRgb(t); R += c[0]; G += c[1]; B += c[2]; }); const n = tags.length; return gRgbHex(Math.round(R / n), Math.round(G / n), Math.round(B / n)); }
 function gBuild(){
   const memos = S.memos.filter(m => m.roomId === roomId && (m.tags || []).length);
   gNodes = []; gEdges = [];
   const tagMap = {};
-  const ensureTag = t => { if (gVisibleTags.has(t) && !tagMap[t]){ tagMap[t] = { id: 't:' + t, type: 'tag', label: t, deg: 0, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 }; gNodes.push(tagMap[t]); } };
+  const ensureTag = t => { if (gVisibleTags.has(t) && !tagMap[t]){ tagMap[t] = { id: 't:' + t, type: 'tag', label: t, color: gTagHex(t), deg: 0, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 }; gNodes.push(tagMap[t]); } };
   if (gAndFilter && gVisibleTags.size > 0) {
     // 絞り込み: 中心を1つにまとめ、選択タグを全て満たすメモだけをそこへ集める
     const sel = [...gVisibleTags];
-    const center = { id: 't:__and__', type: 'tag', label: sel.map(t => '#' + t).join(' '), deg: 0, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+    const center = { id: 't:__and__', type: 'tag', label: sel.map(t => '#' + t).join(' '), color: gBlendHex(sel), deg: 0, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
     gNodes.push(center);
     memos.forEach(m => {
       if (!sel.every(t => (m.tags || []).includes(t))) return;
-      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex((m.tags || []).filter(t => gVisibleTags.has(t))), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
       gNodes.push(n); gEdges.push({ a: n, b: center }); center.deg++;
     });
     gMaxDeg = Math.max(1, center.deg);
@@ -6485,7 +6492,7 @@ function gBuild(){
     memos.forEach(m => {
       const mt = (m.tags || []).filter(t => gVisibleTags.has(t)); if (!mt.length) return;
       if (gAndFilter && mt.length < gVisibleTags.size) return;   // 絞り込み: 選択タグを全て持つメモのみ
-      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(mt), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
       gNodes.push(n); mt.forEach(t => { gEdges.push({ a: n, b: tagMap[t] }); tagMap[t].deg++; });
     });
   } else {
@@ -6538,6 +6545,7 @@ function gBuildSVG(){
   gNodes.forEach(nd => {
     const c = document.createElementNS(G_NS, 'circle');
     if (nd.type === 'tag'){ c.setAttribute('r', gTagR(nd)); c.setAttribute('class', 'g-tag-c'); } else { c.setAttribute('r', 5); c.setAttribute('class', 'g-memo-c'); }
+    if (nd.color) c.style.fill = nd.color;   // タグ＝固有色 / メモ＝タグ色の混色
     g.appendChild(c); nd._c = c;
     const t = document.createElementNS(G_NS, 'text'); t.setAttribute('class', nd.type === 'tag' ? 'g-tag-t' : 'g-memo-t');
     t.textContent = nd.type === 'tag' ? ('#' + nd.label) : (nd.label.length > 16 ? nd.label.slice(0, 16) + '…' : nd.label);
