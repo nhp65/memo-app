@@ -599,6 +599,8 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
   padding: 2px 8px; font-size: 0.74rem; cursor: pointer; white-space: nowrap; flex-shrink: 0;
 }
 .et-chip:hover { background: var(--c1); color: white; }
+.et-chip.in { background: #f1b7b7; color: #6d1d1d; font-weight: 600; }
+.et-chip.in:hover { background: #e89f9f; color: #6d1d1d; }
 /* Tag autocomplete */
 .tag-ac-wrap { position: relative; flex-shrink: 0; }
 .tag-ac-list {
@@ -3181,18 +3183,19 @@ function setupTagAc(inputId, listId, getTagsFn) {
 function renderExistingTags() {
   const container = document.getElementById('exist-tags');
   container.innerHTML = '';
-  const current = new Set(parseTags(document.getElementById('tag-input').value));
+  const inp = document.getElementById('tag-input');
+  const current = new Set(parseTags(inp.value));
   const hiddenSet2 = new Set(S.hiddenTags || []);
-  allTags().filter(t => !current.has(t) && !hiddenSet2.has(t)).forEach(tag => {
+  allTags().filter(t => current.has(t) || !hiddenSet2.has(t)).forEach(tag => {
+    const inTag = current.has(tag);
     const c = document.createElement('button');
-    c.className = 'et-chip'; c.textContent = tag;
+    c.className = 'et-chip' + (inTag ? ' in' : ''); c.textContent = tag;
     c.onclick = () => {
-      const inp = document.getElementById('tag-input');
-      const existing = parseTags(inp.value);
-      if (!existing.includes(tag)) {
-        inp.value = existing.length ? existing.join(', ') + ', ' + tag : tag;
-        renderExistingTags();
-      }
+      let existing = parseTags(inp.value);
+      if (existing.includes(tag)) existing = existing.filter(t => t !== tag);   // 入っていれば外す
+      else existing.push(tag);                                                  // 無ければ追加
+      inp.value = existing.join(', ');
+      renderExistingTags();
     };
     container.appendChild(c);
   });
@@ -3205,15 +3208,16 @@ function renderEditExistingTags() {
   const inp = document.getElementById('edit-tag-input');
   const current = new Set(parseTags(inp.value));
   const hiddenSet2 = new Set(S.hiddenTags || []);
-  allTags().filter(t => !current.has(t) && !hiddenSet2.has(t)).forEach(tag => {
+  allTags().filter(t => current.has(t) || !hiddenSet2.has(t)).forEach(tag => {
+    const inTag = current.has(tag);
     const c = document.createElement('button');
-    c.className = 'et-chip'; c.textContent = tag;
+    c.className = 'et-chip' + (inTag ? ' in' : ''); c.textContent = tag;
     c.onclick = () => {
-      const existing = parseTags(inp.value);
-      if (!existing.includes(tag)) {
-        inp.value = existing.length ? existing.join(', ') + ', ' + tag : tag;
-        renderEditExistingTags();
-      }
+      let existing = parseTags(inp.value);
+      if (existing.includes(tag)) existing = existing.filter(t => t !== tag);
+      else existing.push(tag);
+      inp.value = existing.join(', ');
+      renderEditExistingTags();
     };
     container.appendChild(c);
   });
