@@ -1032,6 +1032,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
         <input type="date" id="date-to" title="終了日">
         <button id="date-clear" class="date-clear-btn" title="日付クリア">✕</button>
       </div>
+      <label id="search-regex-lbl" title="検索を正規表現として扱う" style="display:flex;align-items:center;gap:4px;font-size:.78rem;color:#fff;white-space:nowrap;cursor:pointer"><input type="checkbox" id="search-regex" style="width:auto;margin:0;accent-color:#fff">正規表現</label>
     </div>
     <div class="search-filter-row">
       <div class="tag-bar" id="tag-bar"></div>
@@ -1307,6 +1308,11 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
         <button class="rm-h-btn" data-dm="pc">PC</button>
       </div>
       <div style="font-size:.72rem;color:#aaa;margin:4px 0 10px">PCにすると広い画面向けレイアウトになります（折り畳みが見切れる時の対策）。切替後にズームで調整できます。</div>
+      <div id="mobile-scale-row" style="margin:0 0 12px">
+        <div style="font-size:.8rem;color:#888;margin-bottom:4px">スマホ表示の拡大率 <span id="mobile-scale-val" style="color:#666;font-weight:700"></span></div>
+        <input type="range" id="mobile-scale" min="70" max="200" step="5" style="width:100%;accent-color:var(--c1)">
+        <div style="font-size:.72rem;color:#aaa">「スマホ」表示のときの文字・画像の大きさ。大きいほど拡大（ブラウザでズームできない時用）。</div>
+      </div>
       <div class="cfg-label">🧱 レイアウト</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="layout-mode-row">
         <button class="rm-h-btn" data-layout="chat">💬 チャット</button>
@@ -1487,6 +1493,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
       <span id="fb-search-count"></span>
       <button id="fb-search-prev" title="前へ">‹</button>
       <button id="fb-search-next" title="次へ">›</button>
+      <label title="正規表現" style="display:flex;align-items:center;gap:3px;color:#fff;font-size:.75rem;white-space:nowrap;cursor:pointer"><input type="checkbox" id="fb-search-regex" style="width:auto;margin:0;accent-color:#fff">正規</label>
     </div>
     <div id="fb-zoom">
       <button id="fb-zoom-out">－</button><span id="fb-zoom-lvl">100%</span><button id="fb-zoom-in">＋</button>
@@ -3365,7 +3372,7 @@ function applyDisplayMode(){
   const m = (typeof S !== 'undefined' && S && S.displayMode) || 'auto';
   let content;
   if (m === 'pc')          content = 'width=1100, viewport-fit=cover';                  // PC表示: 広いレイアウト
-  else if (m === 'mobile') content = 'width=420, viewport-fit=cover';                   // スマホ表示: 狭幅固定でモバイルCSSを強制
+  else if (m === 'mobile') { const sc = (S && S.mobileScale) || 100; content = 'width=' + Math.round(420 * 100 / sc) + ', viewport-fit=cover'; }   // スマホ表示: 拡大率で幅を調整（狭いほど拡大）
   else                     content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
   vp.setAttribute('content', content);
 }
@@ -3414,12 +3421,11 @@ function renderTagBar() {
     const isHidden = hiddenSet.has(t);
     const mode = activeTagFilters.get(t) || 0;
     const isInclude = mode === 1;
-    const isExclude = mode === -1;
     const isActive = mode !== 0;
     if (isHidden && !isActive) return; // 非表示かつ未選択はスキップ
     const c = document.createElement('button');
-    c.className = 'tag-chip' + (isInclude ? ' active' : '') + (isExclude ? ' exclude' : '') + (isHidden && isActive ? ' ghost' : '');
-    c.textContent = (isInclude ? '+' : isExclude ? '-' : '') + t;
+    c.className = 'tag-chip' + (isInclude ? ' active' : '') + (isHidden && isActive ? ' ghost' : '');
+    c.textContent = (isInclude ? '✓' : '') + t;
     if (isHidden && isActive) c.title = '（非表示タグ・現在選択中）';
     c.onclick = () => {
       cycleTagFilter(t);
@@ -3456,10 +3462,9 @@ document.getElementById('tag-bar-toggle').onclick = () => {
 
 // ── Render memos ──────────────────────────────────────────────────
 function cycleTagFilter(tag) {
-  const cur = activeTagFilters.get(tag) || 0;
-  const next = cur === 1 ? -1 : cur === -1 ? 0 : 1;
-  if (next === 0) activeTagFilters.delete(tag);
-  else activeTagFilters.set(tag, next);
+  // 含む ↔ 解除 の2状態のみ（除外は廃止）
+  if (activeTagFilters.get(tag) === 1) activeTagFilters.delete(tag);
+  else activeTagFilters.set(tag, 1);
 }
 
 function setOnlyIncludedTag(tag) {
@@ -3510,7 +3515,9 @@ function placeBubble(m, q, showRoom, container) {
 let _lastRenderQ = null, _lastRenderGS = null;
 
 function renderMemos() {
-  const q = document.getElementById('search').value.toLowerCase().trim();
+  const rawQ = document.getElementById('search').value.trim();
+  const q = rawQ.toLowerCase();
+  const reSearch = (S.searchRegex && rawQ) ? (() => { try { return new RegExp(rawQ, 'i'); } catch (e) { return null; } })() : null;
   const dateFrom = document.getElementById('date-from').value;
   const dateTo   = document.getElementById('date-to').value;
   // 検索語や全ルーム表示が変わるとハイライト/バッジが変わるのでキャッシュを破棄
@@ -3525,7 +3532,9 @@ function renderMemos() {
   const list = baseList.filter(m => {
     const memoTags = m.tags || [];
     const ok1 = includedTags.every(t => memoTags.includes(t)) && excludedTags.every(t => !memoTags.includes(t));
-    const ok2 = !q || memoSearchText(m).toLowerCase().includes(q) || (m.tags||[]).some(t => ('#'+t).toLowerCase().includes(q) || t.toLowerCase().includes(q));
+    const ok2 = !q || (reSearch
+      ? (reSearch.test(memoSearchText(m)) || (m.tags||[]).some(t => reSearch.test('#'+t) || reSearch.test(t)))
+      : (memoSearchText(m).toLowerCase().includes(q) || (m.tags||[]).some(t => ('#'+t).toLowerCase().includes(q) || t.toLowerCase().includes(q))));
     const mDate = new Date(m.createdAt).toLocaleDateString('sv');
     const ok3 = (!dateFrom || mDate >= dateFrom) && (!dateTo || mDate <= dateTo);
     return ok1 && ok2 && ok3;
@@ -4849,6 +4858,12 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') lb.classList
   searchEl.addEventListener('compositionend',   () => { composing = false; schedule(); });
   searchEl.addEventListener('input', schedule);
 })();
+// 正規表現トグル
+(function () {
+  const cb = document.getElementById('search-regex');
+  if (!cb) return;
+  cb.onchange = () => { S.searchRegex = cb.checked; persist(); const f = document.getElementById('fb-search-regex'); if (f) f.checked = cb.checked; renderMemos(); };
+})();
 function updateDateClear() {
   const active = !!(document.getElementById('date-from').value || document.getElementById('date-to').value);
   document.getElementById('date-clear').classList.toggle('visible', active);
@@ -5411,6 +5426,9 @@ document.querySelectorAll('#note-cols-row .rm-h-btn').forEach(b => {
 function renderDisplayMode(){
   const m = S.displayMode || 'auto';
   document.querySelectorAll('#display-mode-row .rm-h-btn').forEach(b => b.classList.toggle('active', b.dataset.dm === m));
+  const sc = S.mobileScale || 100;
+  const sl = document.getElementById('mobile-scale'); if (sl) sl.value = sc;
+  const sv = document.getElementById('mobile-scale-val'); if (sv) sv.textContent = sc + '%';
 }
 document.querySelectorAll('#display-mode-row .rm-h-btn').forEach(b => {
   b.onclick = () => {
@@ -5419,6 +5437,12 @@ document.querySelectorAll('#display-mode-row .rm-h-btn').forEach(b => {
     applyLayout(); renderLayoutSettings(); renderMemos(); renderRooms();
   };
 });
+{ const sl = document.getElementById('mobile-scale'); if (sl) sl.oninput = () => {
+  S.mobileScale = parseInt(sl.value) || 100;
+  const sv = document.getElementById('mobile-scale-val'); if (sv) sv.textContent = sl.value + '%';
+  if ((S.displayMode || 'auto') === 'mobile') applyDisplayMode();   // スマホ表示中なら即反映
+  persist();
+}; }
 
 const TITLE_COLORS = [
   { label: '自動', value: null },
@@ -5835,6 +5859,7 @@ async function initApp() {
   if (!S.noteColumns)      S.noteColumns      = 3;
   if (!S.noteColumnsMobile) S.noteColumnsMobile = 2;
   if (!S.displayMode)      S.displayMode      = 'auto';
+  if (!S.mobileScale)      S.mobileScale      = 100;
   if (!S.graph)            S.graph            = { tagBase: 7, tagRange: 14 };
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
@@ -5861,6 +5886,7 @@ async function initApp() {
   applyTitleColor(S.titleColor ?? '#1e3a5f');
   applyTheme(S.theme);
   applyDisplayMode();
+  { const _sr = document.getElementById('search-regex'); if (_sr) _sr.checked = !!S.searchRegex; }
   applyLayout();
 
   roomId = S.rooms[0]?.id || '1';
@@ -5921,6 +5947,7 @@ function openBoard(memoId, isNew){
   document.getElementById('fb-title').value = m.board.title || '';
   document.getElementById('fb-tags').value = (m.tags || []).join(', ');
   document.getElementById('fb-search').value = '';
+  { const fr = document.getElementById('fb-search-regex'); if (fr) fr.checked = !!S.searchRegex; }
   document.getElementById('fb-search-count').textContent = '';
   fbBuildColors();
   fbRender(); fbApplyView();
@@ -6207,11 +6234,13 @@ function fbInitCanvas(){
   }, { passive: false });
 }
 function fbDoSearch(q){
-  q = (q || '').toLowerCase().trim();
+  const raw = (q || '').trim();
+  q = raw.toLowerCase();
   fbMatch = []; fbMatchIdx = -1;
   document.querySelectorAll('#fb-world .fb-match').forEach(n => n.classList.remove('fb-match'));
   if (!q){ document.getElementById('fb-search-count').textContent = ''; return; }
-  fbEls.forEach(el => { const t = el.html ? stripHtml(el.html).toLowerCase() : ''; if (t && t.includes(q)) fbMatch.push(el.id); });
+  const re = (S.searchRegex && raw) ? (() => { try { return new RegExp(raw, 'i'); } catch (e) { return null; } })() : null;
+  fbEls.forEach(el => { const t = el.html ? stripHtml(el.html) : ''; if (t && (re ? re.test(t) : t.toLowerCase().includes(q))) fbMatch.push(el.id); });
   if (fbMatch.length){ fbMatchIdx = 0; fbFocusMatch(); } else document.getElementById('fb-search-count').textContent = '0件';
 }
 function fbFocusMatch(){
@@ -6300,6 +6329,7 @@ function renderBoardBubble(m, q, showRoom, container){
   $('fb-zoom-fit').onclick = fbZoomFit;
   $('fb-toolbar').querySelectorAll('[data-add]').forEach(b => b.onclick = () => fbCreate(b.dataset.add));
   $('fb-search').addEventListener('input', function(){ fbDoSearch(this.value); });
+  if ($('fb-search-regex')) $('fb-search-regex').onchange = function(){ S.searchRegex = this.checked; persist(); const m = document.getElementById('search-regex'); if (m) m.checked = this.checked; fbDoSearch($('fb-search').value); };
   $('fb-search-next').onclick = () => { if (fbMatch.length){ fbMatchIdx = (fbMatchIdx + 1) % fbMatch.length; fbFocusMatch(); } };
   $('fb-search-prev').onclick = () => { if (fbMatch.length){ fbMatchIdx = (fbMatchIdx - 1 + fbMatch.length) % fbMatch.length; fbFocusMatch(); } };
   fbInitCanvas();
@@ -6557,6 +6587,11 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
   $('graph-btn').onclick = gOpen;
   $('g-close').onclick = gClose;
   $('g-filter-btn').onclick = () => $('g-filter').classList.toggle('show');
+  // パネル外タップで閉じる（スマホでフィルターボタンが隠れて閉じられない問題対策）
+  $('g-ov').addEventListener('pointerdown', e => {
+    if ($('g-filter').classList.contains('show') && !e.target.closest('#g-filter') && !e.target.closest('#g-filter-btn')) $('g-filter').classList.remove('show');
+    if ($('g-settings') && $('g-settings').classList.contains('show') && !e.target.closest('#g-settings') && !e.target.closest('#g-settings-btn')) $('g-settings').classList.remove('show');
+  }, true);
   $('g-filter-all').onclick = () => { gVisibleTags = new Set(gAllRoomTags()); gRenderFilter(); gRebuild(); };
   $('g-filter-none').onclick = () => { gVisibleTags = new Set(); gRenderFilter(); gRebuild(); };
   if ($('g-and-filter')) $('g-and-filter').onclick = () => { gAndFilter = $('g-and-filter').checked; gRebuild(); };
