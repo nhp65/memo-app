@@ -826,6 +826,11 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 .fb-el.fb-selected,.fb-line.fb-selected{outline:2px solid var(--c1)}
 .fb-line{position:absolute;pointer-events:none}
 .fb-line svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+#fb-el-actions{display:none;position:fixed;z-index:700;gap:4px;background:var(--th-edit);border:1px solid var(--th-tbdr);border-radius:9px;padding:3px;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+#fb-el-actions.show{display:flex}
+#fb-el-actions button{width:32px;height:32px;border:none;background:none;border-radius:7px;cursor:pointer;font-size:.95rem;line-height:1;color:var(--c3)}
+#fb-el-actions button:hover{background:rgba(76,124,157,.18)}
+#fb-el-actions button:disabled{opacity:.3;cursor:default}
 .fb-handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid var(--c1);border-radius:50%;pointer-events:auto;z-index:5}
 .fb-handle.fb-br{right:-7px;bottom:-7px;cursor:nwse-resize}
 .fb-handle.fb-p1,.fb-handle.fb-p2{transform:translate(-50%,-50%);cursor:move}
@@ -949,6 +954,16 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.45); z-index: 299;
 }
+
+/* 表示モード=スマホ を低倍率（幅が640pxを超えても）でも維持する */
+body.force-mobile #sidebar { position: fixed; top: 0; left: 0; height: 100%; width: 78%; max-width: 270px; z-index: 300; transform: translateX(-100%); transition: transform 0.25s ease; }
+body.force-mobile #sidebar.collapsed { width: 78%; transform: translateX(-100%); }
+body.force-mobile #sidebar.sp-open { transform: translateX(0); }
+body.force-mobile header { flex-wrap: wrap; }
+body.force-mobile #room-title { flex: 1 1 auto; min-width: 80px; }
+body.force-mobile .search-top-row { flex-wrap: wrap; }
+body.force-mobile .date-filter-wrap { flex: 1 1 100%; justify-content: flex-start; }
+body.force-mobile #search { flex: 1 1 100%; }
 
 @media (max-width: 640px) {
   /* Sidebar: overlay drawer */
@@ -1338,7 +1353,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
       <div style="font-size:.72rem;color:#aaa;margin:4px 0 10px">PCにすると広い画面向けレイアウトになります（折り畳みが見切れる時の対策）。切替後にズームで調整できます。</div>
       <div id="mobile-scale-row" style="margin:0 0 12px">
         <div style="font-size:.8rem;color:#888;margin-bottom:4px">スマホ表示の拡大率 <span id="mobile-scale-val" style="color:#666;font-weight:700"></span></div>
-        <input type="range" id="mobile-scale" min="70" max="200" step="5" style="width:100%;accent-color:var(--c1)">
+        <input type="range" id="mobile-scale" min="40" max="200" step="5" style="width:100%;accent-color:var(--c1)">
         <div style="font-size:.72rem;color:#aaa">「スマホ」表示のときの文字・画像の大きさ。大きいほど拡大（ブラウザでズームできない時用）。</div>
       </div>
       <div class="cfg-label">⌨️ 入力エリア</div>
@@ -1492,6 +1507,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
     <div class="gs-row"><label>タグ●のベースの大きさ <span class="gs-val" id="gs-base-val"></span></label><input type="range" id="gs-base" min="2" max="24" step="1"></div>
     <div class="gs-row"><label>ノート数による差（最大タグの追加分） <span class="gs-val" id="gs-range-val"></span></label><input type="range" id="gs-range" min="0" max="40" step="1"></div>
     <div class="gs-row"><label>文字サイズ <span class="gs-val" id="gs-font-val"></span></label><input type="range" id="gs-font" min="60" max="200" step="5"></div>
+    <div class="gs-row"><label>色の鮮やかさ（彩度） <span class="gs-val" id="gs-sat-val"></span></label><input type="range" id="gs-sat" min="0" max="95" step="5"></div>
     <div style="font-size:.72rem;color:#aaa;line-height:1.5">●＝ベース＋（そのタグの数÷最も多いタグの数）×差。ノート数が最多のタグが最大になります。</div>
   </div>
   <svg id="g-svg"><g id="g-zoom"></g></svg>
@@ -1543,14 +1559,15 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
     <button data-add="image">🖼 画像</button>
     <span class="fb-tb-sep"></span>
     <span id="fb-colors"></span>
-    <span class="fb-tb-sep"></span>
-    <button id="fb-zfront" title="最前面へ" disabled>⬆ 前面</button>
-    <button id="fb-zback" title="最背面へ" disabled>⬇ 背面</button>
-    <span class="fb-tb-sep"></span>
-    <button id="fb-del" title="選択を削除" disabled>🗑 削除</button>
   </div>
   <div class="fmt-bar" id="fb-fmt-bar" data-for="fb-editing" style="display:none"></div>
   <div id="fb-canvas"><div id="fb-world"></div></div>
+  <div id="fb-el-actions">
+    <button id="fbe-front" title="前面へ">⬆</button>
+    <button id="fbe-back" title="背面へ">⬇</button>
+    <button id="fbe-dup" title="複製">📋</button>
+    <button id="fbe-del" title="削除">🗑</button>
+  </div>
   <input type="file" id="fb-img-input" accept="image/*" style="display:none">
 </div>
 
@@ -3279,6 +3296,8 @@ async function sendMemo() {
   charCountEl.textContent = '0文字'; charCountEl.classList.remove('warn');
   document.getElementById('tag-input').value = '';
   renderTagBar(); renderMemos(); renderExistingTags(); renderRooms();
+  // 大画面入力からの投稿時は一覧へ戻る
+  if (document.getElementById('compose-ov').classList.contains('open')) closeCompose();
 }
 
 function setRoomTitle(room) {
@@ -3459,6 +3478,7 @@ function applyDisplayMode(){
   else if (m === 'mobile') { const sc = (S && S.mobileScale) || 100; content = 'width=' + Math.round(420 * 100 / sc) + ', viewport-fit=cover'; }   // スマホ表示: 拡大率で幅を調整（狭いほど拡大）
   else                     content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
   vp.setAttribute('content', content);
+  document.body.classList.toggle('force-mobile', m === 'mobile');   // 低倍率で幅が広くてもスマホ用UIを維持
 }
 
 function openSidebar() {
@@ -5954,7 +5974,7 @@ async function initApp() {
   if (!S.displayMode)      S.displayMode      = 'auto';
   if (!S.mobileScale)      S.mobileScale      = 100;
   if (S.alwaysShowInput === undefined) S.alwaysShowInput = false;
-  if (!S.graph)            S.graph            = { tagBase: 7, tagRange: 14, fontScale: 1 };
+  if (!S.graph)            S.graph            = { tagBase: 7, tagRange: 14, fontScale: 1, sat: 45 };
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
 
@@ -6064,12 +6084,14 @@ function fbClose(save){
     persist();
   }
   document.getElementById('fb-ov').classList.remove('open');
-  fbMemoId = null; fbIsNew = false;
+  document.getElementById('fb-el-actions').classList.remove('show');
+  fbSel = null; fbMemoId = null; fbIsNew = false;
   renderTagBar(); renderMemos(); renderRooms();
 }
 function fbApplyView(){
   document.getElementById('fb-world').style.transform = 'translate(' + fbView.x + 'px,' + fbView.y + 'px) scale(' + fbView.scale + ')';
   document.getElementById('fb-zoom-lvl').textContent = Math.round(fbView.scale * 100) + '%';
+  if (typeof fbPositionElActions === 'function') fbPositionElActions();
 }
 function fbRender(){
   const world = document.getElementById('fb-world');
@@ -6144,7 +6166,7 @@ function fbAttachDrag(node, el){
       const dx = (ev.clientX - sx) / fbView.scale, dy = (ev.clientY - sy) / fbView.scale;
       el.x = ox + dx; el.y = oy + dy;
       if (el.type === 'line' || el.type === 'arrow'){ el.x2 = ox2 + dx; el.y2 = oy2 + dy; }
-      fbPositionNode(node, el); fbUpdateHandles(node, el);
+      fbPositionNode(node, el); fbUpdateHandles(node, el); fbPositionElActions();
     };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
@@ -6167,12 +6189,25 @@ function fbSelect(id){
 }
 function fbSyncOrderBtns(){
   const i = fbSel ? fbEls.findIndex(e => e.id === fbSel) : -1;
-  const del = document.getElementById('fb-del'); if (del) del.disabled = !fbSel;
-  const f = document.getElementById('fb-zfront'); if (f) f.disabled = (i < 0) || (i === fbEls.length - 1);  // 既に最前面なら無効
-  const b = document.getElementById('fb-zback');  if (b) b.disabled = (i < 0) || (i === 0);                 // 既に最背面なら無効
+  const f = document.getElementById('fbe-front'); if (f) f.disabled = (i < 0) || (i === fbEls.length - 1);  // 既に最前面なら無効
+  const b = document.getElementById('fbe-back');  if (b) b.disabled = (i < 0) || (i === 0);                 // 既に最背面なら無効
+  fbPositionElActions();
+}
+function fbPositionElActions(){
+  const box = document.getElementById('fb-el-actions'); if (!box) return;
+  const node = fbSel && document.querySelector('#fb-world [data-id="' + fbSel + '"]');
+  if (!node){ box.classList.remove('show'); return; }
+  box.classList.add('show');
+  const r = node.getBoundingClientRect();
+  const bw = box.offsetWidth || 150, bh = box.offsetHeight || 40;
+  let left = r.right - bw, top = r.top - bh - 4;
+  if (top < 54) top = r.top + 4;                       // 上に出せなければ要素の上端に重ねる
+  left = Math.max(6, Math.min(left, window.innerWidth - bw - 6));
+  box.style.left = left + 'px'; box.style.top = top + 'px';
 }
 function fbBringFront(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.push(fbEls.splice(i, 1)[0]); fbRender(); }   // 最前面へ
 function fbSendBack(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.unshift(fbEls.splice(i, 1)[0]); fbRender(); }   // 最背面へ
+function fbDuplicateSel(){ if (!fbSel) return; const el = fbEls.find(e => e.id === fbSel); if (!el) return; const copy = Object.assign({}, el, { id: fbNewId(), x: (el.x || 0) + 16, y: (el.y || 0) + 16 }); if (el.x2 != null){ copy.x2 = el.x2 + 16; copy.y2 = el.y2 + 16; } fbEls.push(copy); fbRender(); fbSelect(copy.id); }
 function fbAddHandles(node){
   const el = fbEls.find(e => e.id === node.dataset.id); if (!el) return;
   if (el.type === 'line' || el.type === 'arrow'){
@@ -6186,7 +6221,7 @@ function fbResizeDrag(h, el, node){
   h.addEventListener('pointerdown', e => {
     e.stopPropagation();
     const sx = e.clientX, sy = e.clientY, ow = el.w, oh = el.h;
-    const mv = ev => { if (fbPinch) return; el.w = Math.max(20, ow + (ev.clientX - sx) / fbView.scale); el.h = Math.max(20, oh + (ev.clientY - sy) / fbView.scale); fbPositionNode(node, el); };
+    const mv = ev => { if (fbPinch) return; el.w = Math.max(20, ow + (ev.clientX - sx) / fbView.scale); el.h = Math.max(20, oh + (ev.clientY - sy) / fbView.scale); fbPositionNode(node, el); fbPositionElActions(); };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
@@ -6429,9 +6464,10 @@ function renderBoardBubble(m, q, showRoom, container){
   };
   $('fb-close').onclick = () => fbClose(true);
   if ($('fb-back')) $('fb-back').onclick = () => fbClose(false);
-  $('fb-del').onclick = fbDeleteSel;
-  if ($('fb-zfront')) $('fb-zfront').onclick = fbBringFront;
-  if ($('fb-zback')) $('fb-zback').onclick = fbSendBack;
+  if ($('fbe-del')) $('fbe-del').onclick = fbDeleteSel;
+  if ($('fbe-dup')) $('fbe-dup').onclick = fbDuplicateSel;
+  if ($('fbe-front')) $('fbe-front').onclick = fbBringFront;
+  if ($('fbe-back')) $('fbe-back').onclick = fbSendBack;
   $('fb-zoom-in').onclick = () => fbZoomBy(1.2);
   $('fb-zoom-out').onclick = () => fbZoomBy(1 / 1.2);
   $('fb-zoom-fit').onclick = fbZoomFit;
@@ -6465,7 +6501,7 @@ function gAllRoomTags(){ const s = new Set(); S.memos.filter(m => m.roomId === r
 // タグごとの色（文字列ハッシュ→色相）。メモはタグ色の平均で表現。
 function gHashHue(s){ let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h % 360; }
 function gHslRgb(h, s, l){ s /= 100; l /= 100; const a = s * Math.min(l, 1 - l); const f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)]; }
-function gTagRgb(tag){ return gHslRgb(gHashHue(tag), 38, 66); }
+function gTagRgb(tag){ const sat = (S.graph && S.graph.sat != null) ? S.graph.sat : 45; return gHslRgb(gHashHue(tag), sat, 64); }
 function gRgbHex(r, g, b){ return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); }
 function gTagHex(tag){ const c = gTagRgb(tag); return gRgbHex(c[0], c[1], c[2]); }
 function gBlendHex(tags){ if (!tags || !tags.length) return '#9bb0bc'; let R = 0, G = 0, B = 0; tags.forEach(t => { const c = gTagRgb(t); R += c[0]; G += c[1]; B += c[2]; }); const n = tags.length; return gRgbHex(Math.round(R / n), Math.round(G / n), Math.round(B / n)); }
@@ -6473,15 +6509,15 @@ function gBuild(){
   const memos = S.memos.filter(m => m.roomId === roomId && (m.tags || []).length);
   gNodes = []; gEdges = [];
   const tagMap = {};
-  const ensureTag = t => { if (gVisibleTags.has(t) && !tagMap[t]){ tagMap[t] = { id: 't:' + t, type: 'tag', label: t, color: gTagHex(t), deg: 0, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 }; gNodes.push(tagMap[t]); } };
+  const ensureTag = t => { if (gVisibleTags.has(t) && !tagMap[t]){ tagMap[t] = { id: 't:' + t, type: 'tag', label: t, color: gTagHex(t), colorTags: [t], deg: 0, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 }; gNodes.push(tagMap[t]); } };
   if (gAndFilter && gVisibleTags.size > 0) {
     // 絞り込み: 中心を1つにまとめ、選択タグを全て満たすメモだけをそこへ集める
     const sel = [...gVisibleTags];
-    const center = { id: 't:__and__', type: 'tag', label: sel.map(t => '#' + t).join(' '), color: gBlendHex(sel), deg: 0, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+    const center = { id: 't:__and__', type: 'tag', label: sel.map(t => '#' + t).join(' '), color: gBlendHex(sel), colorTags: sel, deg: 0, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
     gNodes.push(center);
     memos.forEach(m => {
       if (!sel.every(t => (m.tags || []).includes(t))) return;
-      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(m.tags || []), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(m.tags || []), colorTags: (m.tags || []), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
       gNodes.push(n); gEdges.push({ a: n, b: center }); center.deg++;
     });
     gMaxDeg = Math.max(1, center.deg);
@@ -6493,7 +6529,7 @@ function gBuild(){
     memos.forEach(m => {
       const mt = (m.tags || []).filter(t => gVisibleTags.has(t)); if (!mt.length) return;
       if (gAndFilter && mt.length < gVisibleTags.size) return;   // 絞り込み: 選択タグを全て持つメモのみ
-      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(m.tags || []), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(m.tags || []), colorTags: (m.tags || []), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
       gNodes.push(n); mt.forEach(t => { gEdges.push({ a: n, b: tagMap[t] }); tagMap[t].deg++; });
     });
   } else {
@@ -6535,6 +6571,9 @@ function gApplyFont(){
   const sc = (S.graph && S.graph.fontScale) || 1;
   gNodes.forEach(nd => { if (nd._t) nd._t.style.fontSize = (nd.type === 'tag' ? 13 : 11) * sc + 'px'; });
 }
+function gApplyColors(){
+  gNodes.forEach(nd => { if (nd._c) { nd.color = gBlendHex(nd.colorTags || []); nd._c.style.fill = nd.color; } });
+}
 function renderGraphSettings(){
   const g = S.graph || {};
   const b = g.tagBase != null ? g.tagBase : 7, r = g.tagRange != null ? g.tagRange : 14;
@@ -6544,6 +6583,8 @@ function renderGraphSettings(){
   set('gs-range', r); txt('gs-range-val', r);
   const fp = Math.round(((g.fontScale != null ? g.fontScale : 1)) * 100);
   set('gs-font', fp); txt('gs-font-val', fp + '%');
+  const sa = (g.sat != null ? g.sat : 45);
+  set('gs-sat', sa); txt('gs-sat-val', sa + '%');
 }
 function gBuildSVG(){
   const g = document.getElementById('g-zoom'); g.innerHTML = '';
@@ -6725,6 +6766,7 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
   gsBind('gs-base', 'tagBase', 'gs-base-val');
   gsBind('gs-range', 'tagRange', 'gs-range-val');
   if ($('gs-font')) $('gs-font').oninput = () => { if (!S.graph) S.graph = {}; S.graph.fontScale = (parseInt($('gs-font').value) || 100) / 100; const v = $('gs-font-val'); if (v) v.textContent = $('gs-font').value + '%'; gApplyFont(); persist(); };
+  if ($('gs-sat')) $('gs-sat').oninput = () => { if (!S.graph) S.graph = {}; S.graph.sat = parseInt($('gs-sat').value) || 0; const v = $('gs-sat-val'); if (v) v.textContent = $('gs-sat').value + '%'; gApplyColors(); persist(); };
   const pop = $('g-thumb-pop');
   pop.addEventListener('mouseenter', () => clearTimeout(gHideTimer));
   pop.addEventListener('mouseleave', gHideThumbSoon);
