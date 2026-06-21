@@ -6281,8 +6281,8 @@ function fbCreate(type){
   const { cx, cy } = fbCenterWorld(); const id = fbNewId(); let el;
   if (type === 'text') el = { id, type, x: cx - 80, y: cy - 22, w: 160, h: 44, html: 'テキスト', fontSize: 16, color: '#2D3B45' };
   else if (type === 'note') el = { id, type, x: cx - 80, y: cy - 60, w: 160, h: 120, html: 'メモ', fill: '#FFF9C4', fontSize: 16, color: '#3a3220' };
-  else if (type === 'rect') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: 'rgba(76,124,157,0.12)', stroke: fbColor };
-  else if (type === 'ellipse') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: 'rgba(76,124,157,0.12)', stroke: fbColor };
+  else if (type === 'rect') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: fbFaint(fbColor), stroke: fbColor };
+  else if (type === 'ellipse') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: fbFaint(fbColor), stroke: fbColor };
   else if (type === 'line') el = { id, type, x: cx - 80, y: cy, x2: cx + 80, y2: cy, stroke: fbColor };
   else if (type === 'arrow') el = { id, type, x: cx - 80, y: cy, x2: cx + 80, y2: cy, stroke: fbColor };
   fbEls.push(el); fbRender(); fbSelect(id);
@@ -6294,12 +6294,16 @@ function fbLighten(hex, amt){   // 色を白方向へ amt(0〜1) 混ぜて薄く
   r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt);
   return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
+function fbFaint(hex){   // 枠線色の薄い塗り（同系色）。rgba を返す。
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex || ''); if (!m) return 'rgba(76,124,157,0.12)';
+  const n = parseInt(m[1], 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',0.14)';
+}
 function fbColorApply(c, noteFill){   // c=線/文字/枠用の色, noteFill=付箋の背景色
   const el = fbEls.find(e => e.id === fbSel); if (!el) return;
   const node = document.querySelector('#fb-world [data-id="' + el.id + '"]');
   if (el.type === 'text'){ el.color = c; const t = node && node.querySelector('.fb-text'); if (t) t.style.color = c; }
   else if (el.type === 'note'){ el.fill = noteFill; if (node) node.style.background = noteFill; }
-  else if (el.type === 'rect' || el.type === 'ellipse'){ el.stroke = c; if (node) node.style.borderColor = c; }
+  else if (el.type === 'rect' || el.type === 'ellipse'){ el.stroke = c; el.fill = fbFaint(c); if (node){ node.style.borderColor = c; node.style.background = el.fill; } }
   else { el.stroke = c; if (node) fbDrawLine(node, el); }
 }
 function fbBuildColors(){
@@ -6517,7 +6521,7 @@ function gBuild(){
     gNodes.push(center);
     memos.forEach(m => {
       if (!sel.every(t => (m.tags || []).includes(t))) return;
-      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(m.tags || []), colorTags: (m.tags || []), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(sel), colorTags: sel, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
       gNodes.push(n); gEdges.push({ a: n, b: center }); center.deg++;
     });
     gMaxDeg = Math.max(1, center.deg);
@@ -6529,7 +6533,7 @@ function gBuild(){
     memos.forEach(m => {
       const mt = (m.tags || []).filter(t => gVisibleTags.has(t)); if (!mt.length) return;
       if (gAndFilter && mt.length < gVisibleTags.size) return;   // 絞り込み: 選択タグを全て持つメモのみ
-      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(m.tags || []), colorTags: (m.tags || []), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(mt), colorTags: mt, x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
       gNodes.push(n); mt.forEach(t => { gEdges.push({ a: n, b: tagMap[t] }); tagMap[t].deg++; });
     });
   } else {
