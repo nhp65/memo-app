@@ -6207,7 +6207,8 @@ function renderBoardBubble(m, q, showRoom, container){
   [ { i: m.pinned ? '📌' : '📍', t: m.pinned ? 'ピン解除' : 'ピン留め', f: () => togglePin(m.id) },
     { i: '🖋', t: 'ボードを開く', f: () => openBoard(m.id) },
     { i: '📋', t: '複製', f: () => duplicateMemo(m.id) },
-    { i: '🎨', t: '背景色', f: (e) => showColorPicker(m.id, e), action: 'color' } ].forEach(({ i, t, f, action }) => { const b = document.createElement('button'); b.className = 'abtn'; b.title = t; b.textContent = i; if (action) b.dataset.action = action; b.onclick = f; acts.appendChild(b); });
+    { i: '🎨', t: '背景色', f: (e) => showColorPicker(m.id, e), action: 'color' },
+    { i: '🗑', t: '削除', f: () => delMemo(m.id) } ].forEach(({ i, t, f, action }) => { const b = document.createElement('button'); b.className = 'abtn'; b.title = t; b.textContent = i; if (action) b.dataset.action = action; b.onclick = f; acts.appendChild(b); });
   const bubble = document.createElement('div'); bubble.className = 'bubble fb-bubble';
   if (m.bgColor) bubble.style.background = m.bgColor;
   if (showRoom){ const room = S.rooms.find(r => r.id === m.roomId); if (room){ const badge = document.createElement('div'); badge.className = 'room-badge'; badge.textContent = (room.icon || '') + ' ' + room.name; badge.onclick = () => switchRoom(room.id); badge.style.cursor = 'pointer'; bubble.appendChild(badge); } }
