@@ -735,7 +735,7 @@ body.input-collapsed .input-area { border-top: 1px solid #e8ddc8; }
 .odesc { font-size: 0.78rem; color: #aaa; }
 
 /* Lightbox */
-.lb { display: none; position: fixed; inset: 0; background: rgba(40,30,30,0.9); align-items: center; justify-content: center; z-index: 700; cursor: zoom-out; }
+.lb { display: none; position: fixed; inset: 0; background: rgba(40,30,30,0.9); align-items: center; justify-content: center; z-index: 800; cursor: zoom-out; }
 .lb.open { display: flex; animation: lbFadeIn 0.15s ease; }
 .lb img { max-width: 94vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 4px 32px rgba(0,0,0,0.5); animation: lbImgIn 0.15s ease; }
 @keyframes lbFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -4226,7 +4226,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   // capture で先に処理し、内側の画像ライトボックス等の割り込み（ちらつき）を防ぐ。
   if (isMobile()) {
     wrap.addEventListener('click', e => {
-      if (e.target.closest('.abtn, a, button, input, summary, .tg-head, .b-tag, .copy-btn, .read-more-btn')) return;
+      if (e.target.closest('.abtn, a, button, input, img, summary, .tg-head, .b-tag, .copy-btn, .read-more-btn')) return;
       e.stopPropagation();
       if (wrap.classList.contains('tapped')) {
         openQuickLook(m.id);                 // 2回目 → 拡大表示
@@ -6658,7 +6658,7 @@ function gThumb(m){
   acts.appendChild(zb); acts.appendChild(jb); acts.appendChild(eb); card.appendChild(acts);
   const title = document.createElement('div'); title.className = 'g-thumb-title'; title.textContent = gLabel(m); card.appendChild(title);
   if (m.board){ card.appendChild(fbThumb(m)); }
-  else { const bc = document.createElement('div'); bc.className = 'bc g-thumb-bc'; bc.innerHTML = m.html || '（空）'; hydrateImages(bc); card.appendChild(bc); }
+  else { const bc = document.createElement('div'); bc.className = 'bc g-thumb-bc'; bc.innerHTML = m.html || '（空）'; hydrateImages(bc); bc.querySelectorAll('img').forEach(img => { img.onclick = async (e) => { e.stopPropagation(); const id = img.getAttribute('data-cimg'); lbImg.src = id ? (await getImageData(id)) || img.src : img.src; lb.classList.add('open'); }; }); card.appendChild(bc); }
   const meta = document.createElement('div'); meta.className = 'g-thumb-meta'; meta.textContent = (m.tags || []).map(t => '#' + t).join(' ') + ' ・ ' + fmtTime(m.updatedAt || m.createdAt); card.appendChild(meta);
   return card;
 }
