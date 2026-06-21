@@ -928,14 +928,17 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
   #sidebar.collapsed { width: 78%; transform: translateX(-100%); }
   #sidebar.sp-open { transform: translateX(0); }
 
-  /* Header: compact */
-  header { padding: 8px 10px; gap: 6px; }
+  /* Header: compact + 折り返して全ボタンを表示（右端切れ防止） */
+  header { padding: 8px 10px; gap: 6px; flex-wrap: wrap; }
+  #room-title { flex: 1 1 auto; min-width: 80px; font-size: 0.93rem; }
   .hbtn { padding: 5px 8px; font-size: 0.74rem; }
-  #room-title { font-size: 0.93rem; }
 
-  /* Search bar */
+  /* Search bar: 日付フィルタは折り返して2行目へ（右端切れ防止） */
   .search-bar { padding: 6px 10px; }
-  #search { padding: 6px 12px; font-size: 0.88rem; }
+  .search-top-row { flex-wrap: wrap; }
+  .date-filter-wrap { flex: 1 1 100%; justify-content: flex-start; }
+  #bulk-action-bar { flex-wrap: wrap; }
+  #search { flex: 1 1 100%; padding: 6px 12px; font-size: 0.88rem; }
   #date-from, #date-to { width: 90px; font-size: 0.72rem; padding: 4px 4px; }
   .date-sep { font-size: 0.72rem; }
 
@@ -1297,7 +1300,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
           <button class="rm-h-btn" data-cols="2">2列</button>
           <button class="rm-h-btn" data-cols="3">3列</button>
         </div>
-        <div style="font-size:.72rem;color:#aaa;margin-top:4px">スマホでは常に1列で表示されます</div>
+        <div id="note-cols-hint" style="font-size:.72rem;color:#aaa;margin-top:4px">PC・スマホそれぞれで列数を設定できます</div>
       </div>
       <hr style="border:none;border-top:1px solid #e8f0f5">
       <div class="cfg-label">📷 画像品質</div>
@@ -1418,7 +1421,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
   <div id="g-head">
     <span class="g-title">🕸 タグ・グラフ<span id="g-room"></span></span>
     <span id="g-hint">ホバー/タップでプレビュー・クリックで開く／ドラッグで移動（離すと固定）</span>
-    <label id="g-spread-wrap" style="display:flex;align-items:center;gap:5px;color:#dcebf2;font-size:.78rem;white-space:nowrap">距離<input type="range" id="g-spread" min="0.5" max="3" step="0.1" value="1" style="width:84px;accent-color:#fff"></label>
+    <label id="g-spread-wrap" style="display:flex;align-items:center;gap:5px;color:#dcebf2;font-size:.78rem;white-space:nowrap">距離<input type="range" id="g-spread" min="0.5" max="8" step="0.1" value="1" style="width:84px;accent-color:#fff"></label>
     <button id="g-reset" title="配置をリセット（固定解除）">↻ 整列</button>
     <button id="g-filter-btn">🏷 フィルター</button>
     <button id="g-close">✕ 閉じる</button>
@@ -1935,6 +1938,7 @@ window.applyCloudData = async function(b64) {
         if (!S.theme)          S.theme          = 'light';
         if (!S.layoutMode)     S.layoutMode     = 'note';
         if (!S.noteColumns)    S.noteColumns    = 3;
+        if (!S.noteColumnsMobile) S.noteColumnsMobile = 2;
         if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
         S.imagesExternalized = false;
         await externalizeAllMemos();   // 同期で受けたデータの画像を分離
@@ -2628,18 +2632,26 @@ document.querySelectorAll('.fmt-bar').forEach(bar => {
       if (cmd === 'tc-pick') { showMiniPal('tc-picker', e, getTarget()); return; }
       applyFmt(cmd, getTarget(), e); return;
     }
-    const sel = e.target.closest('.fsel');
-    if (sel && sel.value) {
-      const size = sel.value;
-      const tEl = getTarget();
-      tEl.focus();
-      applyInlineFormat(tEl, 'fontSize', size, 'span', false);
-      sel.value = '';
-    }
   });
 
-  bar.addEventListener('mousedown', e => {
-    if (e.target.closest('.fsel')) e.stopPropagation();
+  // 文字サイズ選択（.fsel）: スマホのネイティブ選択は click ではなく change を発火し、
+  // さらに開いた時点でエディタの選択範囲が失われる。触れた瞬間に範囲を保存し、
+  // change で復元してから適用する（従来の click 依存だとスマホで効かなかった）。
+  bar.addEventListener('pointerdown', e => {
+    if (!e.target.closest('.fsel')) return;
+    const s = window.getSelection();
+    if (s && s.rangeCount && !s.getRangeAt(0).collapsed && getTarget().contains(s.getRangeAt(0).commonAncestorContainer))
+      savedRange = s.getRangeAt(0).cloneRange();
+  }, true);
+  bar.addEventListener('mousedown', e => { if (e.target.closest('.fsel')) e.stopPropagation(); });
+  bar.addEventListener('change', e => {
+    const selEl = e.target.closest('.fsel');
+    if (selEl && selEl.value) {
+      const tEl = getTarget();
+      restoreRange(tEl);                                   // 失われた選択範囲を復元
+      applyInlineFormat(tEl, 'fontSize', selEl.value, 'span', false);
+      selEl.value = '';
+    }
   });
 });
 
@@ -3471,7 +3483,7 @@ function renderMemos() {
   if (!list.length) { msgs.innerHTML = '<div class="nores">メモが見つかりません</div>'; return; }
   if (noteMode) {
     // Keep風ボード: JSで各カードを列に振り分け（折り畳み開閉で他列がずれないように）
-    const cols = isMobile() ? 2 : (S.noteColumns || 3);
+    const cols = isMobile() ? (S.noteColumnsMobile || 2) : (S.noteColumns || 3);
     const addSection = (arr, labelText) => {
       if (!arr.length) return;
       if (labelText) { const lbl = document.createElement('div'); lbl.className = 'note-section-label'; lbl.textContent = labelText; msgs.appendChild(lbl); }
@@ -5298,10 +5310,13 @@ function renderLayoutSettings() {
   const mode = S.layoutMode || 'chat';
   document.querySelectorAll('#layout-mode-row .rm-h-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.layout === mode));
+  const curCols = isMobile() ? (S.noteColumnsMobile || 2) : (S.noteColumns || 3);
   document.querySelectorAll('#note-cols-row .rm-h-btn').forEach(b =>
-    b.classList.toggle('active', Number(b.dataset.cols) === (S.noteColumns || 2)));
+    b.classList.toggle('active', Number(b.dataset.cols) === curCols));
   const sec = document.getElementById('note-cols-section');
   if (sec) sec.style.display = (mode === 'note') ? '' : 'none';
+  const hint = document.getElementById('note-cols-hint');
+  if (hint) hint.textContent = isMobile() ? 'いまスマホ表示中：ここでスマホの列数を設定します' : 'いまPC表示中：ここでPCの列数を設定します（スマホは別に設定）';
 }
 document.querySelectorAll('#layout-mode-row .rm-h-btn').forEach(b => {
   b.onclick = () => {
@@ -5311,7 +5326,9 @@ document.querySelectorAll('#layout-mode-row .rm-h-btn').forEach(b => {
 });
 document.querySelectorAll('#note-cols-row .rm-h-btn').forEach(b => {
   b.onclick = () => {
-    S.noteColumns = Number(b.dataset.cols); persist();
+    const n = Number(b.dataset.cols);
+    if (isMobile()) S.noteColumnsMobile = n; else S.noteColumns = n;   // 表示中の端末の列数を設定
+    persist();
     applyLayout(); renderLayoutSettings(); renderMemos();
   };
 });
@@ -5729,6 +5746,7 @@ async function initApp() {
   if (!S.theme)            S.theme            = 'light';
   if (!S.layoutMode)       S.layoutMode       = 'note';
   if (!S.noteColumns)      S.noteColumns      = 3;
+  if (!S.noteColumnsMobile) S.noteColumnsMobile = 2;
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
 
