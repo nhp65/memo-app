@@ -588,6 +588,7 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 #tag-input:focus { border-color: var(--c1); }
 .exist-tags { flex: 1; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; align-items: center; padding-bottom: 4px; }
 .exist-tags::-webkit-scrollbar { display: none; height: 4px; }
+.et-list { display: flex; flex-wrap: wrap; gap: 5px; max-height: 108px; overflow-y: auto; margin-top: 2px; }
 .exist-tags:hover { scrollbar-width: thin; scrollbar-color: rgba(76,124,157,0.5) transparent; }
 .exist-tags:hover::-webkit-scrollbar { display: block; }
 .exist-tags:hover::-webkit-scrollbar-thumb { background: rgba(76,124,157,0.5); border-radius: 2px; }
@@ -1096,6 +1097,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
       </div>
       <span class="char-count" id="edit-char-count">0</span>
     </div>
+    <div id="edit-exist-tags" class="et-list"></div>
     <div class="title-line-row">
       <input type="checkbox" id="edit-title-line-chk">
       <label for="edit-title-line-chk">1行目をタイトル表示</label>
@@ -3142,6 +3144,27 @@ function renderExistingTags() {
   });
 }
 document.getElementById('tag-input').addEventListener('input', renderExistingTags);
+function renderEditExistingTags() {
+  const container = document.getElementById('edit-exist-tags');
+  if (!container) return;
+  container.innerHTML = '';
+  const inp = document.getElementById('edit-tag-input');
+  const current = new Set(parseTags(inp.value));
+  const hiddenSet2 = new Set(S.hiddenTags || []);
+  allTags().filter(t => !current.has(t) && !hiddenSet2.has(t)).forEach(tag => {
+    const c = document.createElement('button');
+    c.className = 'et-chip'; c.textContent = tag;
+    c.onclick = () => {
+      const existing = parseTags(inp.value);
+      if (!existing.includes(tag)) {
+        inp.value = existing.length ? existing.join(', ') + ', ' + tag : tag;
+        renderEditExistingTags();
+      }
+    };
+    container.appendChild(c);
+  });
+}
+document.getElementById('edit-tag-input').addEventListener('input', renderEditExistingTags);
 
 // ── 入力エリア折りたたみ ──────────────────────────────────────────
 const inputWrapper    = document.querySelector('.input-wrapper');
@@ -4170,6 +4193,7 @@ async function openEdit(id) {
   editEd.innerHTML = await internalizeHtml(m.html);   // 編集中は画像実体を表示
   editEd.querySelectorAll('.cl input[type="checkbox"]').forEach(cb => { cb.contentEditable = 'false'; if (cb.hasAttribute('checked')) cb.checked = true; });
   document.getElementById('edit-tag-input').value = (m.tags||[]).join(', ');
+  renderEditExistingTags();
   document.getElementById('edit-title-line-chk').checked = m.titleLine !== false;
   openOv('edit-ov');
   setTimeout(() => { editEd.focus(); syncEditCharCount(); }, 50);
@@ -5928,7 +5952,7 @@ function setupDragScroll(el) {
 // ── フリーボード（無限キャンバス） ───────────────────────────────────
 const FB_SVGNS = 'http://www.w3.org/2000/svg';
 const FB_PALETTE = ['#4C7C9D','#E0746A','#E0A85B','#5BA86B','#9B7BD0','#444b52','#ffffff','#1f2a33'];
-let fbMemoId = null, fbEls = [], fbView = { x: 60, y: 60, scale: 1 }, fbSel = null, fbColor = '#4C7C9D', fbIsNew = false;
+let fbMemoId = null, fbEls = [], fbView = { x: 60, y: 60, scale: 1 }, fbSel = null, fbColor = '#4C7C9D', fbIsNew = false, fbPinch = false;
 let fbMatch = [], fbMatchIdx = -1;
 function fbNewId(){ return 'e' + Date.now().toString(36) + Math.floor(Math.abs(Math.sin(fbEls.length + Date.now())) * 1e6).toString(36); }
 function boardText(m){ if (!m.board || !m.board.els) return ''; return (m.board.title || '') + ' ' + m.board.els.map(e => e.html ? stripHtml(e.html) : '').join(' '); }
@@ -6045,6 +6069,7 @@ function fbAttachDrag(node, el){
     fbSelect(el.id);
     const sx = e.clientX, sy = e.clientY, ox = el.x, oy = el.y, ox2 = el.x2, oy2 = el.y2;
     const mv = ev => {
+      if (fbPinch) return;   // 2本指ピンチ中はオブジェクト移動を止める
       const dx = (ev.clientX - sx) / fbView.scale, dy = (ev.clientY - sy) / fbView.scale;
       el.x = ox + dx; el.y = oy + dy;
       if (el.type === 'line' || el.type === 'arrow'){ el.x2 = ox2 + dx; el.y2 = oy2 + dy; }
@@ -6090,7 +6115,7 @@ function fbResizeDrag(h, el, node){
   h.addEventListener('pointerdown', e => {
     e.stopPropagation();
     const sx = e.clientX, sy = e.clientY, ow = el.w, oh = el.h;
-    const mv = ev => { el.w = Math.max(20, ow + (ev.clientX - sx) / fbView.scale); el.h = Math.max(20, oh + (ev.clientY - sy) / fbView.scale); fbPositionNode(node, el); };
+    const mv = ev => { if (fbPinch) return; el.w = Math.max(20, ow + (ev.clientX - sx) / fbView.scale); el.h = Math.max(20, oh + (ev.clientY - sy) / fbView.scale); fbPositionNode(node, el); };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
@@ -6099,6 +6124,7 @@ function fbEndpointDrag(h, el, which, node){
   h.addEventListener('pointerdown', e => {
     e.stopPropagation();
     const mv = ev => {
+      if (fbPinch) return;
       const rect = document.getElementById('fb-canvas').getBoundingClientRect();
       const wx = (ev.clientX - rect.left - fbView.x) / fbView.scale, wy = (ev.clientY - rect.top - fbView.y) / fbView.scale;
       if (which === 'p1'){ el.x = wx; el.y = wy; } else { el.x2 = wx; el.y2 = wy; }
@@ -6207,34 +6233,36 @@ function fbInitCanvas(){
     }
     return null;
   };
+  // capture で全ポインタを捕捉（オブジェクト上で始めた指も数える）→ 2本指ならピンチ優先
   canvas.addEventListener('pointerdown', e => {
-    if (e.target !== canvas && e.target.id !== 'fb-world') return;
-    if (fbPtrs.size === 0) fbSelect(null);
-    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
     fbPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    fbGesture = fbSnap();
-  });
+    if (fbPtrs.size >= 2) { fbPinch = true; fbGesture = fbSnap(); }                       // 2本指: ピンチ（オブジェクト上でも優先）
+    else if (e.target === canvas || e.target.id === 'fb-world') { fbSelect(null); fbGesture = fbSnap(); }   // 空キャンバス1本指: パン
+    else { fbGesture = null; }                                                            // オブジェクト1本指: ドラッグはオブジェクト側に任せる
+  }, true);
   canvas.addEventListener('pointermove', e => {
     if (!fbPtrs.has(e.pointerId)) return;
     fbPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (!fbGesture) return;
-    e.preventDefault();
-    const pts = [...fbPtrs.values()];
-    if (fbGesture.mode === 'pan' && pts.length === 1) {
-      fbView.x = fbGesture.vx + (pts[0].x - fbGesture.sx);
-      fbView.y = fbGesture.vy + (pts[0].y - fbGesture.sy);
-      fbApplyView();
-    } else if (fbGesture.mode === 'pinch' && pts.length >= 2) {
-      const r = canvas.getBoundingClientRect(), a = pts[0], b = pts[1];
+    if (fbPinch && fbPtrs.size >= 2) {
+      e.preventDefault();
+      const pts = [...fbPtrs.values()], r = canvas.getBoundingClientRect(), a = pts[0], b = pts[1];
       const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1;
       const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
       const ns = Math.min(4, Math.max(0.2, fbGesture.scale * (dist / fbGesture.dist)));
       fbView.scale = ns; fbView.x = mx - fbGesture.wx * ns; fbView.y = my - fbGesture.wy * ns; fbApplyView();
+      return;
     }
-  });
-  const fbPtrEnd = e => { fbPtrs.delete(e.pointerId); fbGesture = fbPtrs.size ? fbSnap() : null; };
-  canvas.addEventListener('pointerup', fbPtrEnd);
-  canvas.addEventListener('pointercancel', fbPtrEnd);
+    if (fbGesture && fbGesture.mode === 'pan' && fbPtrs.size === 1) {
+      e.preventDefault();
+      const p = [...fbPtrs.values()][0];
+      fbView.x = fbGesture.vx + (p.x - fbGesture.sx);
+      fbView.y = fbGesture.vy + (p.y - fbGesture.sy);
+      fbApplyView();
+    }
+  }, true);
+  const fbPtrEnd = e => { fbPtrs.delete(e.pointerId); if (fbPtrs.size < 2) fbPinch = false; if (fbPtrs.size === 0) fbGesture = null; };
+  canvas.addEventListener('pointerup', fbPtrEnd, true);
+  canvas.addEventListener('pointercancel', fbPtrEnd, true);
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect(), factor = e.deltaY < 0 ? 1.1 : 1 / 1.1, ns = Math.min(4, Math.max(0.2, fbView.scale * factor));
