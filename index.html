@@ -1491,6 +1491,7 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
     <div class="g-filter-hd">⚙ ノードの大きさ</div>
     <div class="gs-row"><label>タグ●のベースの大きさ <span class="gs-val" id="gs-base-val"></span></label><input type="range" id="gs-base" min="2" max="24" step="1"></div>
     <div class="gs-row"><label>ノート数による差（最大タグの追加分） <span class="gs-val" id="gs-range-val"></span></label><input type="range" id="gs-range" min="0" max="40" step="1"></div>
+    <div class="gs-row"><label>文字サイズ <span class="gs-val" id="gs-font-val"></span></label><input type="range" id="gs-font" min="60" max="200" step="5"></div>
     <div style="font-size:.72rem;color:#aaa;line-height:1.5">●＝ベース＋（そのタグの数÷最も多いタグの数）×差。ノート数が最多のタグが最大になります。</div>
   </div>
   <svg id="g-svg"><g id="g-zoom"></g></svg>
@@ -5953,7 +5954,7 @@ async function initApp() {
   if (!S.displayMode)      S.displayMode      = 'auto';
   if (!S.mobileScale)      S.mobileScale      = 100;
   if (S.alwaysShowInput === undefined) S.alwaysShowInput = false;
-  if (!S.graph)            S.graph            = { tagBase: 7, tagRange: 14 };
+  if (!S.graph)            S.graph            = { tagBase: 7, tagRange: 14, fontScale: 1 };
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
 
@@ -6530,6 +6531,10 @@ function gApplySizes(){
   gNodes.forEach(nd => { if (nd.type === 'tag' && nd._c) nd._c.setAttribute('r', gTagR(nd)); });
   gDraw();
 }
+function gApplyFont(){
+  const sc = (S.graph && S.graph.fontScale) || 1;
+  gNodes.forEach(nd => { if (nd._t) nd._t.style.fontSize = (nd.type === 'tag' ? 13 : 11) * sc + 'px'; });
+}
 function renderGraphSettings(){
   const g = S.graph || {};
   const b = g.tagBase != null ? g.tagBase : 7, r = g.tagRange != null ? g.tagRange : 14;
@@ -6537,6 +6542,8 @@ function renderGraphSettings(){
   const txt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   set('gs-base', b); txt('gs-base-val', b);
   set('gs-range', r); txt('gs-range-val', r);
+  const fp = Math.round(((g.fontScale != null ? g.fontScale : 1)) * 100);
+  set('gs-font', fp); txt('gs-font-val', fp + '%');
 }
 function gBuildSVG(){
   const g = document.getElementById('g-zoom'); g.innerHTML = '';
@@ -6548,6 +6555,7 @@ function gBuildSVG(){
     if (nd.color) c.style.fill = nd.color;   // タグ＝固有色 / メモ＝タグ色の混色
     g.appendChild(c); nd._c = c;
     const t = document.createElementNS(G_NS, 'text'); t.setAttribute('class', nd.type === 'tag' ? 'g-tag-t' : 'g-memo-t');
+    t.style.fontSize = (nd.type === 'tag' ? 13 : 11) * ((S.graph && S.graph.fontScale) || 1) + 'px';
     t.textContent = nd.type === 'tag' ? ('#' + nd.label) : (nd.label.length > 16 ? nd.label.slice(0, 16) + '…' : nd.label);
     g.appendChild(t); nd._t = t;
     gAttachNode(nd);
@@ -6716,6 +6724,7 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
   const gsBind = (id, key, valId) => { const el = $(id); if (!el) return; el.oninput = () => { if (!S.graph) S.graph = {}; S.graph[key] = parseFloat(el.value); const v = $(valId); if (v) v.textContent = el.value; gApplySizes(); persist(); }; };
   gsBind('gs-base', 'tagBase', 'gs-base-val');
   gsBind('gs-range', 'tagRange', 'gs-range-val');
+  if ($('gs-font')) $('gs-font').oninput = () => { if (!S.graph) S.graph = {}; S.graph.fontScale = (parseInt($('gs-font').value) || 100) / 100; const v = $('gs-font-val'); if (v) v.textContent = $('gs-font').value + '%'; gApplyFont(); persist(); };
   const pop = $('g-thumb-pop');
   pop.addEventListener('mouseenter', () => clearTimeout(gHideTimer));
   pop.addEventListener('mouseleave', gHideThumbSoon);
