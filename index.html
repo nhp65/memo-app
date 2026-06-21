@@ -6464,7 +6464,7 @@ function gAllRoomTags(){ const s = new Set(); S.memos.filter(m => m.roomId === r
 // タグごとの色（文字列ハッシュ→色相）。メモはタグ色の平均で表現。
 function gHashHue(s){ let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h % 360; }
 function gHslRgb(h, s, l){ s /= 100; l /= 100; const a = s * Math.min(l, 1 - l); const f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)]; }
-function gTagRgb(tag){ return gHslRgb(gHashHue(tag), 62, 55); }
+function gTagRgb(tag){ return gHslRgb(gHashHue(tag), 38, 66); }
 function gRgbHex(r, g, b){ return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); }
 function gTagHex(tag){ const c = gTagRgb(tag); return gRgbHex(c[0], c[1], c[2]); }
 function gBlendHex(tags){ if (!tags || !tags.length) return '#9bb0bc'; let R = 0, G = 0, B = 0; tags.forEach(t => { const c = gTagRgb(t); R += c[0]; G += c[1]; B += c[2]; }); const n = tags.length; return gRgbHex(Math.round(R / n), Math.round(G / n), Math.round(B / n)); }
@@ -6480,7 +6480,7 @@ function gBuild(){
     gNodes.push(center);
     memos.forEach(m => {
       if (!sel.every(t => (m.tags || []).includes(t))) return;
-      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex((m.tags || []).filter(t => gVisibleTags.has(t))), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(m.tags || []), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
       gNodes.push(n); gEdges.push({ a: n, b: center }); center.deg++;
     });
     gMaxDeg = Math.max(1, center.deg);
@@ -6492,7 +6492,7 @@ function gBuild(){
     memos.forEach(m => {
       const mt = (m.tags || []).filter(t => gVisibleTags.has(t)); if (!mt.length) return;
       if (gAndFilter && mt.length < gVisibleTags.size) return;   // 絞り込み: 選択タグを全て持つメモのみ
-      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(mt), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
+      const n = { id: 'm:' + m.id, type: 'memo', label: gLabel(m), memoId: m.id, color: gBlendHex(m.tags || []), x: 0, y: 0, vx: 0, vy: 0, ph: Math.random() * 6.283 };
       gNodes.push(n); mt.forEach(t => { gEdges.push({ a: n, b: tagMap[t] }); tagMap[t].deg++; });
     });
   } else {
