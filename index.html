@@ -154,6 +154,9 @@ header {
   background: rgba(255,255,255,0.92); color: var(--c3);
 }
 .date-filter-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+/* 検索の絞り込みトグル（スマホのみ表示） */
+.search-more-btn { display: none; flex: 0 0 auto; width: 30px; height: 30px; align-items: center; justify-content: center; background: rgba(255,255,255,0.92); color: var(--c3); border: none; border-radius: 50%; cursor: pointer; font-size: 0.7rem; line-height: 1; }
+.search-more-btn.open { background: var(--c1); color: #fff; }
 #date-from, #date-to {
   border: none; border-radius: 8px; padding: 5px 6px;
   font-size: 0.8rem; outline: none; cursor: pointer;
@@ -988,8 +991,13 @@ body.force-mobile #sidebar.sp-open { transform: translateX(0); }
 body.force-mobile header { flex-wrap: wrap; }
 body.force-mobile #room-title { flex: 1 1 auto; min-width: 80px; }
 body.force-mobile .search-top-row { flex-wrap: wrap; }
-body.force-mobile .date-filter-wrap { flex: 1 1 100%; justify-content: flex-start; }
-body.force-mobile #search { flex: 1 1 100%; }
+body.force-mobile .search-more-btn { display: inline-flex; }
+body.force-mobile #search { flex: 1 1 auto; }
+/* スマホ: 期間検索・正規表現は ▼ を開いた時だけ表示 */
+body.force-mobile .date-filter-wrap,
+body.force-mobile #search-regex-lbl { display: none; }
+body.force-mobile .search-bar.adv-open .date-filter-wrap { display: flex; flex: 1 1 100%; justify-content: flex-start; }
+body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 1 1 100%; }
 
 @media (max-width: 640px) {
   /* Sidebar: overlay drawer */
@@ -1008,9 +1016,13 @@ body.force-mobile #search { flex: 1 1 100%; }
   /* Search bar: 日付フィルタは折り返して2行目へ（右端切れ防止） */
   .search-bar { padding: 6px 10px; }
   .search-top-row { flex-wrap: wrap; }
-  .date-filter-wrap { flex: 1 1 100%; justify-content: flex-start; }
+  .search-more-btn { display: inline-flex; }
+  /* スマホ: 期間検索・正規表現は ▼ を開いた時だけ表示 */
+  .date-filter-wrap, #search-regex-lbl { display: none; }
+  .search-bar.adv-open .date-filter-wrap { display: flex; flex: 1 1 100%; justify-content: flex-start; }
+  .search-bar.adv-open #search-regex-lbl { display: flex; flex: 1 1 100%; }
   #bulk-action-bar { flex-wrap: wrap; }
-  #search { flex: 1 1 100%; padding: 6px 12px; font-size: 0.88rem; }
+  #search { flex: 1 1 auto; padding: 6px 12px; font-size: 0.88rem; }
   #date-from, #date-to { width: 90px; font-size: 0.72rem; padding: 4px 4px; }
   .date-sep { font-size: 0.72rem; }
 
@@ -1089,6 +1101,7 @@ body.force-mobile #search { flex: 1 1 100%; }
   <div class="search-bar">
     <div class="search-top-row">
       <input id="search" type="text" placeholder="検索（テキスト または #タグ）">
+      <button id="search-more" class="search-more-btn" title="絞り込み（期間・正規表現）">▼</button>
       <div class="date-filter-wrap">
         <input type="date" id="date-from" title="開始日">
         <span class="date-sep">〜</span>
@@ -5069,6 +5082,17 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') lb.classList
   const cb = document.getElementById('search-regex');
   if (!cb) return;
   cb.onchange = () => { S.searchRegex = cb.checked; persist(); const f = document.getElementById('fb-search-regex'); if (f) f.checked = cb.checked; renderMemos(); };
+})();
+// 検索の絞り込み（期間・正規表現）開閉トグル（スマホ）
+(function () {
+  const btn = document.getElementById('search-more');
+  if (!btn) return;
+  btn.onclick = () => {
+    const bar = btn.closest('.search-bar');
+    const open = bar.classList.toggle('adv-open');
+    btn.classList.toggle('open', open);
+    btn.textContent = open ? '▲' : '▼';
+  };
 })();
 function updateDateClear() {
   const active = !!(document.getElementById('date-from').value || document.getElementById('date-to').value);
