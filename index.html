@@ -617,7 +617,7 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 
 .input-bottom { display: flex; align-items: center; gap: 7px; }
 .sort-sel { font-size: 0.78rem; border: 1px solid #cfe0ea; border-radius: 7px; padding: 3px 4px; color: var(--c3); background: #fff; outline: none; max-width: 110px; }
-.input-bottom #char-count { margin-left: auto; }
+.input-bottom #sort-by { margin-left: auto; }
 /* 大きい画面で入力（入力部を一時的に全画面へ移動して流用） */
 #compose-ov { display: none; position: fixed; inset: 0; z-index: 740; background: var(--c4); flex-direction: column; }
 #compose-ov.open { display: flex; }
@@ -3672,7 +3672,7 @@ function memoSortCmp(a, b){
   let r;
   switch (s.by){
     case 'updated':    r = new Date(a.updatedAt || a.createdAt) - new Date(b.updatedAt || b.createdAt); break;
-    case 'title':      r = (memoFirstLine(a) || '').localeCompare(memoFirstLine(b) || '', 'ja'); break;
+    case 'title':      r = (memoFirstLine(a) || '').localeCompare(memoFirstLine(b) || '', 'ja', { numeric: true, sensitivity: 'base' }); break;
     case 'views':      r = (a.views || 0) - (b.views || 0); break;
     case 'lastviewed': r = new Date(a.lastViewedAt || 0) - new Date(b.lastViewedAt || 0); break;   // 古い=長く見ていない
     case 'chars':      r = stripHtml(a.html || '').length - stripHtml(b.html || '').length; break;
