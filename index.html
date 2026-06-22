@@ -441,6 +441,12 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 .rm-h-btn.active { background: var(--c1); color: white; border-color: var(--c1); font-weight: 600; }
 
 .bubble-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+/* 高さ固定モード: タグは折り返さず横スライド（タグ数で段差ができないように） */
+.bubble.fixed-h .bubble-tags { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; padding-bottom: 2px; }
+.bubble.fixed-h .bubble-tags::-webkit-scrollbar { height: 5px; }
+.bubble.fixed-h .bubble-tags::-webkit-scrollbar-thumb { background: #cde4ef; border-radius: 3px; }
+.bubble.fixed-h .bubble-tags::-webkit-scrollbar-track { background: transparent; }
+.bubble.fixed-h .b-tag { flex: 0 0 auto; }
 .b-tag {
   background: rgba(76,124,157,0.14); border-radius: 10px;
   padding: 1px 8px; font-size: 0.73rem; color: var(--c1); cursor: pointer; border: none;
@@ -4253,6 +4259,8 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   const _noteMode = (S.layoutMode === 'note');
   if (rmMode === 'fixed' && _noteMode) {
     // 高さ固定: 一覧で全メモ同じ高さ。はみ出しはメモ内スクロール。
+    // タグは折り返さず横スライドにして、タグ数による段差を防ぐ（fixed-h クラスで制御）。
+    bubble.classList.add('fixed-h');
     const fx = document.createElement('div'); fx.className = 'rm-fixed';
     fx.style.height = (rmCfg.maxHeight || 250) + 'px';
     fx.appendChild(cnt);
