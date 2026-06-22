@@ -6598,8 +6598,20 @@ function renderBoardBubble(m, q, showRoom, container){
   if (showRoom){ const room = S.rooms.find(r => r.id === m.roomId); if (room){ const badge = document.createElement('div'); badge.className = 'room-badge'; badge.textContent = (room.icon || '') + ' ' + room.name; badge.onclick = () => switchRoom(room.id); badge.style.cursor = 'pointer'; bubble.appendChild(badge); } }
   const title = document.createElement('div'); title.className = 'fb-bubble-title'; title.textContent = '🧩 ' + ((m.board && m.board.title) || '無題のボード');
   if (q && memoSearchText(m).toLowerCase().includes(q)) title.classList.add('search-hl');
-  bubble.appendChild(title);
-  const thumb = fbThumb(m); thumb.onclick = () => openBoard(m.id); bubble.appendChild(thumb);
+  const thumb = fbThumb(m); thumb.onclick = () => openBoard(m.id);
+  // 高さ固定モード: 通常メモと同じく本文領域を固定高さにして段差を防ぐ
+  const _rmCfg = S.readMore;
+  const _rmMode = _rmCfg?.mode || (_rmCfg?.enabled ? 'readmore' : 'off');
+  if (_rmMode === 'fixed' && S.layoutMode === 'note') {
+    bubble.classList.add('fixed-h');
+    const fx = document.createElement('div'); fx.className = 'rm-fixed';
+    fx.style.height = (_rmCfg.maxHeight || 250) + 'px';
+    fx.appendChild(title); fx.appendChild(thumb);
+    bubble.appendChild(fx);
+  } else {
+    bubble.appendChild(title);
+    bubble.appendChild(thumb);
+  }
   if (m.tags && m.tags.length){ const tg = document.createElement('div'); tg.className = 'bubble-tags'; m.tags.forEach(tag => { const sp = document.createElement('button'); sp.className = 'b-tag'; sp.textContent = tag; sp.onclick = () => { setOnlyIncludedTag(tag); renderTagBar(); renderMemos(); }; tg.appendChild(sp); }); bubble.appendChild(tg); }
   const meta = document.createElement('div'); meta.className = 'bubble-meta'; const ti = document.createElement('span'); ti.className = 'bubble-time'; ti.textContent = fmtTime(m.updatedAt || m.createdAt); meta.appendChild(ti); bubble.appendChild(meta);
   if (m.pinned){ wrap.appendChild(acts); wrap.appendChild(bubble); } else { wrap.appendChild(bubble); wrap.appendChild(acts); }
