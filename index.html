@@ -445,6 +445,8 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 .bubble.fixed-h .bubble-tags { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; }
 .bubble.fixed-h .bubble-tags::-webkit-scrollbar { display: none; height: 0; }
 .bubble.fixed-h .b-tag { flex: 0 0 auto; }
+/* タグの有無で段差ができないよう、タグ欄の高さを常に確保 */
+.bubble.fixed-h .bubble-tags { min-height: 20px; }
 .b-tag {
   background: rgba(76,124,157,0.14); border-radius: 10px;
   padding: 1px 8px; font-size: 0.73rem; color: var(--c1); cursor: pointer; border: none;
@@ -4289,9 +4291,10 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   applyLiveCounts(cnt, m);
   if (q) highlightQuery(cnt, q);
 
-  if (m.tags?.length) {
+  const _fixedH = (rmMode === 'fixed' && _noteMode);   // 固定モードはタグ無しでも欄を確保
+  if (m.tags?.length || _fixedH) {
     const tg = document.createElement('div'); tg.className = 'bubble-tags';
-    m.tags.forEach(tag => {
+    (m.tags || []).forEach(tag => {
       const s = document.createElement('button'); s.className='b-tag'; s.textContent=tag;
       s.onclick = () => { setOnlyIncludedTag(tag); renderTagBar(); renderMemos(); };
       tg.appendChild(s);
@@ -6612,7 +6615,7 @@ function renderBoardBubble(m, q, showRoom, container){
     bubble.appendChild(title);
     bubble.appendChild(thumb);
   }
-  if (m.tags && m.tags.length){ const tg = document.createElement('div'); tg.className = 'bubble-tags'; m.tags.forEach(tag => { const sp = document.createElement('button'); sp.className = 'b-tag'; sp.textContent = tag; sp.onclick = () => { setOnlyIncludedTag(tag); renderTagBar(); renderMemos(); }; tg.appendChild(sp); }); bubble.appendChild(tg); }
+  if ((m.tags && m.tags.length) || (_rmMode === 'fixed' && S.layoutMode === 'note')){ const tg = document.createElement('div'); tg.className = 'bubble-tags'; (m.tags || []).forEach(tag => { const sp = document.createElement('button'); sp.className = 'b-tag'; sp.textContent = tag; sp.onclick = () => { setOnlyIncludedTag(tag); renderTagBar(); renderMemos(); }; tg.appendChild(sp); }); bubble.appendChild(tg); }
   const meta = document.createElement('div'); meta.className = 'bubble-meta'; const ti = document.createElement('span'); ti.className = 'bubble-time'; ti.textContent = fmtTime(m.updatedAt || m.createdAt); meta.appendChild(ti); bubble.appendChild(meta);
   if (m.pinned){ wrap.appendChild(acts); wrap.appendChild(bubble); } else { wrap.appendChild(bubble); wrap.appendChild(acts); }
   if (isMobile()){ wrap.addEventListener('click', e => { if (e.target.closest('.abtn')) return; if (e.target.closest('.fb-thumb')) return; document.querySelectorAll('.bubble-wrap.tapped').forEach(w => { if (w !== wrap) w.classList.remove('tapped'); }); wrap.classList.toggle('tapped'); }); }
