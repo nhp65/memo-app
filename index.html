@@ -442,10 +442,8 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 
 .bubble-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 /* 高さ固定モード: タグは折り返さず横スライド（タグ数で段差ができないように） */
-.bubble.fixed-h .bubble-tags { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; padding-bottom: 2px; }
-.bubble.fixed-h .bubble-tags::-webkit-scrollbar { height: 5px; }
-.bubble.fixed-h .bubble-tags::-webkit-scrollbar-thumb { background: #cde4ef; border-radius: 3px; }
-.bubble.fixed-h .bubble-tags::-webkit-scrollbar-track { background: transparent; }
+.bubble.fixed-h .bubble-tags { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; }
+.bubble.fixed-h .bubble-tags::-webkit-scrollbar { display: none; height: 0; }
 .bubble.fixed-h .b-tag { flex: 0 0 auto; }
 .b-tag {
   background: rgba(76,124,157,0.14); border-radius: 10px;
@@ -576,6 +574,9 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 }
 #editor:empty::before { content: attr(data-placeholder); color: #bbb; pointer-events: none; }
 #editor pre { background: #2c2c2c; color: #f0e8d8; padding: 9px; border-radius: 7px; font-family: 'Consolas', monospace; font-size: 0.88em; white-space: pre-wrap; }
+/* 編集画面のインラインコード（一覧表示の .bc code と同じ見た目に） */
+#editor code, #edit-ed code { background: var(--code-bg); border: 1px solid var(--code-bdr); color: var(--code-fg); padding: 1.5px 6px; border-radius: 6px; font-family: 'Consolas', 'SFMono-Regular', monospace; font-size: 0.85em; font-weight: 600; }
+#editor pre code, #edit-ed pre code { background: none; border: none; color: inherit; padding: 0; font-weight: normal; }
 #editor blockquote { border-left: 4px solid var(--c5); background: rgba(94,155,181,0.09); padding: 8px 12px 8px 14px; margin: 5px 0; border-radius: 0 6px 6px 0; color: var(--c3); }
 #editor .toggle-block { border: 1px solid #cce5f0; border-radius: 8px; margin: 5px 0; overflow: hidden; }
 #editor .tg-head { padding: 6px 12px; background: #f0f7fa; font-weight: 700; color: var(--c8); font-size: 0.9rem; }
