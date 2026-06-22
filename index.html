@@ -16,6 +16,7 @@
   --th-bubble:  #ffffff;   --th-pin:     #d0e8f0;
   --th-edit:    #ffffff;   --th-toolbar: #f0f7fa;  --th-tbdr:    #d0e8f2;
   --th-text:    #2D3B45;   --th-muted:   #888;     --th-sep:     #d8e8ef;
+  --code-bg: #f4ece2;  --code-bdr: #e2d2bd;  --code-fg: #c0532b;
 }
 body.theme-dark {
   --c1: #4a8aae;  --c3: #15202c;  --c4: #141e28;
@@ -23,6 +24,7 @@ body.theme-dark {
   --th-bubble:  #1c2b3a;   --th-pin:     #18303f;
   --th-edit:    #192634;   --th-toolbar: #192634;  --th-tbdr:    #243548;
   --th-text:    #b8cdd8;   --th-muted:   #607888;  --th-sep:     #243548;
+  --code-bg: #233649;  --code-bdr: #355068;  --code-fg: #e3a878;
 }
 body.theme-sepia {
   --c1: #8a6820;  --c3: #3a2e20;  --c4: #f0e8d4;
@@ -30,6 +32,7 @@ body.theme-sepia {
   --th-bubble:  #faf4e8;   --th-pin:     #ecdcc8;
   --th-edit:    #faf4e8;   --th-toolbar: #f5ede0;  --th-tbdr:    #d4c4a0;
   --th-text:    #4a3820;   --th-muted:   #907560;  --th-sep:     #d0c0a0;
+  --code-bg: #efe4cf;  --code-bdr: #d4c096;  --code-fg: #9a5a1e;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; overflow: hidden; background: var(--c4); color: var(--c3); }
@@ -287,7 +290,7 @@ header {
 .bc s, .bc del, .bc strike { text-decoration: line-through; }
 .bc mark { background: #ffeb3b; padding: 0 2px; border-radius: 2px; }
 .bc a { color: var(--c6); text-decoration: underline; }
-.bc code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 0.86em; }
+.bc code { background: var(--code-bg); border: 1px solid var(--code-bdr); color: var(--code-fg); padding: 1.5px 6px; border-radius: 6px; font-family: 'Consolas', 'SFMono-Regular', monospace; font-size: 0.85em; font-weight: 600; overflow-wrap: break-word; }
 .pre-wrap { position: relative; margin: 5px 0; }
 .pre-wrap pre { margin: 0; }
 .copy-btn {
@@ -300,7 +303,7 @@ header {
 .copy-btn.copied { background: rgba(100,220,120,0.25); color: #7ddc8f; }
 .bc pre { background: #2c2c2c; color: #f0e8d8; padding: 11px 11px 11px 11px; border-radius: 8px; overflow-x: hidden; overflow-wrap: break-word; margin: 5px 0; font-family: 'Consolas', monospace; font-size: 0.86em; white-space: pre-wrap; }
 .bc pre span { white-space: pre-wrap; background: transparent !important; }
-.bc pre code { background: none; color: inherit; padding: 0; }
+.bc pre code { background: none; border: none; color: inherit; padding: 0; font-weight: normal; }
 /* シンタックスハイライト（内蔵・オフライン・依存なし） */
 .bc pre .hl-com  { color: #7d8f93; font-style: italic; }
 .bc pre .hl-str  { color: #b6e3a0; }
@@ -428,6 +431,11 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 }
 .read-more-btn:hover { color: var(--c5); }
 .read-more-btn.visible { display: block; }
+/* 高さ固定モード（メモ一覧）: 全メモ同じ高さ・はみ出しはメモ内スクロール */
+.rm-fixed { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; border-radius: 6px; }
+.rm-fixed::-webkit-scrollbar { width: 7px; }
+.rm-fixed::-webkit-scrollbar-thumb { background: #cde4ef; border-radius: 4px; }
+.rm-fixed::-webkit-scrollbar-track { background: transparent; }
 /* 間隔設定ボタン（続きを読む高さ選択） */
 .rm-h-btn { padding: 4px 12px; border-radius: 6px; border: 1.5px solid #cce5f0; background: white; color: var(--c3); font-size: 0.8rem; cursor: pointer; }
 .rm-h-btn.active { background: var(--c1); color: white; border-color: var(--c1); font-weight: 600; }
@@ -1406,15 +1414,15 @@ body.force-mobile #search { flex: 1 1 100%; }
         <button class="rm-h-btn" data-w="100">全幅</button>
       </div>
       <hr style="border:none;border-top:1px solid #e8f0f5">
-      <div class="cfg-label">📖 続きを読む</div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <label class="tg-sw" title="続きを読む ON/OFF">
-          <input type="checkbox" id="rm-enabled"><span class="tg-sl"></span>
-        </label>
-        <span style="font-size:.82rem;color:#666">長いメモを折りたたんで表示</span>
+      <div class="cfg-label">📖 メモの高さ</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="rm-mode-row">
+        <button class="rm-h-btn" data-mode="off">なし</button>
+        <button class="rm-h-btn" data-mode="readmore">続きを読む</button>
+        <button class="rm-h-btn" data-mode="fixed">高さ固定</button>
       </div>
+      <div style="font-size:.78rem;color:#888;margin:5px 0">続きを読む＝長いメモを折りたたみ「続きを読む」で展開／高さ固定＝メモ一覧で全メモを同じ高さにし、はみ出した分はメモの上でスクロール</div>
       <div id="rm-height-section">
-        <div style="font-size:.8rem;color:#888;margin-bottom:4px">折りたたむ高さ</div>
+        <div style="font-size:.8rem;color:#888;margin-bottom:4px" id="rm-height-label">折りたたむ高さ</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="rm-h-btn" data-h="150">小（150px）</button>
           <button class="rm-h-btn" data-h="250">中（250px）</button>
@@ -2038,7 +2046,7 @@ window.applyCloudData = async function(b64) {
         if (!S.tagOrder)       S.tagOrder       = [];
         if (!S.templates)      S.templates      = [];
         if (!S.backupReminder) S.backupReminder = { enabled: false, intervalDays: 7, lastBackedAt: null };
-        if (!S.readMore)       S.readMore       = { enabled: false, maxHeight: 250 };
+        if (!S.readMore)       S.readMore       = { enabled: false, maxHeight: 250, mode: 'off' };
         if (!S.recentEmoji)    S.recentEmoji    = [];
         if (!S.bubbleWidth)    S.bubbleWidth    = 74;
         if (!S.theme)          S.theme          = 'light';
@@ -3643,7 +3651,7 @@ function bubbleSig(m, q, showRoom) {
   return imgHash(m.html || '') + '|' + (m.pinned ? 1 : 0) + '|' + (m.bgColor || '')
        + '|' + (m.titleLine !== false ? 1 : 0) + '|' + (m.tags ? m.tags.join(',') : '')
        + '|' + (m.updatedAt || m.createdAt || '') + '|' + (m.roomId || '')
-       + '|' + q + '|' + (showRoom ? 1 : 0) + '|' + _bubbleRenderVer;
+       + '|' + q + '|' + (showRoom ? 1 : 0) + '|' + (S.layoutMode || '') + '|' + _bubbleRenderVer;
 }
 function placeBubble(m, q, showRoom, container) {
   if (m.board) { renderBubble(m, q, showRoom, container); return; }   // ボードは都度描画
@@ -3761,7 +3769,7 @@ function renderMemos() {
     msgs.scrollTop = msgs.scrollHeight;
   }
   // 続きを読む: 実際に溢れていないバブルはボタン非表示
-  if (S.readMore?.enabled) {
+  if ((S.readMore?.mode || (S.readMore?.enabled ? 'readmore' : 'off')) === 'readmore') {
     msgs.querySelectorAll('.rm-wrap.clamped').forEach(wrap => {
       const btn = wrap.nextElementSibling;
       if (!btn?.classList.contains('read-more-btn')) return;
@@ -4239,9 +4247,17 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   cnt.querySelectorAll('.tg-head').forEach(head => {
     head.onclick = () => head.closest('.toggle-block').classList.toggle('open');
   });
-  // 続きを読む
+  // 続きを読む / 高さ固定（排他）
   const rmCfg = S.readMore;
-  if (rmCfg?.enabled) {
+  const rmMode = rmCfg?.mode || (rmCfg?.enabled ? 'readmore' : 'off');
+  const _noteMode = (S.layoutMode === 'note');
+  if (rmMode === 'fixed' && _noteMode) {
+    // 高さ固定: 一覧で全メモ同じ高さ。はみ出しはメモ内スクロール。
+    const fx = document.createElement('div'); fx.className = 'rm-fixed';
+    fx.style.height = (rmCfg.maxHeight || 250) + 'px';
+    fx.appendChild(cnt);
+    bubble.appendChild(fx);
+  } else if (rmMode === 'readmore') {
     const rmWrap = document.createElement('div'); rmWrap.className = 'rm-wrap clamped';
     rmWrap.style.maxHeight = (rmCfg.maxHeight || 250) + 'px';
     const fade = document.createElement('div'); fade.className = 'rm-fade';
@@ -5953,22 +5969,32 @@ document.getElementById('corkboard-close').onclick = closeCorkboard;
 corkboardOverlay.addEventListener('click', e => { if (e.target === corkboardOverlay) closeCorkboard(); });
 
 
+function rmMode() { const rm = S.readMore || {}; return rm.mode || (rm.enabled ? 'readmore' : 'off'); }
+
 function renderReadMoreSettings() {
   const rm = S.readMore;
-  document.getElementById('rm-enabled').checked = !!rm.enabled;
-  document.getElementById('rm-height-section').style.display = rm.enabled ? '' : 'none';
+  const mode = rmMode();
+  document.querySelectorAll('#rm-mode-row .rm-h-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('rm-height-section').style.display = (mode === 'off') ? 'none' : '';
+  const lbl = document.getElementById('rm-height-label');
+  if (lbl) lbl.textContent = (mode === 'fixed') ? '固定する高さ' : '折りたたむ高さ';
   document.querySelectorAll('#rm-height-section .rm-h-btn').forEach(b => {
     b.classList.toggle('active', Number(b.dataset.h) === rm.maxHeight);
   });
 }
 
-document.getElementById('rm-enabled').onchange = function() {
-  S.readMore.enabled = this.checked;
-  persist();
-  _bubbleRenderVer++;   // バブル構造が変わるのでキャッシュ全体を無効化
-  document.getElementById('rm-height-section').style.display = this.checked ? '' : 'none';
-  renderMemos();
-};
+document.querySelectorAll('#rm-mode-row .rm-h-btn').forEach(b => {
+  b.onclick = () => {
+    const mode = b.dataset.mode;
+    S.readMore.mode = mode;
+    S.readMore.enabled = (mode === 'readmore');   // 後方互換
+    persist();
+    _bubbleRenderVer++;   // バブル構造が変わるのでキャッシュ全体を無効化
+    renderReadMoreSettings();
+    renderMemos();
+  };
+});
 
 document.querySelectorAll('#rm-height-section .rm-h-btn').forEach(b => {
   b.onclick = () => {
@@ -6034,7 +6060,8 @@ async function initApp() {
   if (!S.imgQuality)       S.imgQuality       = 'std';
   if (!S.templates)        S.templates        = [];
   if (!S.backupReminder)   S.backupReminder   = { enabled: false, intervalDays: 7, lastBackedAt: null };
-  if (!S.readMore)         S.readMore         = { enabled: false, maxHeight: 250 };
+  if (!S.readMore)         S.readMore         = { enabled: false, maxHeight: 250, mode: 'off' };
+  if (S.readMore.mode === undefined) S.readMore.mode = (S.readMore.enabled ? 'readmore' : 'off');
   if (!S.recentEmoji)      S.recentEmoji      = [];
   if (!S.bubbleWidth)      S.bubbleWidth      = 74;
   if (!S.theme)            S.theme            = 'light';
