@@ -616,6 +616,8 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 .tag-ac-item:hover, .tag-ac-item.active { background: #e8f4fb; color: var(--c1); }
 
 .input-bottom { display: flex; align-items: center; gap: 7px; }
+.sort-sel { font-size: 0.78rem; border: 1px solid #cfe0ea; border-radius: 7px; padding: 3px 4px; color: var(--c3); background: #fff; outline: none; max-width: 110px; }
+.input-bottom #char-count { margin-left: auto; }
 /* 大きい画面で入力（入力部を一時的に全画面へ移動して流用） */
 #compose-ov { display: none; position: fixed; inset: 0; z-index: 740; background: var(--c4); flex-direction: column; }
 #compose-ov.open { display: flex; }
@@ -1117,6 +1119,17 @@ body.force-mobile #search { flex: 1 1 100%; }
       <input type="file" id="file-input" accept="image/*" multiple style="display:none">
       <button class="sbtn" id="expand-input-btn" title="大きい画面で入力">✏️</button>
       <button class="sbtn" id="fb-new-btn" title="フリーボードを追加">🧩</button>
+      <select id="sort-by" class="sort-sel" title="並び替えの種類">
+        <option value="created">作成日</option>
+        <option value="updated">変更日</option>
+        <option value="title">タイトル</option>
+        <option value="views">閲覧数</option>
+        <option value="lastviewed">最終閲覧</option>
+        <option value="chars">文字数</option>
+        <option value="tags">タグ数</option>
+        <option value="random">ランダム</option>
+      </select>
+      <button class="sbtn" id="sort-dir" title="昇順/降順">↓</button>
       <span class="char-count" id="char-count">0</span>
       <button id="send-btn" title="送信">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="20" height="20"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -3278,6 +3291,21 @@ function applyInputMode(){
 }
 { const ai = document.getElementById('always-input-chk'); if (ai) ai.onchange = () => { S.alwaysShowInput = ai.checked; persist(); applyInputMode(); }; }
 
+// メモ一覧の並び替えコントロール（種類＋昇順/降順）
+function applySortUI(){
+  S.sort = S.sort || { by: 'created', dir: 'desc' };
+  const sel = document.getElementById('sort-by');
+  const dir = document.getElementById('sort-dir');
+  if (sel) sel.value = S.sort.by;
+  if (dir){ dir.textContent = (S.sort.dir === 'asc' ? '↑' : '↓'); dir.title = (S.sort.dir === 'asc' ? '昇順（タップで降順）' : '降順（タップで昇順）'); }
+}
+{
+  const sel = document.getElementById('sort-by');
+  const dir = document.getElementById('sort-dir');
+  if (sel) sel.onchange = () => { S.sort.by = sel.value; if (sel.value === 'random') _sortRandSeed = (Math.random() * 0xffffffff) >>> 0; persist(); renderMemos(); };
+  if (dir) dir.onclick = () => { S.sort.dir = (S.sort.dir === 'asc' ? 'desc' : 'asc'); applySortUI(); persist(); renderMemos(); };
+}
+
 // ── Send ──────────────────────────────────────────────────────────
 sendBtn.onclick = () => {
   if (sendBtn.classList.contains('open-mode')) { setEditorCollapsed(false); return; }
@@ -3629,6 +3657,33 @@ function placeBubble(m, q, showRoom, container) {
 }
 let _lastRenderQ = null, _lastRenderGS = null;
 
+// ランダム並び用シード（種類をランダムに切替えた時に振り直す）
+let _sortRandSeed = 1;
+function _randKey(id){   // id+シードから0..1の安定した擬似乱数
+  let h = _sortRandSeed >>> 0;
+  const str = String(id);
+  for (let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) >>> 0; }
+  return (h >>> 0) / 4294967296;
+}
+
+// メモ一覧の並び替え（作成日・変更日・タイトル・閲覧数・最終閲覧・文字数・タグ数・ランダム）
+function memoSortCmp(a, b){
+  const s = S.sort || { by: 'created', dir: 'desc' };
+  let r;
+  switch (s.by){
+    case 'updated':    r = new Date(a.updatedAt || a.createdAt) - new Date(b.updatedAt || b.createdAt); break;
+    case 'title':      r = (memoFirstLine(a) || '').localeCompare(memoFirstLine(b) || '', 'ja'); break;
+    case 'views':      r = (a.views || 0) - (b.views || 0); break;
+    case 'lastviewed': r = new Date(a.lastViewedAt || 0) - new Date(b.lastViewedAt || 0); break;   // 古い=長く見ていない
+    case 'chars':      r = stripHtml(a.html || '').length - stripHtml(b.html || '').length; break;
+    case 'tags':       r = (a.tags || []).length - (b.tags || []).length; break;
+    case 'random':     return _randKey(a.id) - _randKey(b.id);   // 昇順/降順の影響を受けない
+    default:           r = new Date(a.createdAt) - new Date(b.createdAt);
+  }
+  if (r === 0) r = new Date(a.createdAt) - new Date(b.createdAt);   // 同値は作成日で安定化
+  return s.dir === 'asc' ? r : -r;
+}
+
 function renderMemos() {
   const rawQ = document.getElementById('search').value.trim();
   const q = rawQ.toLowerCase();
@@ -3655,9 +3710,8 @@ function renderMemos() {
     return ok1 && ok2 && ok3;
   });
   const noteMode = (S.layoutMode === 'note');
-  list.sort((a,b) => noteMode
-    ? new Date(b.createdAt) - new Date(a.createdAt)   // メモ一覧: 新しい順
-    : new Date(a.createdAt) - new Date(b.createdAt)); // チャット: 古い順
+  if (noteMode) list.sort(memoSortCmp);                              // メモ一覧: 並び替え設定に従う
+  else list.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt)); // チャット: 古い順（時系列）
   renderedMemos = list;
 
   if (!list.length) { msgs.innerHTML = '<div class="nores">メモが見つかりません</div>'; return; }
@@ -5764,9 +5818,14 @@ function qlShow() {
   document.getElementById('ql-next').style.visibility = qlIndex < renderedMemos.length - 1 ? '' : 'hidden';
   body.scrollTop = 0;
 }
+function markViewed(id){
+  const m = S.memos.find(x => x.id === id); if (!m) return;
+  m.views = (m.views || 0) + 1; m.lastViewedAt = new Date().toISOString(); persist();
+}
 function openQuickLook(id) {
   qlIndex = renderedMemos.findIndex(m => m.id === id);
   if (qlIndex < 0) { const m = S.memos.find(m => m.id === id); if (!m) return; renderedMemos = [m]; qlIndex = 0; }
+  markViewed(id);
   qlShow(); openOv('ql-ov');
 }
 document.getElementById('ql-close').onclick = () => closeOv('ql-ov');
@@ -5986,6 +6045,7 @@ async function initApp() {
   if (!S.mobileScale)      S.mobileScale      = 100;
   if (S.alwaysShowInput === undefined) S.alwaysShowInput = false;
   if (!S.graph)            S.graph            = { tagBase: 7, tagRange: 14, fontScale: 1, sat: 45 };
+  if (!S.sort)             S.sort             = { by: 'created', dir: 'desc' };
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
 
@@ -6012,6 +6072,7 @@ async function initApp() {
   applyTheme(S.theme);
   applyDisplayMode();
   applyInputMode();
+  applySortUI();
   { const _sr = document.getElementById('search-regex'); if (_sr) _sr.checked = !!S.searchRegex; }
   applyLayout();
 
@@ -6722,6 +6783,7 @@ function gShowThumb(nd){
 function gHideThumbSoon(){ if (gCoarse) return; clearTimeout(gHideTimer); gHideTimer = setTimeout(() => document.getElementById('g-thumb-pop').classList.remove('show'), 240); }
 function gOpenPreview(memoId){
   const m = S.memos.find(x => x.id === memoId); if (!m) return;
+  markViewed(memoId);
   gPreviewMemoId = memoId;
   document.getElementById('g-thumb-pop').classList.remove('show');
   document.getElementById('g-preview-title').textContent = gLabel(m);
