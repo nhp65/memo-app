@@ -638,17 +638,19 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 .input-bottom { display: flex; align-items: center; gap: 7px; }
 .sort-sel { font-size: 0.78rem; border: 1px solid #cfe0ea; border-radius: 7px; padding: 3px 4px; color: var(--c3); background: #fff; outline: none; max-width: 110px; }
 .input-bottom #sort-by { margin-left: auto; }
-/* 大きい画面で入力（入力部を一時的に全画面へ移動して流用） */
-#compose-ov { display: none; position: fixed; inset: 0; z-index: 740; background: var(--c4); flex-direction: column; }
+/* 大きい画面で入力（編集画面と同じモーダル風。入力部を一時的に移動して流用） */
+#compose-ov { display: none; position: fixed; inset: 0; z-index: 730; background: rgba(75,70,67,0.45); align-items: center; justify-content: center; padding: 10px; }
 #compose-ov.open { display: flex; }
+.compose-modal { background: var(--th-edit); border-radius: 14px; width: 93%; max-width: 680px; height: 82vh; height: 82dvh; max-height: 88dvh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 36px rgba(76,124,157,0.25); }
 #compose-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--c1); color: #fff; flex-shrink: 0; font-weight: 700; }
 #compose-head button { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: .85rem; }
 #compose-head button:hover { background: rgba(255,255,255,.32); }
 #compose-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 10px; }
 #compose-foot { flex-shrink: 0; padding: 8px 12px; border-top: 1px solid var(--th-tbdr); }
 #compose-ov .input-wrapper { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
-#compose-ov #editor { flex: 1; min-height: 0; max-height: none; }
-#compose-ov #collapse-editor-btn, #compose-ov #expand-input-btn { display: none; }
+#compose-ov #editor { flex: 1; min-height: 200px; max-height: none; }
+#compose-ov #collapse-editor-btn, #compose-ov #expand-input-btn,
+#compose-ov #fb-new-btn, #compose-ov #sort-by, #compose-ov #sort-dir { display: none; }
 /* 入力エリア常時表示=オフ: 入力欄を隠し ✏️ と 🧩 だけ残す */
 body.input-collapsed .input-area .input-wrapper { display: none; }
 body.input-collapsed .input-area #char-count,
@@ -1170,9 +1172,11 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
 
 <!-- Edit modal -->
 <div id="compose-ov">
-  <div id="compose-head"><span>📝 入力</span><button id="compose-close">✕ 閉じる</button></div>
-  <div id="compose-body"></div>
-  <div id="compose-foot"></div>
+  <div class="compose-modal">
+    <div id="compose-head"><span>📝 入力</span><button id="compose-close">✕ 閉じる</button></div>
+    <div id="compose-body"></div>
+    <div id="compose-foot"></div>
+  </div>
 </div>
 
 <div class="ov" id="edit-ov">
@@ -1600,6 +1604,9 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button id="fb-close">✓ 保存して閉じる</button>
   </div>
   <div id="fb-toolbar">
+    <button id="fb-undo" title="元に戻す (Ctrl+Z)" disabled>↶</button>
+    <button id="fb-redo" title="やり直し (Ctrl+Y)" disabled>↷</button>
+    <span class="fb-tb-sep"></span>
     <button data-add="text">📝 テキスト</button>
     <button data-add="boxtext">🔠 ボックス文字</button>
     <button data-add="note">🗒 付箋</button>
@@ -2497,11 +2504,25 @@ const COLORS = [
   });
 })();
 
+// 色だけその場で反映（全再描画しないのでスクロール位置が動かない）
+function applyMemoColorInPlace(m){
+  const wrap = document.getElementById('memo-' + m.id);
+  if (!wrap) return false;
+  const bubble = wrap.querySelector('.bubble');
+  if (!bubble) return false;
+  if (m.bgColor) bubble.style.background = m.bgColor;
+  else bubble.style.removeProperty('background');
+  const fade = bubble.querySelector('.rm-fade');
+  if (fade) fade.style.background = m.bgColor ? `linear-gradient(transparent, ${m.bgColor})` : '';
+  if (typeof _bubbleCache !== 'undefined') _bubbleCache.delete(m.id);   // 次の再描画で正しく作り直す
+  return true;
+}
+
 document.getElementById('cp-row').addEventListener('click', e => {
   const sw = e.target.closest('.cp-sw');
   if (!sw || !cpTargetId) return;
   const m = S.memos.find(m => m.id === cpTargetId);
-  if (m) { m.bgColor = sw.dataset.bg || null; persist(); renderMemos(); }
+  if (m) { m.bgColor = sw.dataset.bg || null; persist(); if (!applyMemoColorInPlace(m)) renderMemos(); }
   document.getElementById('color-picker').style.display = 'none';
 });
 document.addEventListener('click', e => {
@@ -2585,6 +2606,27 @@ if (document.getElementById('fb-fmt-bar')) buildToolbar('fb-fmt-bar');
   bcmp.onclick = () => openCompare([...selectedMemoIds]);
   const bar = document.getElementById('main-fmt-bar');
   bar.appendChild(s); bar.appendChild(b); bar.appendChild(bcmp); bar.appendChild(bc); }
+// 元に戻す/やり直しボタン（新規入力・編集の両ツールバー）。先頭付近に配置。
+['main-fmt-bar', 'edit-fmt-bar'].forEach(id => {
+  const bar = document.getElementById(id);
+  if (!bar || bar.querySelector('[data-c="undo"]')) return;
+  const mk = (c, t, label) => { const b = document.createElement('button'); b.className = 'fb'; b.dataset.c = c; b.title = t; b.textContent = label; return b; };
+  const sep = document.createElement('div'); sep.className = 'fs';
+  const ref = (bar.firstChild && bar.firstChild.id === 'collapse-editor-btn') ? bar.firstChild.nextSibling : bar.firstChild;
+  bar.insertBefore(mk('undo', '元に戻す (Ctrl+Z)', '↶'), ref);
+  bar.insertBefore(mk('redo', 'やり直し (Ctrl+Y)', '↷'), ref);
+  bar.insertBefore(sep, ref);
+});
+// 編集モーダルのツールバーにもジャンプリンクボタンを追加（統一）
+{ const eb = document.getElementById('edit-fmt-bar');
+  if (eb && !document.getElementById('edit-jump-insert-btn')) {
+    const s = document.createElement('div'); s.className = 'fs';
+    const b = document.createElement('button');
+    b.className = 'fb'; b.id = 'edit-jump-insert-btn'; b.dataset.c = 'jump';
+    b.title = 'ジャンプリンクを挿入（☐でメモを選択してください）';
+    b.textContent = '⚓'; b.disabled = true;
+    eb.appendChild(s); eb.appendChild(b);
+  } }
 
 // ── Block-element helper ──────────────────────────────────────────
 function isEditorBlock(node) {
@@ -2612,6 +2654,8 @@ function wrapTag(tag, attrs, targetEl) {
 function applyFmt(cmd, targetEl, e) {
   targetEl.focus();
   switch (cmd) {
+    case 'undo':          document.execCommand('undo', false, null); break;
+    case 'redo':          document.execCommand('redo', false, null); break;
     case 'bold':          document.execCommand('bold', false, null); break;
     case 'italic':        document.execCommand('italic', false, null); break;
     case 'underline':     document.execCommand('underline', false, null); break;
@@ -4387,6 +4431,7 @@ async function openEdit(id) {
   renderEditExistingTags();
   document.getElementById('edit-title-line-chk').checked = m.titleLine !== false;
   openOv('edit-ov');
+  updateJumpBtn();   // 選択中メモに応じてジャンプボタンの活性状態を反映
   setTimeout(() => { editEd.focus(); syncEditCharCount(); }, 50);
 }
 document.getElementById('edit-save').onclick = async () => {
@@ -4418,8 +4463,11 @@ document.getElementById('edit-ov').addEventListener('click', e => { if (e.target
 // ── Jump link ────────────────────────────────────────────────────
 function updateJumpBtn() {
   const n = selectedMemoIds.size;
-  const jb = document.getElementById('jump-insert-btn');
-  if (jb) { jb.disabled = n === 0; jb.title = n > 0 ? `ジャンプリンクを挿入 (${n}件選択中)` : 'ジャンプリンクを挿入（☐でメモを選択してください）'; }
+  const jumpTitle = n > 0 ? `ジャンプリンクを挿入 (${n}件選択中)` : 'ジャンプリンクを挿入（☐でメモを選択してください）';
+  ['jump-insert-btn', 'edit-jump-insert-btn'].forEach(id => {
+    const jb = document.getElementById(id);
+    if (jb) { jb.disabled = n === 0; jb.title = jumpTitle; }
+  });
   const cb = document.getElementById('sel-clear-btn');
   if (cb) { cb.disabled = n === 0; cb.title = n > 0 ? `選択を全解除 (${n}件)` : '選択を全解除'; }
   const cmpb = document.getElementById('compare-sel-btn');
@@ -6201,6 +6249,7 @@ function openBoard(memoId, isNew){
   document.getElementById('fb-search-count').textContent = '';
   fbBuildColors();
   fbRender(); fbApplyView();
+  fbHistReset();   // 履歴を初期化（開いた状態を基点に）
   document.getElementById('fb-ov').classList.add('open');
 }
 function fbClose(save){
@@ -6236,6 +6285,45 @@ function fbRender(){
   if (fbSel) fbSelect(fbSel);
   fbSyncOrderBtns();
 }
+// ── フリーボードの元に戻す/やり直し（スナップショット方式） ───────────
+let fbUndo = [], fbRedo = [], fbApplyingHist = false;
+function fbCloneEls(){ return fbEls.map(e => ({ ...e })); }   // 要素はフラットなのでこれで十分な複製
+function fbHistReset(){ fbUndo = [fbCloneEls()]; fbRedo = []; fbUpdateUndoBtns(); }
+function fbCommit(){
+  if (fbApplyingHist) return;
+  const cur = JSON.stringify(fbEls);
+  if (fbUndo.length && JSON.stringify(fbUndo[fbUndo.length - 1]) === cur) return;   // 変化なし
+  fbUndo.push(fbCloneEls());
+  if (fbUndo.length > 120) fbUndo.shift();
+  fbRedo = [];
+  fbUpdateUndoBtns();
+}
+function fbApplyState(st){
+  fbApplyingHist = true;
+  fbEls = st.map(e => ({ ...e }));
+  fbSel = null; fbEditingId = null;
+  const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'none';
+  fbRender(); fbSyncOrderBtns();
+  fbApplyingHist = false;
+}
+function fbUndoAct(){
+  if (fbUndo.length <= 1) return;            // 先頭は初期状態なので残す
+  fbRedo.push(fbUndo.pop());                 // 現在をやり直し側へ
+  fbApplyState(fbUndo[fbUndo.length - 1]);   // ひとつ前へ戻す
+  fbUpdateUndoBtns();
+}
+function fbRedoAct(){
+  if (!fbRedo.length) return;
+  const st = fbRedo.pop();
+  fbUndo.push(st);
+  fbApplyState(st);
+  fbUpdateUndoBtns();
+}
+function fbUpdateUndoBtns(){
+  const u = document.getElementById('fb-undo'); if (u) u.disabled = fbUndo.length <= 1;
+  const r = document.getElementById('fb-redo'); if (r) r.disabled = !fbRedo.length;
+}
+
 function fbCreateNode(el){
   let node;
   if (el.type === 'line' || el.type === 'arrow'){
@@ -6316,7 +6404,7 @@ function fbAttachDrag(node, el){
       if (el.type === 'line' || el.type === 'arrow'){ el.x2 = ox2 + dx; el.y2 = oy2 + dy; }
       fbPositionNode(node, el); fbUpdateHandles(node, el); fbPositionElActions();
     };
-    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
+    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); fbCommit(); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
 }
@@ -6354,9 +6442,9 @@ function fbPositionElActions(){
   left = Math.max(6, Math.min(left, window.innerWidth - bw - 6));
   box.style.left = left + 'px'; box.style.top = top + 'px';
 }
-function fbBringFront(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.push(fbEls.splice(i, 1)[0]); fbRender(); }   // 最前面へ
-function fbSendBack(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.unshift(fbEls.splice(i, 1)[0]); fbRender(); }   // 最背面へ
-function fbDuplicateSel(){ if (!fbSel) return; const el = fbEls.find(e => e.id === fbSel); if (!el) return; const copy = Object.assign({}, el, { id: fbNewId(), x: (el.x || 0) + 16, y: (el.y || 0) + 16 }); if (el.x2 != null){ copy.x2 = el.x2 + 16; copy.y2 = el.y2 + 16; } fbEls.push(copy); fbRender(); fbSelect(copy.id); }
+function fbBringFront(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.push(fbEls.splice(i, 1)[0]); fbRender(); fbCommit(); }   // 最前面へ
+function fbSendBack(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.unshift(fbEls.splice(i, 1)[0]); fbRender(); fbCommit(); }   // 最背面へ
+function fbDuplicateSel(){ if (!fbSel) return; const el = fbEls.find(e => e.id === fbSel); if (!el) return; const copy = Object.assign({}, el, { id: fbNewId(), x: (el.x || 0) + 16, y: (el.y || 0) + 16 }); if (el.x2 != null){ copy.x2 = el.x2 + 16; copy.y2 = el.y2 + 16; } fbEls.push(copy); fbRender(); fbSelect(copy.id); fbCommit(); }
 function fbAddHandles(node){
   const el = fbEls.find(e => e.id === node.dataset.id); if (!el) return;
   if (el.type === 'line' || el.type === 'arrow'){
@@ -6371,7 +6459,7 @@ function fbResizeDrag(h, el, node){
     e.stopPropagation();
     const sx = e.clientX, sy = e.clientY, ow = el.w, oh = el.h;
     const mv = ev => { if (fbPinch) return; el.w = Math.max(20, ow + (ev.clientX - sx) / fbView.scale); el.h = Math.max(20, oh + (ev.clientY - sy) / fbView.scale); fbPositionNode(node, el); fbPositionElActions(); };
-    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
+    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); fbCommit(); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
 }
@@ -6385,7 +6473,7 @@ function fbEndpointDrag(h, el, which, node){
       if (which === 'p1'){ el.x = wx; el.y = wy; } else { el.x2 = wx; el.y2 = wy; }
       fbDrawLine(node, el);
     };
-    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
+    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); fbCommit(); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
 }
@@ -6414,6 +6502,7 @@ function fbEndEdit(){
   }
   const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'none';
   fbEditingId = null;
+  fbCommit();
 }
 // 表示中の箇条書きチェック・折りたたみを操作可能にする（ドラッグと衝突しないよう pointerdown を止める）
 function fbWireRichText(t, el){
@@ -6421,7 +6510,7 @@ function fbWireRichText(t, el){
     if (cb.hasAttribute('checked')) cb.checked = true;
     cb.contentEditable = 'false';
     cb.addEventListener('pointerdown', ev => ev.stopPropagation());
-    cb.addEventListener('change', () => { if (cb.checked) cb.setAttribute('checked', ''); else cb.removeAttribute('checked'); const li = cb.closest('li'); if (li) li.classList.toggle('ck-done', cb.checked); el.html = t.innerHTML; });
+    cb.addEventListener('change', () => { if (cb.checked) cb.setAttribute('checked', ''); else cb.removeAttribute('checked'); const li = cb.closest('li'); if (li) li.classList.toggle('ck-done', cb.checked); el.html = t.innerHTML; fbCommit(); });
   });
   t.querySelectorAll('.tg-head').forEach(head => { head.addEventListener('pointerdown', ev => ev.stopPropagation()); head.addEventListener('click', () => head.closest('.toggle-block').classList.toggle('open')); });
 }
@@ -6437,9 +6526,9 @@ function fbCreate(type){
   else if (type === 'ellipse') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: fbFaint(fbColor), stroke: fbColor };
   else if (type === 'line') el = { id, type, x: cx - 80, y: cy, x2: cx + 80, y2: cy, stroke: fbColor };
   else if (type === 'arrow') el = { id, type, x: cx - 80, y: cy, x2: cx + 80, y2: cy, stroke: fbColor };
-  fbEls.push(el); fbRender(); fbSelect(id);
+  fbEls.push(el); fbRender(); fbSelect(id); fbCommit();
 }
-function fbDeleteSel(){ if (!fbSel) return; if (fbEditingId === fbSel) fbEditingId = null; const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'none'; fbEls = fbEls.filter(e => e.id !== fbSel); fbSel = null; fbRender(); fbSyncOrderBtns(); }
+function fbDeleteSel(){ if (!fbSel) return; if (fbEditingId === fbSel) fbEditingId = null; const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'none'; fbEls = fbEls.filter(e => e.id !== fbSel); fbSel = null; fbRender(); fbSyncOrderBtns(); fbCommit(); }
 function fbLighten(hex, amt){   // 色を白方向へ amt(0〜1) 混ぜて薄くする
   const m = /^#?([0-9a-fA-F]{6})$/.exec(hex || ''); if (!m) return hex;
   const n = parseInt(m[1], 16); let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
@@ -6457,6 +6546,7 @@ function fbColorApply(c, noteFill){   // c=線/文字/枠用の色, noteFill=付
   else if (el.type === 'note'){ el.fill = noteFill; if (node) node.style.background = noteFill; }
   else if (el.type === 'rect' || el.type === 'ellipse'){ el.stroke = c; el.fill = fbFaint(c); if (node){ node.style.borderColor = c; node.style.background = el.fill; } }
   else { el.stroke = c; if (node) fbDrawLine(node, el); }
+  fbCommit();
 }
 function fbBuildColors(){
   const row = document.getElementById('fb-colors'); row.innerHTML = '';
@@ -6664,6 +6754,8 @@ function renderBoardBubble(m, q, showRoom, container){
   $('fb-zoom-in').onclick = () => fbZoomBy(1.2);
   $('fb-zoom-out').onclick = () => fbZoomBy(1 / 1.2);
   $('fb-zoom-fit').onclick = fbZoomFit;
+  if ($('fb-undo')) $('fb-undo').onclick = fbUndoAct;
+  if ($('fb-redo')) $('fb-redo').onclick = fbRedoAct;
   $('fb-toolbar').querySelectorAll('[data-add]').forEach(b => b.onclick = () => fbCreate(b.dataset.add));
   $('fb-search').addEventListener('input', function(){ fbDoSearch(this.value); });
   if ($('fb-search-regex')) $('fb-search-regex').onchange = function(){ S.searchRegex = this.checked; persist(); const m = document.getElementById('search-regex'); if (m) m.checked = this.checked; fbDoSearch($('fb-search').value); };
@@ -6673,6 +6765,9 @@ function renderBoardBubble(m, q, showRoom, container){
   document.addEventListener('keydown', e => {
     if (!$('fb-ov').classList.contains('open')) return;
     if (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && (e.key === 'z' || e.key === 'Z')){ e.preventDefault(); if (e.shiftKey) fbRedoAct(); else fbUndoAct(); return; }
+    if (mod && (e.key === 'y' || e.key === 'Y')){ e.preventDefault(); fbRedoAct(); return; }
     if (e.key === 'Delete' || e.key === 'Backspace'){ e.preventDefault(); fbDeleteSel(); }
     if (e.key === 'Escape'){ fbClose(true); }
   });
@@ -6680,7 +6775,7 @@ function renderBoardBubble(m, q, showRoom, container){
     const f = this.files[0]; this.value = ''; if (!f) return;
     const src = await resizeImg(f);
     const { cx, cy } = fbCenterWorld();
-    const im = new Image(); im.onload = () => { let w = im.width, h = im.height; const mx = 260; if (w > mx || h > mx){ const r = Math.min(mx / w, mx / h); w *= r; h *= r; } const id = fbNewId(); fbEls.push({ id, type: 'image', x: cx - w / 2, y: cy - h / 2, w, h, src }); fbRender(); fbSelect(id); }; im.src = src;
+    const im = new Image(); im.onload = () => { let w = im.width, h = im.height; const mx = 260; if (w > mx || h > mx){ const r = Math.min(mx / w, mx / h); w *= r; h *= r; } const id = fbNewId(); fbEls.push({ id, type: 'image', x: cx - w / 2, y: cy - h / 2, w, h, src }); fbRender(); fbSelect(id); fbCommit(); }; im.src = src;
   });
 })();
 
