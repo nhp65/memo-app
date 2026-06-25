@@ -278,11 +278,24 @@ header {
 .title-line-row { display: flex; align-items: center; gap: 6px; padding: 3px 11px 1px; font-size: 0.78rem; color: var(--c3); }
 .title-line-row input[type=checkbox] { accent-color: var(--c1); cursor: pointer; width: 13px; height: 13px; }
 .bubble {
+  position: relative;
   max-width: var(--bubble-max-w, 74%); background: var(--th-bubble);
   border-radius: 14px 3px 14px 14px;
   padding: 9px 12px; box-shadow: 0 1px 4px rgba(76,124,157,0.18); word-break: break-word;
   transition: background .2s; overflow: hidden;
 }
+/* 選択チェックボックス（メモ左上・一括編集モードのみ表示） */
+.sel-check {
+  display: none; position: absolute; top: 7px; left: 7px; z-index: 7;
+  width: 28px; height: 28px; align-items: center; justify-content: center;
+  padding: 0; line-height: 1; font-size: 1.05rem; cursor: pointer;
+  border: 1.5px solid var(--c1); border-radius: 8px;
+  background: rgba(255,255,255,0.94); color: var(--c1);
+  box-shadow: 0 1px 5px rgba(0,0,0,0.18);
+}
+.sel-check.sel-on { background: var(--c1); color: #fff; }
+#messages.bulk-edit-mode .sel-check { display: flex; }
+#messages.bulk-edit-mode .bubble { padding-left: 44px; }
 .bubble-wrap.pinned .bubble { background: var(--th-pin); border-radius: 3px 14px 14px 14px; }
 
 /* Rich content styles */
@@ -945,6 +958,33 @@ a.jump-link:hover { background: rgba(76,124,157,0.22); }
 a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
 @keyframes jumpFlash { 0%,100% { box-shadow: 0 1px 4px rgba(76,124,157,0.18); } 50% { box-shadow: 0 0 0 4px var(--c5); } }
 .bubble-wrap.jump-highlight .bubble { animation: jumpFlash .55s ease 3; }
+/* ジャンプ: メモ選択画面 */
+.jump-tools { display: flex; align-items: center; gap: 8px; }
+.jump-tools #jump-search { flex: 1; padding: 7px 12px; border: 1.5px solid #b5d5e5; border-radius: 8px; font-size: .88rem; outline: none; color: var(--c3); }
+.jump-tools #jump-search:focus { border-color: var(--c1); }
+#jump-selcount { font-size: .78rem; color: #888; white-space: nowrap; }
+#jump-tagbar { display: flex; flex-wrap: wrap; gap: 5px; max-height: 84px; overflow-y: auto; }
+#jump-tagbar:empty { display: none; }
+.jump-tag { background: rgba(76,124,157,0.12); color: var(--c1); border: 1px solid transparent; border-radius: 12px; padding: 2px 10px; font-size: .76rem; cursor: pointer; }
+.jump-tag.on { background: var(--c1); color: #fff; }
+#jump-list { max-height: 44vh; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; border-top: 1px solid #eef4f8; padding-top: 6px; }
+.jump-row { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: #fff; border: 1px solid #eef4f8; border-radius: 8px; padding: 8px 10px; cursor: pointer; font: inherit; color: var(--c3); }
+.jump-row:hover { background: #f5f9fb; }
+.jump-row.on { background: rgba(76,124,157,0.1); border-color: var(--c1); }
+.jump-chk { flex: 0 0 auto; font-size: 1.05rem; color: var(--c1); line-height: 1; }
+.jump-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .86rem; }
+.jump-meta { flex: 0 0 auto; font-size: .72rem; color: #aaa; }
+.jump-prev { flex: 0 0 auto; width: 26px; height: 26px; border: 1px solid var(--c2); border-radius: 7px; background: #fff; color: var(--c1); cursor: pointer; font-size: .9rem; line-height: 1; padding: 0; }
+.jump-prev:hover { background: var(--c4); }
+.jump-empty { color: #aaa; font-size: .85rem; padding: 18px 0; text-align: center; }
+/* ジャンプ選択画面のホバーサムネイル（拡大可） */
+#jump-thumb-pop { position: fixed; display: none; z-index: 800; background: var(--th-bubble); border: 1px solid var(--th-tbdr); border-radius: 12px; box-shadow: 0 6px 28px rgba(0,0,0,.28); padding: 12px; width: 300px; max-height: 360px; overflow: hidden; }
+#jump-thumb-pop.show { display: block; }
+#jump-thumb-pop.big { left: 50% !important; top: 50% !important; transform: translate(-50%, -50%); width: min(620px, 92vw); max-height: 82vh; overflow-y: auto; cursor: default; }
+#jump-thumb-back { display: none; position: fixed; inset: 0; z-index: 799; background: rgba(20,28,38,0.5); }
+#jump-thumb-back.show { display: block; }
+#jump-thumb-pop.big .g-thumb-bc { max-height: none; }
+#jump-thumb-pop.big .g-thumb-bc img { max-height: 60vh; }
 .search-hl { background: #ffe066; color: #333; border-radius: 2px; padding: 0 1px; }
 .fb:disabled { opacity: 0.35; cursor: default; }
 .nores { text-align: center; color: #c4a8b0; margin-top: 40px; font-size: 0.93rem; }
@@ -1123,6 +1163,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button class="hbtn bulk-op-btn" id="bulk-move-btn" disabled>移動</button>
     <button class="hbtn bulk-op-btn" id="bulk-copy-btn" disabled>コピー</button>
     <button class="hbtn bulk-op-btn" id="bulk-compare-btn" disabled>並べて</button>
+    <button class="hbtn bulk-op-btn" id="bulk-clear-btn" disabled>全解除</button>
     <button class="hbtn bulk-op-btn" id="bulk-delete-btn" disabled>削除</button>
     <button class="hbtn" id="bulk-cancel-btn">キャンセル</button>
   </div>
@@ -1360,18 +1401,25 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
   </div>
 </div>
 
-<!-- Jump link modal -->
+<!-- Jump link modal（メモ選択画面） -->
 <div class="ov" id="jump-ov">
-  <div class="modal" style="max-width:620px">
-    <h3>⚓ ジャンプリンクを挿入</h3>
-    <div style="font-size:.83rem;color:#888;margin-bottom:10px;line-height:1.5">選択したメモへのジャンプリンクを作成します。ラベルを入力すると、そのテキストでリンクを作成します。空欄の場合は先頭テキストがそのまま使われます。</div>
-    <div id="jump-list" style="max-height:340px;overflow-y:auto"></div>
+  <div class="modal" style="max-width:640px">
+    <h3>⚓ ジャンプ先のメモを選択</h3>
+    <div class="jump-tools">
+      <input id="jump-search" type="text" placeholder="検索（テキスト / #タグ）">
+      <span id="jump-selcount">0件選択</span>
+      <button class="bcl" id="jump-clear" style="font-size:.78rem;padding:4px 10px">全解除</button>
+    </div>
+    <div id="jump-tagbar"></div>
+    <div id="jump-list"></div>
     <div class="mact" style="margin-top:12px">
       <button class="bcl" id="jump-cancel">キャンセル</button>
-      <button class="bpr" id="jump-ok">挿入</button>
+      <button class="bpr" id="jump-ok" disabled>決定して挿入</button>
     </div>
   </div>
 </div>
+<div id="jump-thumb-back"></div>
+<div id="jump-thumb-pop"></div>
 
 <!-- Settings modal -->
 <div class="ov" id="tag-manage-ov">
@@ -2589,23 +2637,14 @@ if (document.getElementById('fb-fmt-bar')) buildToolbar('fb-fmt-bar');
     bar.insertBefore(b, bar.firstChild);
   }
 })();
-// ジャンプ・全解除ボタン（メインツールバーのみ）
+// ジャンプボタン（メインツールバーのみ）。並べて配置・全解除は一括編集バーへ。
 { const s = document.createElement('div'); s.className = 'fs';
   const b = document.createElement('button');
   b.className = 'fb'; b.id = 'jump-insert-btn'; b.dataset.c = 'jump';
-  b.title = 'ジャンプリンクを挿入（☐でメモを選択してください）';
-  b.textContent = '⚓'; b.disabled = true;
-  const bc = document.createElement('button');
-  bc.className = 'fb'; bc.id = 'sel-clear-btn';
-  bc.title = '選択を全解除'; bc.textContent = '☐✕'; bc.disabled = true;
-  bc.onclick = () => { selectedMemoIds.clear(); renderMemos(); updateJumpBtn(); };
-  const bcmp = document.createElement('button');
-  bcmp.className = 'fb'; bcmp.id = 'compare-sel-btn';
-  bcmp.title = '選択したメモを並べて表示（2件以上選択）';
-  bcmp.textContent = '⊞'; bcmp.disabled = true;
-  bcmp.onclick = () => openCompare([...selectedMemoIds]);
+  b.title = 'ジャンプリンクを挿入';
+  b.textContent = '⚓';
   const bar = document.getElementById('main-fmt-bar');
-  bar.appendChild(s); bar.appendChild(b); bar.appendChild(bcmp); bar.appendChild(bc); }
+  bar.appendChild(s); bar.appendChild(b); }
 // 元に戻す/やり直しボタン（新規入力・編集の両ツールバー）。先頭付近に配置。
 ['main-fmt-bar', 'edit-fmt-bar'].forEach(id => {
   const bar = document.getElementById(id);
@@ -2623,8 +2662,8 @@ if (document.getElementById('fb-fmt-bar')) buildToolbar('fb-fmt-bar');
     const s = document.createElement('div'); s.className = 'fs';
     const b = document.createElement('button');
     b.className = 'fb'; b.id = 'edit-jump-insert-btn'; b.dataset.c = 'jump';
-    b.title = 'ジャンプリンクを挿入（☐でメモを選択してください）';
-    b.textContent = '⚓'; b.disabled = true;
+    b.title = 'ジャンプリンクを挿入';
+    b.textContent = '⚓';
     eb.appendChild(s); eb.appendChild(b);
   } }
 
@@ -2784,11 +2823,9 @@ function applyFmt(cmd, targetEl, e) {
       openEmojiPicker(e.target.closest('.fb'));
       break;
     case 'jump':
-      if (selectedMemoIds.size === 0) return;
       savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
       jumpTargetEl = targetEl;
-      renderJumpList();
-      openOv('jump-ov');
+      openJumpPicker();
       break;
   }
 }
@@ -4166,6 +4203,25 @@ function applyLiveCounts(cnt, m){
   });
 }
 
+// 選択チェックボックス（メモ左上に配置する大きめのトグル）
+function makeSelCheck(m, wrap) {
+  const c = document.createElement('button');
+  c.className = 'sel-check' + (selectedMemoIds.has(m.id) ? ' sel-on' : '');
+  c.title = '選択'; c.textContent = selectedMemoIds.has(m.id) ? '☑' : '☐';
+  c.onclick = (e) => {
+    e.stopPropagation();
+    if (selectedMemoIds.has(m.id)) selectedMemoIds.delete(m.id);
+    else selectedMemoIds.add(m.id);
+    const on = selectedMemoIds.has(m.id);
+    wrap.classList.toggle('selected', on);
+    c.textContent = on ? '☑' : '☐';
+    c.className = 'sel-check' + (on ? ' sel-on' : '');
+    updateJumpBtn();
+    updateBulkBar();
+  };
+  return c;
+}
+
 function renderBubble(m, q = '', showRoom = false, container = null) {
   if (m.board) { renderBoardBubble(m, q, showRoom, container); return; }
   const wrap = document.createElement('div');
@@ -4174,19 +4230,6 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   wrap.id = 'memo-' + m.id;
 
   const acts = document.createElement('div'); acts.className = 'bubble-actions';
-  const selBtn = document.createElement('button');
-  selBtn.className = selectedMemoIds.has(m.id) ? 'abtn sel-on' : 'abtn';
-  selBtn.title = '選択'; selBtn.textContent = selectedMemoIds.has(m.id) ? '☑' : '☐';
-  selBtn.onclick = () => {
-    if (selectedMemoIds.has(m.id)) selectedMemoIds.delete(m.id);
-    else selectedMemoIds.add(m.id);
-    wrap.classList.toggle('selected', selectedMemoIds.has(m.id));
-    selBtn.textContent = selectedMemoIds.has(m.id) ? '☑' : '☐';
-    selBtn.className = selectedMemoIds.has(m.id) ? 'abtn sel-on' : 'abtn';
-    updateJumpBtn();
-    updateBulkBar();
-  };
-  acts.appendChild(selBtn);
   [
     { i: m.pinned?'📌':'📍', t: m.pinned?'ピン解除':'ピン留め（左寄せ）', f: ()=>togglePin(m.id) },
     { i: '⤢', t: '拡大表示', f: ()=>openQuickLook(m.id) },
@@ -4204,6 +4247,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
 
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
+  bubble.appendChild(makeSelCheck(m, wrap));
   bubble.addEventListener('dblclick', e => {
     if (isMobile()) return;   // スマホは「1タップ表示→もう1タップで拡大」で扱う
     if (e.target.closest('a, button, input, .tg-head, img, .b-tag, .copy-btn')) return;
@@ -4462,16 +4506,11 @@ document.getElementById('edit-ov').addEventListener('click', e => { if (e.target
 
 // ── Jump link ────────────────────────────────────────────────────
 function updateJumpBtn() {
-  const n = selectedMemoIds.size;
-  const jumpTitle = n > 0 ? `ジャンプリンクを挿入 (${n}件選択中)` : 'ジャンプリンクを挿入（☐でメモを選択してください）';
+  // ジャンプは押した先のメモ選択画面で選ぶため、ボタンは常に有効。
   ['jump-insert-btn', 'edit-jump-insert-btn'].forEach(id => {
     const jb = document.getElementById(id);
-    if (jb) { jb.disabled = n === 0; jb.title = jumpTitle; }
+    if (jb) jb.disabled = false;
   });
-  const cb = document.getElementById('sel-clear-btn');
-  if (cb) { cb.disabled = n === 0; cb.title = n > 0 ? `選択を全解除 (${n}件)` : '選択を全解除'; }
-  const cmpb = document.getElementById('compare-sel-btn');
-  if (cmpb) { cmpb.disabled = n < 2; cmpb.title = n >= 2 ? `並べて表示 (${n}件)` : '並べて表示（2件以上選択）'; }
 }
 
 function memoFirstLine(m) {
@@ -4486,56 +4525,141 @@ function memoFirstLine(m) {
   return fmtTime(m.createdAt);
 }
 
-function renderJumpList() {
-  const list = document.getElementById('jump-list');
-  list.innerHTML = '';
-  const selMemos = S.memos
-    .filter(m => selectedMemoIds.has(m.id) && m.roomId === roomId)
-    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-  if (!selMemos.length) {
-    list.innerHTML = '<div style="color:#aaa;font-size:.85rem;padding:14px 0;text-align:center">同じルームの選択済みメモがありません</div>';
-    return;
-  }
-  const hdr = document.createElement('div');
-  hdr.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 2px 6px;font-size:.75rem;color:#aaa;font-weight:600;border-bottom:1px solid #e8f0f5';
-  hdr.innerHTML = '<span>メモ（先頭テキスト / 日時）</span><span>ラベル（省略時は左をそのまま使用）</span>';
-  list.appendChild(hdr);
-  selMemos.forEach(m => {
-    const fl = memoFirstLine(m);
-    const row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:7px 2px;border-bottom:1px solid #f5f9fb;align-items:center';
-    const preview = document.createElement('div');
-    preview.style.cssText = 'font-size:.82rem;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
-    preview.title = fl; preview.textContent = fl;
-    const inp = document.createElement('input');
-    inp.type = 'text'; inp.dataset.id = m.id; inp.dataset.auto = fl;
-    inp.placeholder = '省略時は左の内容';
-    inp.style.cssText = 'padding:4px 8px;border:1.5px solid #b5d5e5;border-radius:6px;font-size:.82rem;outline:none;color:var(--c3);width:100%;box-sizing:border-box';
-    inp.onfocus = () => { inp.style.borderColor = 'var(--c1)'; };
-    inp.onblur  = () => { inp.style.borderColor = '#b5d5e5'; };
-    row.appendChild(preview); row.appendChild(inp);
-    list.appendChild(row);
+// ── ジャンプ: メモ選択画面（検索・タグ絞り込み・選択保持） ──────────────
+let jumpSel = new Set(), jumpQuery = '', jumpTags = new Set();
+
+function openJumpPicker() {
+  jumpSel = new Set(); jumpQuery = ''; jumpTags = new Set();   // 毎回まっさら（事前選択は不要）
+  const s = document.getElementById('jump-search'); if (s) s.value = '';
+  jumpHideThumb();
+  renderJumpTagBar();
+  renderJumpList();
+  openOv('jump-ov');
+  setTimeout(() => { try { document.getElementById('jump-search').focus(); } catch(e){} }, 50);
+}
+function renderJumpTagBar() {
+  const bar = document.getElementById('jump-tagbar'); if (!bar) return;
+  bar.innerHTML = '';
+  const tags = new Set();
+  S.memos.filter(m => m.roomId === roomId).forEach(m => (m.tags || []).forEach(t => tags.add(t)));
+  if (!tags.size) return;
+  [...tags].sort((a, b) => a.localeCompare(b, 'ja')).forEach(t => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'jump-tag' + (jumpTags.has(t) ? ' on' : '');
+    b.textContent = '#' + t;
+    b.onclick = () => { if (jumpTags.has(t)) jumpTags.delete(t); else jumpTags.add(t); renderJumpTagBar(); renderJumpList(); };
+    bar.appendChild(b);
   });
 }
+function jumpMemoMatches(m) {
+  if (m.roomId !== roomId) return false;
+  for (const t of jumpTags) { if (!(m.tags || []).includes(t)) return false; }   // 選択タグはすべて含む（AND）
+  if (jumpQuery) {
+    const q = jumpQuery.toLowerCase();
+    const hit = memoSearchText(m).toLowerCase().includes(q) || (m.tags || []).some(t => ('#' + t).toLowerCase().includes(q) || t.toLowerCase().includes(q));
+    if (!hit) return false;
+  }
+  return true;
+}
+function renderJumpList() {
+  const list = document.getElementById('jump-list'); list.innerHTML = '';
+  const memos = S.memos.filter(jumpMemoMatches).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  if (!memos.length) {
+    list.innerHTML = '<div class="jump-empty">該当するメモがありません</div>';
+    updateJumpPickerUI(); return;
+  }
+  memos.forEach(m => {
+    const fl = memoFirstLine(m);
+    const row = document.createElement('div');
+    row.className = 'jump-row' + (jumpSel.has(m.id) ? ' on' : '');
+    const chk = document.createElement('span'); chk.className = 'jump-chk'; chk.textContent = jumpSel.has(m.id) ? '☑' : '☐';
+    const txt = document.createElement('span'); txt.className = 'jump-txt'; txt.textContent = (m.board ? '🧩 ' : '') + fl; txt.title = fl;
+    const meta = document.createElement('span'); meta.className = 'jump-meta'; meta.textContent = fmtTime(m.createdAt);
+    const prev = document.createElement('button'); prev.type = 'button'; prev.className = 'jump-prev'; prev.title = 'プレビュー（拡大）'; prev.textContent = '⤢';
+    prev.onclick = (e) => { e.stopPropagation(); jumpShowThumb(m, row, true); };
+    row.appendChild(chk); row.appendChild(txt); row.appendChild(meta); row.appendChild(prev);
+    row.onclick = () => {
+      if (jumpSel.has(m.id)) jumpSel.delete(m.id); else jumpSel.add(m.id);
+      const on = jumpSel.has(m.id);
+      row.classList.toggle('on', on); chk.textContent = on ? '☑' : '☐';
+      updateJumpPickerUI();
+    };
+    row.addEventListener('mouseenter', () => jumpShowThumb(m, row, false));
+    row.addEventListener('mouseleave', jumpHideThumbSoon);
+    list.appendChild(row);
+  });
+  updateJumpPickerUI();
+}
 
+// ジャンプ選択画面のサムネイルプレビュー（グラフのサムネと同様の見た目・拡大可）
+let jumpThumbTimer = null;
+function jumpThumbCard(m) {
+  const card = document.createElement('div');
+  const acts = document.createElement('div'); acts.className = 'g-thumb-acts';
+  const zb = document.createElement('button'); zb.className = 'g-thumb-act'; zb.title = '拡大/縮小'; zb.textContent = '⤢';
+  zb.onclick = (e) => { e.stopPropagation(); jumpSetBig(!document.getElementById('jump-thumb-pop').classList.contains('big')); };
+  acts.appendChild(zb); card.appendChild(acts);
+  const title = document.createElement('div'); title.className = 'g-thumb-title'; title.textContent = (m.board ? '🧩 ' : '') + (memoFirstLine(m) || '無題');
+  card.appendChild(title);
+  if (m.board) { card.appendChild(fbThumb(m)); }
+  else { const bc = document.createElement('div'); bc.className = 'bc g-thumb-bc'; bc.innerHTML = m.html || '（空）'; hydrateImages(bc); card.appendChild(bc); }
+  const meta = document.createElement('div'); meta.className = 'g-thumb-meta'; meta.textContent = (m.tags || []).map(t => '#' + t).join(' ') + ' ・ ' + fmtTime(m.updatedAt || m.createdAt);
+  card.appendChild(meta);
+  return card;
+}
+function jumpSetBig(on) {
+  document.getElementById('jump-thumb-pop').classList.toggle('big', on);
+  document.getElementById('jump-thumb-back').classList.toggle('show', on);
+}
+function jumpShowThumb(m, anchor, big) {
+  clearTimeout(jumpThumbTimer);
+  const pop = document.getElementById('jump-thumb-pop');
+  jumpSetBig(false);
+  pop.innerHTML = ''; pop.appendChild(jumpThumbCard(m));
+  pop.classList.add('show');
+  const r = anchor.getBoundingClientRect();
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  let left = r.right + 10; if (left + pw > window.innerWidth - 8) left = r.left - pw - 10; if (left < 8) left = 8;
+  let top = r.top; if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8; if (top < 8) top = 8;
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  if (big) jumpSetBig(true);
+}
+function jumpHideThumb() { clearTimeout(jumpThumbTimer); document.getElementById('jump-thumb-pop').classList.remove('show'); jumpSetBig(false); }
+function jumpHideThumbSoon() {
+  if (document.getElementById('jump-thumb-pop').classList.contains('big')) return;   // 拡大中はホバーで閉じない
+  clearTimeout(jumpThumbTimer); jumpThumbTimer = setTimeout(jumpHideThumb, 220);
+}
+{ const pop = document.getElementById('jump-thumb-pop');
+  if (pop) {
+    pop.addEventListener('mouseenter', () => clearTimeout(jumpThumbTimer));
+    pop.addEventListener('mouseleave', jumpHideThumbSoon);
+  }
+  const back = document.getElementById('jump-thumb-back');
+  if (back) back.addEventListener('click', jumpHideThumb);   // 背景クリックで閉じる
+}
+function updateJumpPickerUI() {
+  const c = document.getElementById('jump-selcount'); if (c) c.textContent = jumpSel.size + '件選択';
+  const ok = document.getElementById('jump-ok'); if (ok) ok.disabled = jumpSel.size === 0;
+}
+
+document.getElementById('jump-search').addEventListener('input', function(){ jumpQuery = this.value.trim(); renderJumpList(); });
+document.getElementById('jump-clear').onclick = () => { jumpSel.clear(); renderJumpList(); };
 document.getElementById('jump-ok').onclick = () => {
-  const inputs = document.querySelectorAll('#jump-list input[data-id]');
-  const links = [];
-  inputs.forEach(inp => {
-    const m = S.memos.find(m => m.id === inp.dataset.id);
-    if (!m) return;
-    const label = (inp.value.trim() || inp.dataset.auto).replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    links.push(`<a href="#" data-jump-id="${inp.dataset.id}" class="jump-link">${label}</a>`);
+  const memos = S.memos.filter(m => jumpSel.has(m.id)).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const links = memos.map(m => {
+    const label = memoFirstLine(m).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<a href="#" data-jump-id="${m.id}" class="jump-link">${label}</a>`;
   });
   if (links.length) {
     jumpTargetEl.focus();
     restoreRange(jumpTargetEl);
     document.execCommand('insertHTML', false, links.join('<br>'));
   }
-  closeOv('jump-ov');
+  jumpHideThumb(); closeOv('jump-ov');
 };
-document.getElementById('jump-cancel').onclick = () => closeOv('jump-ov');
-document.getElementById('jump-ov').addEventListener('click', e => { if (e.target===document.getElementById('jump-ov')) closeOv('jump-ov'); });
+document.getElementById('jump-cancel').onclick = () => { jumpHideThumb(); closeOv('jump-ov'); };
+document.getElementById('jump-ov').addEventListener('click', e => { if (e.target===document.getElementById('jump-ov')) { jumpHideThumb(); closeOv('jump-ov'); } });
+document.getElementById('jump-list').addEventListener('scroll', jumpHideThumb);
 
 // ── Export ────────────────────────────────────────────────────────
 document.getElementById('export-btn').onclick = () => {
@@ -5831,6 +5955,7 @@ function updateBulkBar() {
   document.getElementById('bulk-move-btn').disabled   = n === 0;
   document.getElementById('bulk-copy-btn').disabled   = n === 0;
   document.getElementById('bulk-compare-btn').disabled = n < 2;
+  document.getElementById('bulk-clear-btn').disabled  = n === 0;
   document.getElementById('bulk-delete-btn').disabled = n === 0;
 }
 
@@ -5852,6 +5977,8 @@ document.getElementById('bulk-edit-btn').onclick = () => {
   updateBulkBar();
 };
 document.getElementById('bulk-cancel-btn').onclick = exitBulkEditMode;
+// 全解除: 一括編集モードは維持したまま選択だけクリア
+document.getElementById('bulk-clear-btn').onclick = () => { selectedMemoIds.clear(); renderMemos(); updateBulkBar(); updateJumpBtn(); };
 document.getElementById('bulk-move-btn').onclick = () => {
   if (selectedMemoIds.size === 0) return;
   openMoveModal(null, 'move');
@@ -6702,15 +6829,13 @@ function renderBoardBubble(m, q, showRoom, container){
   wrap.className = 'bubble-wrap' + (m.pinned ? ' pinned' : '') + (selectedMemoIds.has(m.id) ? ' selected' : '');
   wrap.dataset.id = m.id; wrap.id = 'memo-' + m.id;
   const acts = document.createElement('div'); acts.className = 'bubble-actions';
-  const selBtn = document.createElement('button'); selBtn.className = selectedMemoIds.has(m.id) ? 'abtn sel-on' : 'abtn'; selBtn.title = '選択'; selBtn.textContent = selectedMemoIds.has(m.id) ? '☑' : '☐';
-  selBtn.onclick = () => { if (selectedMemoIds.has(m.id)) selectedMemoIds.delete(m.id); else selectedMemoIds.add(m.id); wrap.classList.toggle('selected', selectedMemoIds.has(m.id)); selBtn.textContent = selectedMemoIds.has(m.id) ? '☑' : '☐'; selBtn.className = selectedMemoIds.has(m.id) ? 'abtn sel-on' : 'abtn'; updateJumpBtn(); updateBulkBar(); };
-  acts.appendChild(selBtn);
   [ { i: m.pinned ? '📌' : '📍', t: m.pinned ? 'ピン解除' : 'ピン留め', f: () => togglePin(m.id) },
     { i: '🖋', t: 'ボードを開く', f: () => openBoard(m.id) },
     { i: '📋', t: '複製', f: () => duplicateMemo(m.id) },
     { i: '🎨', t: '背景色', f: (e) => showColorPicker(m.id, e), action: 'color' },
     { i: '🗑', t: '削除', f: () => delMemo(m.id) } ].forEach(({ i, t, f, action }) => { const b = document.createElement('button'); b.className = 'abtn'; b.title = t; b.textContent = i; if (action) b.dataset.action = action; b.onclick = f; acts.appendChild(b); });
   const bubble = document.createElement('div'); bubble.className = 'bubble fb-bubble';
+  bubble.appendChild(makeSelCheck(m, wrap));
   if (m.bgColor) bubble.style.background = m.bgColor;
   if (showRoom){ const room = S.rooms.find(r => r.id === m.roomId); if (room){ const badge = document.createElement('div'); badge.className = 'room-badge'; badge.textContent = (room.icon || '') + ' ' + room.name; badge.onclick = () => switchRoom(room.id); badge.style.cursor = 'pointer'; bubble.appendChild(badge); } }
   const title = document.createElement('div'); title.className = 'fb-bubble-title'; title.textContent = '🧩 ' + ((m.board && m.board.title) || '無題のボード');
