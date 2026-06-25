@@ -1215,7 +1215,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
 <!-- Edit modal -->
 <div id="compose-ov">
   <div class="compose-modal">
-    <div id="compose-head"><span>📝 入力</span><button id="compose-close">✕ 閉じる</button></div>
+    <div id="compose-head"><span>📝 入力</span><span style="display:flex;gap:8px"><button id="compose-draft">📑 下書き</button><button id="compose-close">✕ 閉じる</button></span></div>
     <div id="compose-body"></div>
     <div id="compose-foot"></div>
   </div>
@@ -1421,6 +1421,29 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
 </div>
 <div id="jump-thumb-back"></div>
 <div id="jump-thumb-pop"></div>
+
+<!-- 下書き: 保存確認 -->
+<div class="ov" id="draft-ask-ov">
+  <div class="modal" style="max-width:380px">
+    <h3>下書きを保存しますか？</h3>
+    <div style="font-size:.85rem;color:#888;line-height:1.5">送信していない内容があります。下書きとして保存できます（いくつでも保存可）。</div>
+    <div class="mact" style="flex-wrap:wrap;gap:7px">
+      <button class="bcl" id="draft-ask-cancel" style="margin-right:auto">編集に戻る</button>
+      <button class="bcl" id="draft-ask-discard" style="background:#fdeaea;color:#c0392b;border-color:#f1c0c0">破棄して閉じる</button>
+      <button class="bpr" id="draft-ask-save">下書き保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 下書き: 一覧 -->
+<div class="ov" id="draft-list-ov">
+  <div class="modal" style="max-width:560px">
+    <h3>📑 下書き</h3>
+    <div style="font-size:.8rem;color:#888;line-height:1.5">呼び出すと内容が入力欄に戻り、その下書きは一覧から消えます（保存し直すと再び残ります）。</div>
+    <div id="draft-list"></div>
+    <div class="mact"><button class="bcl" id="draft-list-close">閉じる</button></div>
+  </div>
+</div>
 
 <!-- Settings modal -->
 <div class="ov" id="tag-manage-ov">
@@ -3395,7 +3418,81 @@ function closeCompose(){
   document.getElementById('compose-ov').classList.remove('open');
 }
 document.getElementById('expand-input-btn').onclick = openCompose;
-document.getElementById('compose-close').onclick = closeCompose;
+
+// ── 下書き ────────────────────────────────────────────────────────
+function composeIsEmpty(){
+  const raw = (editor.innerHTML || '').trim();
+  return !raw || raw === '<br>';
+}
+function clearComposer(){
+  editor.innerHTML = '';
+  charCountEl.textContent = '0文字'; charCountEl.classList.remove('warn');
+  document.getElementById('tag-input').value = '';
+  renderExistingTags();
+}
+async function saveDraft(){
+  syncCheckboxAttrs(editor);
+  const raw = editor.innerHTML.trim();
+  if (!raw || raw === '<br>') return;
+  const html = await externalizeAndStore(raw);   // 画像も分離して保存
+  S.drafts = S.drafts || [];
+  S.drafts.push({
+    id: 'd' + Date.now().toString(36),
+    html,
+    tags: parseTags(document.getElementById('tag-input').value),
+    titleLine: document.getElementById('title-line-chk').checked,
+    createdAt: new Date().toISOString()
+  });
+  persist();
+}
+async function loadDraft(id){
+  const i = (S.drafts || []).findIndex(d => d.id === id);
+  if (i < 0) return;
+  const d = S.drafts[i];
+  editor.innerHTML = await internalizeHtml(d.html);   // 画像実体を表示
+  document.getElementById('tag-input').value = (d.tags || []).join(', ');
+  document.getElementById('title-line-chk').checked = d.titleLine !== false;
+  S.drafts.splice(i, 1);            // 呼び出したら一覧から消す
+  persist();
+  renderDraftList();                // ボタン件数を更新
+  renderExistingTags();
+  updateCharCount(editor, charCountEl);
+  closeOv('draft-list-ov');
+  if (!document.getElementById('compose-ov').classList.contains('open')) openCompose();
+  else editor.focus();
+}
+function renderDraftList(){
+  const list = document.getElementById('draft-list');
+  list.innerHTML = '';
+  const drafts = (S.drafts || []).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  document.getElementById('compose-draft').textContent = '📑 下書き' + (drafts.length ? '(' + drafts.length + ')' : '');
+  if (!drafts.length){ list.innerHTML = '<div class="jump-empty">保存された下書きはありません</div>'; return; }
+  drafts.forEach(d => {
+    const fl = memoFirstLine({ html: d.html, createdAt: d.createdAt });
+    const row = document.createElement('div'); row.className = 'jump-row';
+    const txt = document.createElement('span'); txt.className = 'jump-txt'; txt.textContent = fl; txt.title = fl;
+    const meta = document.createElement('span'); meta.className = 'jump-meta'; meta.textContent = fmtTime(d.createdAt);
+    const del = document.createElement('button'); del.type = 'button'; del.className = 'jump-prev'; del.title = '削除'; del.textContent = '🗑';
+    del.onclick = (e) => { e.stopPropagation(); const i = S.drafts.findIndex(x => x.id === d.id); if (i >= 0) S.drafts.splice(i, 1); persist(); renderDraftList(); };
+    row.appendChild(txt); row.appendChild(meta); row.appendChild(del);
+    row.onclick = () => loadDraft(d.id);
+    list.appendChild(row);
+  });
+}
+function openDraftList(){ renderDraftList(); openOv('draft-list-ov'); }
+document.getElementById('compose-draft').onclick = openDraftList;
+document.getElementById('draft-list-close').onclick = () => closeOv('draft-list-ov');
+document.getElementById('draft-list-ov').addEventListener('click', e => { if (e.target === document.getElementById('draft-list-ov')) closeOv('draft-list-ov'); });
+
+// 閉じる時：内容があれば下書き保存を確認
+function closeComposeAsk(){
+  if (composeIsEmpty()) { closeCompose(); return; }
+  openOv('draft-ask-ov');
+}
+document.getElementById('compose-close').onclick = closeComposeAsk;
+document.getElementById('draft-ask-cancel').onclick = () => closeOv('draft-ask-ov');
+document.getElementById('draft-ask-discard').onclick = () => { clearComposer(); closeOv('draft-ask-ov'); closeCompose(); };
+document.getElementById('draft-ask-save').onclick = async () => { await saveDraft(); renderDraftList(); clearComposer(); closeOv('draft-ask-ov'); closeCompose(); };
 // 入力エリア常時表示の切り替え（オフ=既定: ✏️で大画面入力）
 function applyInputMode(){
   document.body.classList.toggle('input-collapsed', !S.alwaysShowInput);
@@ -6285,6 +6382,7 @@ async function initApp() {
   if (S.alwaysShowInput === undefined) S.alwaysShowInput = false;
   if (!S.graph)            S.graph            = { tagBase: 7, tagRange: 14, fontScale: 1, sat: 45 };
   if (!S.sort)             S.sort             = { by: 'created', dir: 'desc' };
+  if (!S.drafts)           S.drafts           = [];
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
 
@@ -6312,6 +6410,7 @@ async function initApp() {
   applyDisplayMode();
   applyInputMode();
   applySortUI();
+  renderDraftList();   // 下書きボタンの件数を反映
   { const _sr = document.getElementById('search-regex'); if (_sr) _sr.checked = !!S.searchRegex; }
   applyLayout();
 
