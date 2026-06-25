@@ -6910,12 +6910,21 @@ function fbThumbEl(e, minx, miny, s){
   else if (e.type === 'note'){ d.style.background = e.fill || '#FFF9C4'; d.style.fontSize = Math.max(4, (e.fontSize || 16) * s) + 'px'; d.style.color = e.color || '#3a3220'; d.style.padding = (2 * s) + 'px'; d.textContent = stripHtml(e.html || ''); }
   else if (e.type === 'text'){ d.style.fontSize = Math.max(4, (e.fontSize || 16) * s) + 'px'; d.style.color = e.color || '#2D3B45'; d.textContent = stripHtml(e.html || ''); }
   else if (e.type === 'boxtext'){
-    const txt = stripHtml(e.html || ''); const L = Math.max(1, txt.length);
-    const w = (e.w || 40), h = (e.h || 40);
-    let fs = Math.max(6, Math.min(240, Math.sqrt((w * h) / (0.72 * L))));   // 枠に収まる文字サイズの概算（自動フィットの近似）
-    d.style.fontSize = Math.max(4, fs * s) + 'px'; d.style.color = e.color || '#2D3B45';
+    const txt = stripHtml(e.html || '');
+    const w = Math.max(1, (e.w || 40)), h = Math.max(1, (e.h || 40));
+    const L = Math.max(1, txt.length);
+    const cjk = (txt.match(/[　-ヿ㐀-鿿＀-￯]/g) || []).length;
+    const adv = 0.55 + 0.5 * (cjk / L);   // 1文字の横幅係数（ラテン≈0.55〜全角≈1.05）
+    let best = 4;
+    for (let fs = 4; fs <= 200; fs++){    // 幅・高さ両方に収まる最大サイズ（自動フィットの近似）
+      const cpl = Math.max(1, Math.floor(w / (adv * fs)));
+      const lines = Math.ceil(L / cpl);
+      if (lines * 1.3 * fs <= h - 4 && adv * fs <= w) best = fs;
+    }
+    d.style.fontSize = Math.max(3, best * s) + 'px'; d.style.color = e.color || '#2D3B45';
     d.style.display = 'flex'; d.style.alignItems = 'center'; d.style.justifyContent = 'center'; d.style.textAlign = 'center';
-    d.style.padding = (2 * s) + 'px'; d.textContent = txt;
+    d.style.lineHeight = '1.3'; d.style.wordBreak = 'break-word'; d.style.padding = (2 * s) + 'px';
+    d.textContent = txt;
   }
   else if (e.type === 'image'){ const img = document.createElement('img'); img.src = e.src; img.style.cssText = 'width:100%;height:100%;object-fit:cover'; d.appendChild(img); }
   return d;
