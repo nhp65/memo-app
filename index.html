@@ -596,6 +596,8 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 /* 編集画面のインラインコード（一覧表示の .bc code と同じ見た目に） */
 #editor code, #edit-ed code { background: var(--code-bg); border: 1px solid var(--code-bdr); color: var(--code-fg); padding: 1.5px 6px; border-radius: 6px; font-family: 'Consolas', 'SFMono-Regular', monospace; font-size: 0.85em; font-weight: 600; }
 #editor pre code, #edit-ed pre code { background: none; border: none; color: inherit; padding: 0; font-weight: normal; }
+/* 水平線 */
+.bc hr, #editor hr, #edit-ed hr { border: none; border-top: 1.5px solid var(--th-sep, #d8e8ef); margin: 9px 0; }
 #editor blockquote { border-left: 4px solid var(--c5); background: rgba(94,155,181,0.09); padding: 8px 12px 8px 14px; margin: 5px 0; border-radius: 0 6px 6px 0; color: var(--c3); }
 #editor .toggle-block { border: 1px solid #cce5f0; border-radius: 8px; margin: 5px 0; overflow: hidden; }
 #editor .tg-head { padding: 6px 12px; background: #f0f7fa; font-weight: 700; color: var(--c8); font-size: 0.9rem; }
@@ -959,6 +961,82 @@ a.jump-link:hover { background: rgba(76,124,157,0.22); }
 a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
 @keyframes jumpFlash { 0%,100% { box-shadow: 0 1px 4px rgba(76,124,157,0.18); } 50% { box-shadow: 0 0 0 4px var(--c5); } }
 .bubble-wrap.jump-highlight .bubble { animation: jumpFlash .55s ease 3; }
+/* バックリンク欄 */
+.backlinks { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--th-sep); display: flex; flex-direction: column; gap: 3px; }
+.backlinks-head { font-size: .68rem; color: var(--th-muted); font-weight: 700; }
+.backlink { text-align: left; background: rgba(76,124,157,0.08); border: 1px solid rgba(76,124,157,0.2); border-radius: 6px; padding: 2px 8px; font-size: .76rem; color: var(--c1); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.backlink:hover { background: rgba(76,124,157,0.18); }
+.backlink::before { content: '↩ '; opacity: .7; }
+/* 統計ダッシュボード */
+#stats-body { max-height: 70vh; overflow-y: auto; }
+.stats-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat-card { background: var(--c4); border: 1px solid var(--th-sep); border-radius: 10px; padding: 10px 6px; text-align: center; }
+.stat-num { font-size: 1.35rem; font-weight: 700; color: var(--c1); line-height: 1.1; }
+.stat-lbl { font-size: .72rem; color: var(--th-muted); margin-top: 3px; }
+.stats-sec { margin-top: 16px; }
+.stats-sec h4 { font-size: .85rem; color: var(--c3); margin-bottom: 7px; }
+.stats-empty { font-size: .8rem; color: var(--th-muted); }
+.stat-bar-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.stat-bar-label { flex: 0 0 90px; font-size: .76rem; color: var(--c3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-bar-track { flex: 1; background: var(--c4); border: 1px solid var(--th-sep); border-radius: 6px; height: 15px; overflow: hidden; }
+.stat-bar-fill { height: 100%; background: var(--c1); }
+.stat-bar-val { flex: 0 0 auto; min-width: 30px; text-align: right; font-size: .72rem; color: var(--th-muted); }
+/* コマンドパレット */
+#cmdp-ov { align-items: flex-start; }
+.cmdp-modal { max-width: 560px; width: 92%; margin-top: 10vh; padding: 10px; gap: 8px; }
+#cmdp-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--c1); border-radius: 9px; font-size: .95rem; outline: none; color: var(--c3); background: var(--c4); box-sizing: border-box; }
+#cmdp-list { max-height: 56vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.cmdp-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 8px; cursor: pointer; color: var(--c3); }
+.cmdp-row.sel { background: rgba(76,124,157,0.15); }
+.cmdp-row:hover { background: rgba(76,124,157,0.08); }
+.cmdp-ico { flex: 0 0 auto; width: 20px; text-align: center; font-size: 1rem; }
+.cmdp-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .88rem; }
+.cmdp-hint { flex: 0 0 auto; font-size: .7rem; color: var(--th-muted); }
+.cmdp-sec { font-size: .68rem; color: var(--th-muted); font-weight: 700; padding: 6px 8px 2px; }
+.cmdp-empty { color: var(--th-muted); font-size: .82rem; padding: 16px; text-align: center; }
+/* スプレッドシート */
+#sheet-ov { display: none; position: fixed; inset: 0; z-index: 640; background: var(--c4); flex-direction: column; }
+#sheet-ov.open { display: flex; }
+#sheet-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--c1); color: #fff; flex-shrink: 0; }
+#sheet-head input { flex: 0 1 240px; padding: 6px 10px; border: none; border-radius: 7px; font-size: .9rem; outline: none; }
+.sheet-cellref { font-size: .82rem; color: rgba(255,255,255,.85); min-width: 46px; }
+#sheet-head button { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 7px; padding: 6px 11px; cursor: pointer; font-size: .82rem; }
+#sheet-head button:hover { background: rgba(255,255,255,.32); }
+#sheet-head #sheet-close { margin-left: auto; }
+#sheet-toolbar { display: flex; align-items: center; gap: 5px; padding: 6px 12px; background: var(--th-toolbar); border-bottom: 1px solid var(--th-tbdr); flex-shrink: 0; overflow-x: auto; }
+#sheet-toolbar button { background: #fff; border: 1px solid var(--th-tbdr); border-radius: 7px; padding: 5px 9px; cursor: pointer; font-size: .8rem; white-space: nowrap; color: var(--c3); }
+#sheet-toolbar button:hover { background: #eef5f9; }
+#sheet-fxbar { display: flex; align-items: center; gap: 8px; padding: 5px 12px; background: var(--th-edit); border-bottom: 1px solid var(--th-tbdr); flex-shrink: 0; }
+.sheet-fx-ref { min-width: 46px; text-align: center; font-size: .8rem; font-weight: 600; color: var(--c3); background: var(--th-toolbar); border: 1px solid var(--th-tbdr); border-radius: 6px; padding: 3px 6px; }
+.sheet-fx-fx { font-style: italic; color: var(--th-muted); font-size: .82rem; }
+#sheet-fx-input { flex: 1; padding: 5px 10px; border: 1.5px solid var(--th-tbdr); border-radius: 7px; font-size: .85rem; outline: none; color: var(--c3); background: var(--th-bubble); font-family: 'Consolas', monospace; }
+#sheet-fx-input:focus { border-color: var(--c1); }
+#sheet-grid-wrap { flex: 1; overflow: auto; outline: none; background: var(--th-edit); }
+#sheet-grid { border-collapse: collapse; font-size: .85rem; }
+#sheet-grid th, #sheet-grid td { border: 1px solid var(--th-tbdr); padding: 0; }
+#sheet-grid th { background: var(--th-toolbar); color: var(--th-muted); font-weight: 600; text-align: center; font-size: .72rem; position: sticky; cursor: pointer; user-select: none; }
+#sheet-grid thead th { top: 0; z-index: 3; min-width: 70px; height: 24px; }
+#sheet-grid tbody th { left: 0; z-index: 2; min-width: 34px; }
+#sheet-grid thead th.corner { left: 0; z-index: 4; min-width: 34px; }
+#sheet-grid th.hdr-sel { background: var(--c2); color: var(--c8); }
+#sheet-grid td { background: var(--th-bubble); color: var(--th-text); min-width: 70px; max-width: 240px; height: 26px; vertical-align: top; }
+#sheet-grid, #sheet-grid td, #sheet-grid .scell { user-select: none; -webkit-user-select: none; }
+#sheet-grid .scell[contenteditable="true"] { user-select: text; -webkit-user-select: text; }
+#sheet-grid td .scell { display: block; padding: 3px 6px; min-height: 20px; white-space: pre-wrap; overflow: hidden; outline: none; }
+#sheet-grid td.num .scell { text-align: right; }
+#sheet-grid td.sel { box-shadow: inset 0 0 0 2px var(--c1); }
+#sheet-grid td.in-range { background: rgba(76,124,157,0.12); }
+#sheet-grid td.calc .scell { color: var(--c6); }
+#sheet-grid td .scell[contenteditable="true"] { background: #fff; box-shadow: inset 0 0 0 2px var(--c1); }
+/* シートのサムネイル（メモ／フリーボード上） */
+.sheet-thumb { border: 1px solid var(--th-tbdr); border-radius: 8px; overflow: hidden; background: var(--th-bubble); cursor: pointer; display: inline-block; max-width: 100%; }
+.sheet-thumb .sheet-thumb-bar { font-size: .72rem; color: var(--th-muted); padding: 3px 7px; background: var(--th-toolbar); border-bottom: 1px solid var(--th-tbdr); display: flex; align-items: center; gap: 5px; }
+.sheet-thumb table { border-collapse: collapse; font-size: .72rem; width: 100%; table-layout: fixed; }
+.sheet-thumb th, .sheet-thumb td { border: 1px solid var(--th-tbdr); padding: 1px 5px; color: var(--th-text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sheet-thumb tr > th:first-child { width: 22px; }
+.sheet-thumb th { background: var(--th-toolbar); color: var(--th-muted); font-weight: 600; font-size: .64rem; text-align: center; }
+.sheet-thumb td.num { text-align: right; }
+.sheet-embed { margin: 6px 0; }
 /* ジャンプ: メモ選択画面 */
 .jump-tools { display: flex; align-items: center; gap: 8px; }
 .jump-tools #jump-search { flex: 1; padding: 7px 12px; border: 1.5px solid #b5d5e5; border-radius: 8px; font-size: .88rem; outline: none; color: var(--c3); }
@@ -1139,6 +1217,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button class="hbtn" id="tag-manage-btn" title="設定">設定</button>
     <button class="hbtn" id="corkboard-btn">📌 ピン止め</button>
     <button class="hbtn" id="graph-btn" title="タグ・グラフ">🕸 グラフ</button>
+    <button class="hbtn" id="stats-btn" title="統計">📊 統計</button>
   </header>
 
   <div class="search-bar">
@@ -1445,6 +1524,23 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
   </div>
 </div>
 
+<!-- コマンドパレット -->
+<div class="ov" id="cmdp-ov">
+  <div class="modal cmdp-modal">
+    <input id="cmdp-input" type="text" placeholder="コマンド or メモを検索…（↑↓で選択 / Enterで実行 / Escで閉じる）" autocomplete="off">
+    <div id="cmdp-list"></div>
+  </div>
+</div>
+
+<!-- 統計ダッシュボード -->
+<div class="ov" id="stats-ov">
+  <div class="modal" style="max-width:640px">
+    <h3>📊 統計</h3>
+    <div id="stats-body"></div>
+    <div class="mact"><button class="bcl" id="stats-close">閉じる</button></div>
+  </div>
+</div>
+
 <!-- Settings modal -->
 <div class="ov" id="tag-manage-ov">
   <div class="modal">
@@ -1527,6 +1623,12 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
           <button class="rm-h-btn" data-h="400">大（400px）</button>
           <button class="rm-h-btn" data-h="600">特大（600px）</button>
         </div>
+      </div>
+      <hr style="border:none;border-top:1px solid #e8f0f5">
+      <div class="cfg-label">🔗 バックリンク</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <label class="tg-sw" title="バックリンク表示 ON/OFF"><input type="checkbox" id="backlinks-chk"><span class="tg-sl"></span></label>
+        <span style="font-size:.82rem;color:#666">各メモに「リンク元（このメモへジャンプリンクしているメモ）」を表示</span>
       </div>
       <hr style="border:none;border-top:1px solid #e8f0f5">
       <div class="cfg-label">🔤 タイトル行フォントサイズ</div>
@@ -1687,6 +1789,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button data-add="line">／ 線</button>
     <button data-add="arrow">→ 矢印</button>
     <button data-add="image">🖼 画像</button>
+    <button data-add="sheet">📊 表計算</button>
     <span class="fb-tb-sep"></span>
     <span id="fb-colors"></span>
   </div>
@@ -1699,6 +1802,44 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button id="fbe-del" title="削除">🗑</button>
   </div>
   <input type="file" id="fb-img-input" accept="image/*" style="display:none">
+</div>
+
+<!-- スプレッドシート 全画面エディタ -->
+<div id="sheet-ov">
+  <div id="sheet-head">
+    <input id="sheet-title" type="text" placeholder="シート名">
+    <span id="sheet-cellref" class="sheet-cellref"></span>
+    <button id="sheet-csv" title="CSVで書き出し">CSV</button>
+    <button id="sheet-back">← 保存せず戻る</button>
+    <button id="sheet-close">✓ 保存して閉じる</button>
+  </div>
+  <div id="sheet-toolbar">
+    <button id="sheet-row-add">＋行</button>
+    <button id="sheet-row-del">－行</button>
+    <button id="sheet-col-add">＋列</button>
+    <button id="sheet-col-del">－列</button>
+    <span class="fb-tb-sep"></span>
+    <button id="sheet-row-copy">⧉ 行コピー</button>
+    <button id="sheet-col-copy">⧉ 列コピー</button>
+    <span class="fb-tb-sep"></span>
+    <button id="sheet-merge">⛶ 結合</button>
+    <button id="sheet-unmerge">解除</button>
+    <span class="fb-tb-sep"></span>
+    <button id="sheet-fill" title="先頭セルから連続値で埋める">🔢 連続データ</button>
+    <button id="sheet-concat" title="選択セルを連結する式を右隣に作成">🔗 連結</button>
+    <span class="fb-tb-sep"></span>
+    <button id="sheet-paste-values" title="コピーした内容を値で貼り付け (Ctrl+Shift+V)">値で貼付</button>
+    <button id="sheet-freeze" title="選択した数式を計算結果（値）に変換">値に変換</button>
+    <button id="sheet-fixedcopy" title="固定長(Fortran風書式)でコピー">固定長コピー</button>
+    <span class="fb-tb-sep"></span>
+    <button id="sheet-clear">内容クリア</button>
+  </div>
+  <div id="sheet-fxbar">
+    <span id="sheet-fx-ref" class="sheet-fx-ref">A1</span>
+    <span class="sheet-fx-fx">fx</span>
+    <input id="sheet-fx-input" type="text" placeholder="値や数式を入力（例: =SUM(A1:A5)）">
+  </div>
+  <div id="sheet-grid-wrap" tabindex="0"><table id="sheet-grid"></table></div>
 </div>
 
 <!-- Lightbox -->
@@ -2625,6 +2766,7 @@ function buildToolbar(barId) {
     <button class="fb" data-c="code"      title="コード">&lt;/&gt;</button>
     <button class="fb" data-c="codeblock" title="コードブロック">&#96;&#96;&#96;</button>
     <button class="fb" data-c="quote"  title="引用">&gt;&gt;</button>
+    <button class="fb" data-c="hr"     title="水平線">―</button>
     <button class="fb" data-c="toggle" title="折りたたみ">⊟</button>
     <div class="fs"></div>
     <button class="fb" data-c="link"   title="リンク">🔗</button>
@@ -2645,7 +2787,7 @@ function buildToolbar(barId) {
   // 画像・スニペットはツールバーへ（新規入力・編集の両方／フリーボードのテキストには付けない）
   if (barId !== 'fb-fmt-bar') {
     document.getElementById(barId).insertAdjacentHTML('beforeend',
-      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button>');
+      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button><button class="fb" data-c="sheet" title="スプレッドシートを挿入">📊</button>');
   }
 }
 buildToolbar('main-fmt-bar');
@@ -2763,6 +2905,14 @@ function applyFmt(cmd, targetEl, e) {
       break;
     }
     case 'quote':         document.execCommand('formatBlock', false, 'blockquote'); break;
+    case 'hr':            document.execCommand('insertHorizontalRule', false, null); break;
+    case 'sheet': {
+      const id = 'sh' + Date.now().toString(36);
+      S.sheets = S.sheets || {}; S.sheets[id] = makeSheet(8, 5); persist();
+      document.execCommand('insertHTML', false, '<div class="sheet-embed" data-sheet="' + id + '" contenteditable="false"></div><p><br></p>');
+      hydrateSheetEmbeds(targetEl);
+      break;
+    }
     case 'hl':
       applyHL(targetEl, selHasTag('mark', targetEl) ? '' : currentHlColor);
       break;
@@ -3432,7 +3582,7 @@ function clearComposer(){
 }
 async function saveDraft(){
   syncCheckboxAttrs(editor);
-  const raw = editor.innerHTML.trim();
+  const raw = sheetStripHtml(editor.innerHTML.trim());
   if (!raw || raw === '<br>') return;
   const html = await externalizeAndStore(raw);   // 画像も分離して保存
   S.drafts = S.drafts || [];
@@ -3450,6 +3600,7 @@ async function loadDraft(id){
   if (i < 0) return;
   const d = S.drafts[i];
   editor.innerHTML = await internalizeHtml(d.html);   // 画像実体を表示
+  hydrateSheetEmbeds(editor);
   document.getElementById('tag-input').value = (d.tags || []).join(', ');
   document.getElementById('title-line-chk').checked = d.titleLine !== false;
   S.drafts.splice(i, 1);            // 呼び出したら一覧から消す
@@ -3493,6 +3644,170 @@ document.getElementById('compose-close').onclick = closeComposeAsk;
 document.getElementById('draft-ask-cancel').onclick = () => closeOv('draft-ask-ov');
 document.getElementById('draft-ask-discard').onclick = () => { clearComposer(); closeOv('draft-ask-ov'); closeCompose(); };
 document.getElementById('draft-ask-save').onclick = async () => { await saveDraft(); renderDraftList(); clearComposer(); closeOv('draft-ask-ov'); closeCompose(); };
+
+// ── 統計ダッシュボード ────────────────────────────────────────────
+function statBars(container, rows){
+  const max = Math.max(1, ...rows.map(r => r[1]));
+  rows.forEach(([label, val]) => {
+    const row = document.createElement('div'); row.className = 'stat-bar-row';
+    const lb = document.createElement('div'); lb.className = 'stat-bar-label'; lb.textContent = label; lb.title = label;
+    const tr = document.createElement('div'); tr.className = 'stat-bar-track';
+    const fi = document.createElement('div'); fi.className = 'stat-bar-fill'; fi.style.width = (val / max * 100) + '%';
+    tr.appendChild(fi);
+    const vv = document.createElement('div'); vv.className = 'stat-bar-val'; vv.textContent = val;
+    row.appendChild(lb); row.appendChild(tr); row.appendChild(vv);
+    container.appendChild(row);
+  });
+}
+function ymd(d){ const x = new Date(d); return x.getFullYear() + '-' + (x.getMonth()+1) + '-' + x.getDate(); }
+function renderStats(){
+  const body = document.getElementById('stats-body'); body.innerHTML = '';
+  const memos = S.memos;
+  const boards = memos.filter(m => m.board).length;
+  const totalChars = memos.reduce((s, m) => s + stripHtml(m.html || '').length, 0);
+  const tagSet = new Set(); memos.forEach(m => (m.tags || []).forEach(t => tagSet.add(t)));
+  const avg = memos.length ? Math.round(totalChars / memos.length) : 0;
+  // サマリーカード
+  const cards = document.createElement('div'); cards.className = 'stats-cards';
+  [['メモ', memos.length], ['ボード', boards], ['下書き', (S.drafts || []).length],
+   ['ルーム', S.rooms.length], ['タグ', tagSet.size], ['総文字数', totalChars.toLocaleString()],
+   ['平均文字数', avg.toLocaleString()], ['ピン', memos.filter(m => m.pinned).length], ['画像あり', memos.filter(m => /cmemo-img:|<img/.test(m.html || '')).length]
+  ].forEach(([lbl, num]) => {
+    const c = document.createElement('div'); c.className = 'stat-card';
+    c.innerHTML = '<div class="stat-num">' + num + '</div><div class="stat-lbl">' + lbl + '</div>';
+    cards.appendChild(c);
+  });
+  body.appendChild(cards);
+  if (!memos.length){ const e = document.createElement('div'); e.className = 'stats-sec stats-empty'; e.textContent = 'メモがありません'; body.appendChild(e); return; }
+  // ルーム別
+  const roomSec = document.createElement('div'); roomSec.className = 'stats-sec';
+  roomSec.innerHTML = '<h4>ルーム別メモ数</h4>';
+  const roomRows = S.rooms.map(r => [(r.icon ? r.icon + ' ' : '') + r.name, memos.filter(m => m.roomId === r.id).length])
+    .filter(r => r[1] > 0).sort((a, b) => b[1] - a[1]);
+  statBars(roomSec, roomRows); body.appendChild(roomSec);
+  // タグ別 top10
+  const tagCount = {}; memos.forEach(m => (m.tags || []).forEach(t => tagCount[t] = (tagCount[t] || 0) + 1));
+  const topTags = Object.entries(tagCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const tagSec = document.createElement('div'); tagSec.className = 'stats-sec';
+  tagSec.innerHTML = '<h4>よく使うタグ（上位10）</h4>';
+  if (topTags.length) statBars(tagSec, topTags.map(([t, n]) => ['#' + t, n]));
+  else tagSec.innerHTML += '<div class="stats-empty">タグがありません</div>';
+  body.appendChild(tagSec);
+  // 曜日別
+  const wlabels = ['日', '月', '火', '水', '木', '金', '土'];
+  const wd = [0,0,0,0,0,0,0]; memos.forEach(m => { wd[new Date(m.createdAt).getDay()]++; });
+  const wSec = document.createElement('div'); wSec.className = 'stats-sec';
+  wSec.innerHTML = '<h4>曜日別の投稿数</h4>';
+  statBars(wSec, wlabels.map((l, i) => [l + '曜', wd[i]]));
+  body.appendChild(wSec);
+  // 連続投稿（ストリーク）
+  const dayKeys = new Set(memos.map(m => ymd(m.createdAt)));
+  let longest = 0, cur = 0; const today = new Date();
+  for (let i = 0; i < 730; i++){
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    if (dayKeys.has(ymd(d))){ cur++; if (cur > longest) longest = cur; }
+    else { if (i === 0) cur = 0; else break; }   // 今日未投稿でも昨日からの連続は許容
+  }
+  // 最長ストリーク（全期間）
+  const sortedDays = [...dayKeys].map(k => { const [y,mo,da] = k.split('-').map(Number); return new Date(y, mo-1, da).getTime(); }).sort((a,b)=>a-b);
+  let best = sortedDays.length ? 1 : 0, run = best;
+  for (let i = 1; i < sortedDays.length; i++){
+    if (sortedDays[i] - sortedDays[i-1] === 86400000){ run++; if (run > best) best = run; } else run = 1;
+  }
+  const sSec = document.createElement('div'); sSec.className = 'stats-sec';
+  sSec.innerHTML = '<h4>継続</h4>';
+  const sc = document.createElement('div'); sc.className = 'stats-cards';
+  sc.innerHTML = '<div class="stat-card"><div class="stat-num">' + cur + '</div><div class="stat-lbl">現在の連続日数</div></div>'
+    + '<div class="stat-card"><div class="stat-num">' + best + '</div><div class="stat-lbl">最長連続日数</div></div>'
+    + '<div class="stat-card"><div class="stat-num">' + dayKeys.size + '</div><div class="stat-lbl">投稿した日数</div></div>';
+  sSec.appendChild(sc); body.appendChild(sSec);
+}
+document.getElementById('stats-btn').onclick = () => { renderStats(); openOv('stats-ov'); };
+document.getElementById('stats-close').onclick = () => closeOv('stats-ov');
+document.getElementById('stats-ov').addEventListener('click', e => { if (e.target === document.getElementById('stats-ov')) closeOv('stats-ov'); });
+
+// ── コマンドパレット（Ctrl+K） ───────────────────────────────────
+let cmdpItems = [], cmdpSel = 0;
+function cmdpClick(id){ const el = document.getElementById(id); if (el) el.click(); }
+function cmdpCommands(){
+  const cmds = [
+    { ico: '📝', label: '新規メモ（大きい画面）', run: () => openCompose() },
+    { ico: '🧩', label: 'フリーボードを追加', run: () => cmdpClick('fb-new-btn') },
+    { ico: '🔍', label: '検索にフォーカス', run: () => { const s = document.getElementById('search'); s.focus(); s.select(); } },
+    { ico: '🗂', label: '表示切替（チャット ⇔ メモ一覧）', run: () => { S.layoutMode = (S.layoutMode === 'note') ? 'chat' : 'note'; persist(); applyLayout(); renderMemos(); } },
+    { ico: '🕸', label: 'グラフを開く', run: () => cmdpClick('graph-btn') },
+    { ico: '📊', label: '統計を開く', run: () => cmdpClick('stats-btn') },
+    { ico: '📌', label: 'ピン留め一覧', run: () => cmdpClick('corkboard-btn') },
+    { ico: '📑', label: '下書きを開く', run: () => openDraftList() },
+    { ico: '🎨', label: 'テーマ切替', run: () => cmdpClick('theme-btn') },
+    { ico: '✏️', label: '一括編集モード', run: () => cmdpClick('bulk-edit-btn') },
+    { ico: '⚙', label: '設定を開く', run: () => cmdpClick('tag-manage-btn') },
+    { ico: '↓', label: '書き出し（エクスポート）', run: () => cmdpClick('export-btn') },
+    { ico: '↑', label: '取り込み（インポート）', run: () => cmdpClick('import-btn') },
+  ];
+  (S.rooms || []).forEach(r => {
+    if (r.id === roomId) return;
+    cmds.push({ ico: r.icon || '💬', label: 'ルーム: ' + r.name, hint: '移動', run: () => switchRoom(r.id) });
+  });
+  return cmds;
+}
+function renderCmdp(){
+  const q = document.getElementById('cmdp-input').value.trim().toLowerCase();
+  const listEl = document.getElementById('cmdp-list');
+  listEl.innerHTML = '';
+  cmdpItems = [];
+  cmdpCommands().filter(c => !q || c.label.toLowerCase().includes(q)).forEach(c => cmdpItems.push(c));
+  // メモ検索（入力があるとき）
+  if (q){
+    const memos = S.memos.filter(m => memoSearchText(m).toLowerCase().includes(q) || (m.tags || []).some(t => t.toLowerCase().includes(q)))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
+    memos.forEach(m => cmdpItems.push({ ico: m.board ? '🧩' : '📄', label: memoFirstLine(m) || '無題', hint: fmtTime(m.createdAt), _sec: 'memo', run: () => navToMemo(m.id) }));
+  }
+  if (!cmdpItems.length){ listEl.innerHTML = '<div class="cmdp-empty">該当なし</div>'; return; }
+  let lastSec = null;
+  cmdpItems.forEach((it, i) => {
+    const sec = it._sec === 'memo' ? 'メモ' : 'コマンド';
+    if (sec !== lastSec){ const s = document.createElement('div'); s.className = 'cmdp-sec'; s.textContent = sec; listEl.appendChild(s); lastSec = sec; }
+    const row = document.createElement('div'); row.className = 'cmdp-row' + (i === cmdpSel ? ' sel' : ''); row.dataset.i = i;
+    row.innerHTML = '<span class="cmdp-ico"></span><span class="cmdp-label"></span><span class="cmdp-hint"></span>';
+    row.querySelector('.cmdp-ico').textContent = it.ico || '•';
+    row.querySelector('.cmdp-label').textContent = it.label;
+    row.querySelector('.cmdp-hint').textContent = it.hint || '';
+    row.onclick = () => runCmdp(i);
+    listEl.appendChild(row);
+  });
+}
+function runCmdp(i){ const it = cmdpItems[i]; if (!it) return; closeOv('cmdp-ov'); setTimeout(() => it.run(), 0); }
+function moveCmdpSel(d){
+  if (!cmdpItems.length) return;
+  cmdpSel = (cmdpSel + d + cmdpItems.length) % cmdpItems.length;
+  const rows = document.querySelectorAll('#cmdp-list .cmdp-row');
+  rows.forEach(r => r.classList.toggle('sel', Number(r.dataset.i) === cmdpSel));
+  const sel = [...rows].find(r => Number(r.dataset.i) === cmdpSel);
+  if (sel) sel.scrollIntoView({ block: 'nearest' });
+}
+function openCmdp(){
+  cmdpSel = 0;
+  const inp = document.getElementById('cmdp-input'); inp.value = '';
+  renderCmdp();
+  openOv('cmdp-ov');
+  setTimeout(() => inp.focus(), 30);
+}
+document.getElementById('cmdp-input').addEventListener('input', () => { cmdpSel = 0; renderCmdp(); });
+document.getElementById('cmdp-input').addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown'){ e.preventDefault(); moveCmdpSel(1); }
+  else if (e.key === 'ArrowUp'){ e.preventDefault(); moveCmdpSel(-1); }
+  else if (e.key === 'Enter'){ e.preventDefault(); runCmdp(cmdpSel); }
+  else if (e.key === 'Escape'){ e.preventDefault(); closeOv('cmdp-ov'); }
+});
+document.getElementById('cmdp-ov').addEventListener('click', e => { if (e.target === document.getElementById('cmdp-ov')) closeOv('cmdp-ov'); });
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')){
+    e.preventDefault();
+    const ov = document.getElementById('cmdp-ov');
+    if (ov.classList.contains('open')) closeOv('cmdp-ov'); else openCmdp();
+  }
+});
 // 入力エリア常時表示の切り替え（オフ=既定: ✏️で大画面入力）
 function applyInputMode(){
   document.body.classList.toggle('input-collapsed', !S.alwaysShowInput);
@@ -3529,7 +3844,7 @@ function syncCheckboxAttrs(el){
 }
 async function sendMemo() {
   syncCheckboxAttrs(editor);
-  const raw = editor.innerHTML.trim();
+  const raw = sheetStripHtml(editor.innerHTML.trim());
   if (!raw || raw === '<br>') return;
   const html = await externalizeAndStore(raw);   // 画像を分離してから保存
   const tags = parseTags(document.getElementById('tag-input').value);
@@ -3852,7 +4167,8 @@ function bubbleSig(m, q, showRoom) {
   return imgHash(m.html || '') + '|' + (m.pinned ? 1 : 0) + '|' + (m.bgColor || '')
        + '|' + (m.titleLine !== false ? 1 : 0) + '|' + (m.tags ? m.tags.join(',') : '')
        + '|' + (m.updatedAt || m.createdAt || '') + '|' + (m.roomId || '')
-       + '|' + q + '|' + (showRoom ? 1 : 0) + '|' + (S.layoutMode || '') + '|' + _bubbleRenderVer;
+       + '|' + q + '|' + (showRoom ? 1 : 0) + '|' + (S.layoutMode || '') + '|' + _bubbleRenderVer
+       + '|bl:' + (S.showBacklinks ? (_backlinks.get(m.id) || []).join(',') : '');
 }
 function placeBubble(m, q, showRoom, container) {
   if (m.board) { renderBubble(m, q, showRoom, container); return; }   // ボードは都度描画
@@ -3865,6 +4181,25 @@ function placeBubble(m, q, showRoom, container) {
   (container || msgs).appendChild(ent.node);
 }
 let _lastRenderQ = null, _lastRenderGS = null;
+
+// バックリンク（このメモへジャンプリンクしている他メモ）の索引
+let _backlinks = new Map();
+function extractJumpIds(html){
+  const ids = []; const re = /data-jump-id="([^"]+)"/g; let m;
+  while ((m = re.exec(html || ''))) ids.push(m[1]);
+  return ids;
+}
+function rebuildBacklinks(){
+  _backlinks = new Map();
+  if (!S.showBacklinks) return;
+  S.memos.forEach(src => {
+    extractJumpIds(src.html).forEach(tid => {
+      if (tid === src.id) return;
+      if (!_backlinks.has(tid)) _backlinks.set(tid, []);
+      const arr = _backlinks.get(tid); if (!arr.includes(src.id)) arr.push(src.id);
+    });
+  });
+}
 
 // ランダム並び用シード（種類をランダムに切替えた時に振り直す）
 let _sortRandSeed = 1;
@@ -3904,6 +4239,7 @@ function renderMemos() {
     _bubbleCache.clear(); _lastRenderQ = q; _lastRenderGS = globalSearch;
   }
   msgs.innerHTML = '';
+  rebuildBacklinks();
   const baseList = globalSearch ? S.memos : curMemos();
   // タグ絞り込み配列はメモ件数分くり返し作ると無駄なので、ループ外で1回だけ計算
   const includedTags = [...activeTagFilters.entries()].filter(([, mode]) => mode === 1).map(([tag]) => tag);
@@ -4198,22 +4534,44 @@ function sheetCollect(grid, args, vis){
   });
   return out;
 }
+function sheetCellText(grid, r, c, vis){
+  if (r < 0 || c < 0 || r >= grid.length || !grid[r] || c >= grid[r].length) return '';
+  const raw = String(grid[r][c] == null ? '' : grid[r][c]);
+  if (raw[0] === '='){ const k = r + ',' + c; if (vis.has(k)) return ''; vis.add(k); const v = sheetEvalFormula(grid, raw.slice(1), vis); vis.delete(k); return (typeof v === 'number') ? sheetFormat(v) : String(v); }
+  return raw;
+}
+function sheetEvalString(grid, body, vis){
+  return body.split('&').map(p => {
+    p = p.trim(); if (p === '') return '';
+    const q = p.match(/^"([\s\S]*)"$/); if (q) return q[1];
+    const rc = sheetRefToRC(p); if (rc) return sheetCellText(grid, rc.r, rc.c, vis);
+    if (/^-?\d*\.?\d+$/.test(p)) return sheetFormat(parseFloat(p));
+    return p;
+  }).join('');
+}
 function sheetEvalFormula(grid, body, vis){
   vis = vis || new Set();
-  body = body.replace(/\b(SUM|AVERAGE|AVG|MIN|MAX|COUNT|PRODUCT)\s*\(([^()]*)\)/gi, (mm, fn, args) => {
+  body = body.replace(/\bCONCAT\s*\(([^()]*)\)/gi, (mm, args) => args.split(',').map(x => x.trim()).join('&'));
+  if (/&/.test(body)) return sheetEvalString(grid, body, vis);
+  body = body.replace(/\b(SUM|AVERAGE|AVG|MEDIAN|MIN|MAX|COUNT|PRODUCT|ROUND|ABS|INT)\s*\(([^()]*)\)/gi, (mm, fn, args) => {
     const nums = sheetCollect(grid, args, vis); fn = fn.toUpperCase(); let v = 0;
     if (fn === 'SUM') v = nums.reduce((a, b) => a + b, 0);
     else if (fn === 'AVERAGE' || fn === 'AVG') v = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+    else if (fn === 'MEDIAN'){ if (nums.length){ const s = nums.slice().sort((a, b) => a - b); const h = Math.floor(s.length / 2); v = s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; } }
     else if (fn === 'MIN') v = nums.length ? Math.min(...nums) : 0;
     else if (fn === 'MAX') v = nums.length ? Math.max(...nums) : 0;
     else if (fn === 'COUNT') v = nums.length;
     else if (fn === 'PRODUCT') v = nums.length ? nums.reduce((a, b) => a * b, 1) : 0;
+    else if (fn === 'ROUND'){ const p = Math.pow(10, nums[1] || 0); v = Math.round((nums[0] || 0) * p) / p; }
+    else if (fn === 'ABS') v = Math.abs(nums[0] || 0);
+    else if (fn === 'INT') v = Math.floor(nums[0] || 0);
     return '(' + v + ')';
   });
   body = body.replace(/\b([A-Za-z]+\d+)\b/g, (mm, ref) => { const rc = sheetRefToRC(ref); return rc ? '(' + sheetCellNum(grid, rc.r, rc.c, vis) + ')' : '0'; });
   try { return sheetEvalArith(body); } catch (e) { return NaN; }
 }
 function sheetFormat(v){
+  if (typeof v === 'string') return v;
   if (typeof v !== 'number' || !isFinite(v)) return '#ERR';
   const r = Math.round(v * 1e6) / 1e6;
   return (Math.abs(r - Math.round(r)) < 1e-9) ? String(Math.round(r)) : String(r);
@@ -4235,6 +4593,386 @@ function computeSheet(table){
     });
   });
 }
+// ── スプレッドシート（データ・計算用。「表」とは別物） ─────────────────
+function sheetColLetter(c){ let s = ''; c++; while (c > 0){ const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; }
+function makeSheet(rows, cols){ rows = rows || 8; cols = cols || 5; return { name: 'シート', data: Array.from({ length: rows }, () => Array.from({ length: cols }, () => '')), colW: [], merges: [] }; }
+function sheetNRows(sh){ return sh.data.length; }
+function sheetNCols(sh){ return sh.data[0] ? sh.data[0].length : 0; }
+function sheetRect(sel){ return { r1: Math.min(sel.r1, sel.r2), c1: Math.min(sel.c1, sel.c2), r2: Math.max(sel.r1, sel.r2), c2: Math.max(sel.c1, sel.c2) }; }
+function sheetMergeAt(sh, r, c){ return (sh.merges || []).find(m => m.r === r && m.c === c) || null; }
+function sheetCoveredBy(sh, r, c){ return (sh.merges || []).find(m => r >= m.r && r < m.r + m.rs && c >= m.c && c < m.c + m.cs && !(m.r === r && m.c === c)) || null; }
+function sheetCompDisplay(sh, r, c){
+  const raw = (sh.data[r] && sh.data[r][c] != null) ? String(sh.data[r][c]) : '';
+  if (raw[0] === '='){ const v = sheetEvalFormula(sh.data, raw.slice(1), new Set()); return { text: sheetFormat(v), calc: true, num: (typeof v === 'number') }; }
+  const isNum = raw.trim() !== '' && /^-?[\d,]*\.?\d+$/.test(raw.trim());
+  return { text: raw, calc: false, num: isNum };
+}
+function sheetToCSV(sh){ return sh.data.map(row => row.map(v => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\n'); }
+function sheetThumb(sh, maxR, maxC){
+  const box = document.createElement('div'); box.className = 'sheet-thumb';
+  const bar = document.createElement('div'); bar.className = 'sheet-thumb-bar'; bar.textContent = '📊 ' + (sh.name || 'シート'); box.appendChild(bar);
+  const nr = Math.min(sheetNRows(sh), maxR || 8), nc = Math.min(sheetNCols(sh), maxC || 6);
+  const tbl = document.createElement('table');
+  const thr = document.createElement('tr'); thr.appendChild(document.createElement('th'));
+  for (let c = 0; c < nc; c++){ const th = document.createElement('th'); th.textContent = sheetColLetter(c); thr.appendChild(th); }
+  tbl.appendChild(thr);
+  for (let r = 0; r < nr; r++){
+    const tr = document.createElement('tr'); const rh = document.createElement('th'); rh.textContent = r + 1; tr.appendChild(rh);
+    for (let c = 0; c < nc; c++){
+      if (sheetCoveredBy(sh, r, c)) continue;
+      const td = document.createElement('td'); const m = sheetMergeAt(sh, r, c);
+      if (m){ if (m.rs > 1) td.rowSpan = Math.min(m.rs, nr - r); if (m.cs > 1) td.colSpan = Math.min(m.cs, nc - c); }
+      const d = sheetCompDisplay(sh, r, c); if (d.num) td.className = 'num'; td.textContent = d.text; tr.appendChild(td);
+    }
+    tbl.appendChild(tr);
+  }
+  box.appendChild(tbl); return box;
+}
+
+// メモ本文に埋め込んだシート（<div class="sheet-embed" data-sheet="ID">）をサムネイル化
+function hydrateSheetEmbeds(container){
+  if (!container) return;
+  container.querySelectorAll('.sheet-embed[data-sheet]').forEach(el => {
+    const id = el.dataset.sheet; const sh = (S.sheets || {})[id];
+    el.setAttribute('contenteditable', 'false'); el.innerHTML = '';
+    if (!sh){ el.textContent = '📊 （削除されたシート）'; return; }
+    const thumb = sheetThumb(sh, 14, 8); thumb.style.cursor = 'pointer';
+    thumb.onclick = (e) => { e.stopPropagation(); openSheetEditor(sh, (res) => { S.sheets[id] = res; persist(); hydrateSheetEmbeds(container); renderMemos(); }); };
+    el.appendChild(thumb);
+  });
+}
+// 保存前に埋め込みシートの中身（サムネイル）を空のマーカーへ戻す
+function sheetStripHtml(raw){
+  const d = document.createElement('div'); d.innerHTML = raw;
+  d.querySelectorAll('.sheet-embed').forEach(e => { e.innerHTML = ''; });
+  return d.innerHTML;
+}
+
+// 全画面エディタ
+let _sheet = null, _sheetSel = { r1: 0, c1: 0, r2: 0, c2: 0 }, _sheetOnDone = null, _sheetEditing = false, _sheetEditCell = null, _sheetClip = null, _sheetDrag = false;
+let _sheetCellEls = [], _sheetColHdrEls = [], _sheetRowHdrEls = [], _sheetPrev = null, _fxCell = null, _fxOrig = '', _sheetClipDisp = null;
+function syncSheetFx(){
+  const ref = document.getElementById('sheet-fx-ref'); const inp = document.getElementById('sheet-fx-input');
+  if (ref) ref.textContent = sheetColLetter(_sheetSel.c1) + (_sheetSel.r1 + 1);
+  if (inp && document.activeElement !== inp) inp.value = (_sheet && _sheet.data[_sheetSel.r1] && _sheet.data[_sheetSel.r1][_sheetSel.c1] != null) ? String(_sheet.data[_sheetSel.r1][_sheetSel.c1]) : '';
+}
+function openSheetEditor(sh, onDone){
+  _sheet = JSON.parse(JSON.stringify(sh));   // 編集はコピーに対して行い、保存時のみ反映
+  _sheet.merges = _sheet.merges || []; _sheet.colW = _sheet.colW || [];
+  _sheetOnDone = onDone || null; _sheetSel = { r1: 0, c1: 0, r2: 0, c2: 0 }; _sheetEditing = false; _sheetEditCell = null;
+  document.getElementById('sheet-title').value = _sheet.name || 'シート';
+  renderSheetGrid();
+  document.getElementById('sheet-ov').classList.add('open');
+  setTimeout(() => document.getElementById('sheet-grid-wrap').focus(), 30);
+}
+function closeSheetEditor(save){
+  commitSheetEdit();
+  if (save){ _sheet.name = document.getElementById('sheet-title').value.trim() || 'シート'; if (_sheetOnDone) _sheetOnDone(_sheet); }
+  document.getElementById('sheet-ov').classList.remove('open');
+  _sheet = null; _sheetOnDone = null;
+}
+function updateSheetCellRef(){ const el = document.getElementById('sheet-cellref'); if (el) el.textContent = sheetColLetter(_sheetSel.c1) + (_sheetSel.r1 + 1); }
+function renderSheetGrid(){
+  const sh = _sheet; if (!sh) return;
+  const tbl = document.getElementById('sheet-grid'); tbl.innerHTML = '';
+  const nr = sheetNRows(sh), nc = sheetNCols(sh);
+  _sheetCellEls = Array.from({ length: nr }, () => new Array(nc).fill(null));
+  _sheetColHdrEls = new Array(nc); _sheetRowHdrEls = new Array(nr); _sheetPrev = null;
+  const thead = document.createElement('thead'); const htr = document.createElement('tr');
+  const corner = document.createElement('th'); corner.className = 'corner'; htr.appendChild(corner);
+  for (let c = 0; c < nc; c++){
+    const th = document.createElement('th'); th.textContent = sheetColLetter(c);
+    if (sh.colW && sh.colW[c]) th.style.minWidth = sh.colW[c] + 'px';
+    th.onclick = () => { commitSheetEdit(); _sheetSel = { r1: 0, c1: c, r2: sheetNRows(_sheet) - 1, c2: c }; updateSheetSelUI(); document.getElementById('sheet-grid-wrap').focus(); };
+    _sheetColHdrEls[c] = th; htr.appendChild(th);
+  }
+  thead.appendChild(htr); tbl.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  for (let r = 0; r < nr; r++){
+    const tr = document.createElement('tr');
+    const rh = document.createElement('th'); rh.textContent = r + 1;
+    rh.onclick = () => { commitSheetEdit(); _sheetSel = { r1: r, c1: 0, r2: r, c2: sheetNCols(_sheet) - 1 }; updateSheetSelUI(); document.getElementById('sheet-grid-wrap').focus(); };
+    _sheetRowHdrEls[r] = rh; tr.appendChild(rh);
+    for (let c = 0; c < nc; c++){
+      if (sheetCoveredBy(sh, r, c)) continue;
+      const td = document.createElement('td'); const m = sheetMergeAt(sh, r, c);
+      if (m){ if (m.rs > 1) td.rowSpan = m.rs; if (m.cs > 1) td.colSpan = m.cs; }
+      const disp = sheetCompDisplay(sh, r, c);
+      if (disp.num) td.classList.add('num'); if (disp.calc) td.classList.add('calc');
+      const span = document.createElement('div'); span.className = 'scell'; span.textContent = disp.text; td.appendChild(span);
+      td.dataset.r = r; td.dataset.c = c;
+      _sheetCellEls[r][c] = td;
+      const rr = r, cc = c;
+      td.onmousedown = (e) => { if (e.button !== 0) return; if (_sheetEditing) commitSheetEdit(); if (e.shiftKey){ _sheetSel.r2 = rr; _sheetSel.c2 = cc; } else { _sheetSel = { r1: rr, c1: cc, r2: rr, c2: cc }; _sheetDrag = true; } updateSheetSelUI(); document.getElementById('sheet-grid-wrap').focus(); };
+      td.onmouseenter = () => { if (_sheetDrag){ _sheetSel.r2 = rr; _sheetSel.c2 = cc; updateSheetSelUI(); } };
+      td.ondblclick = () => startSheetEdit(rr, cc);
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+  updateSheetSelUI();
+}
+function updateSheetSelUI(){
+  if (!_sheet) return;
+  const sel = sheetRect(_sheetSel); const single = (sel.r1 === sel.r2 && sel.c1 === sel.c2);
+  const p = _sheetPrev;
+  if (p){
+    for (let r = p.r1; r <= p.r2; r++) for (let c = p.c1; c <= p.c2; c++){ const td = _sheetCellEls[r] && _sheetCellEls[r][c]; if (td) td.classList.remove('in-range', 'sel'); }
+    for (let c = p.c1; c <= p.c2; c++){ const th = _sheetColHdrEls[c]; if (th) th.classList.remove('hdr-sel'); }
+    for (let r = p.r1; r <= p.r2; r++){ const th = _sheetRowHdrEls[r]; if (th) th.classList.remove('hdr-sel'); }
+  }
+  for (let r = sel.r1; r <= sel.r2; r++) for (let c = sel.c1; c <= sel.c2; c++){ const td = _sheetCellEls[r] && _sheetCellEls[r][c]; if (td && !single) td.classList.add('in-range'); }
+  const at = _sheetCellEls[_sheetSel.r1] && _sheetCellEls[_sheetSel.r1][_sheetSel.c1]; if (at) at.classList.add('sel');
+  for (let c = sel.c1; c <= sel.c2; c++){ const th = _sheetColHdrEls[c]; if (th) th.classList.add('hdr-sel'); }
+  for (let r = sel.r1; r <= sel.r2; r++){ const th = _sheetRowHdrEls[r]; if (th) th.classList.add('hdr-sel'); }
+  _sheetPrev = { r1: sel.r1, c1: sel.c1, r2: sel.r2, c2: sel.c2 };
+  updateSheetCellRef();
+  syncSheetFx();
+}
+function sheetTd(r, c){ return _sheetCellEls[r] ? _sheetCellEls[r][c] : null; }
+function startSheetEdit(r, c, initial){
+  commitSheetEdit();
+  _sheetSel = { r1: r, c1: c, r2: r, c2: c }; updateSheetSelUI();
+  const td = sheetTd(r, c); if (!td) return;
+  _sheetEditing = true; _sheetEditCell = { r, c };
+  const span = td.querySelector('.scell');
+  span.textContent = (initial != null) ? initial : String((_sheet.data[r] && _sheet.data[r][c]) || '');
+  span.contentEditable = 'true'; span.focus();
+  const range = document.createRange(); range.selectNodeContents(span); range.collapse(false);
+  const s = window.getSelection(); s.removeAllRanges(); s.addRange(range);
+  span.onkeydown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); commitSheetEdit(); sheetMove(1, 0); }
+    else if (e.key === 'Escape'){ e.preventDefault(); _sheetEditing = false; _sheetEditCell = null; renderSheetGrid(); document.getElementById('sheet-grid-wrap').focus(); }
+    else if (e.key === 'Tab'){ e.preventDefault(); commitSheetEdit(); sheetMove(0, e.shiftKey ? -1 : 1); }
+  };
+  span.onblur = () => { if (_sheetEditing && _sheetEditCell && _sheetEditCell.r === r && _sheetEditCell.c === c) commitSheetEdit(); };
+}
+function commitSheetEdit(){
+  if (!_sheetEditing || !_sheetEditCell) { _sheetEditing = false; return; }
+  const { r, c } = _sheetEditCell; const td = sheetTd(r, c);
+  if (td){ const span = td.querySelector('.scell'); if (span){ _sheet.data[r][c] = span.textContent; span.contentEditable = 'false'; } }
+  _sheetEditing = false; _sheetEditCell = null;
+  renderSheetGrid();
+}
+function sheetMove(dr, dc){
+  const r = Math.max(0, Math.min(sheetNRows(_sheet) - 1, _sheetSel.r1 + dr));
+  const c = Math.max(0, Math.min(sheetNCols(_sheet) - 1, _sheetSel.c1 + dc));
+  _sheetSel = { r1: r, c1: c, r2: r, c2: c }; updateSheetSelUI();
+  const td = sheetTd(r, c); if (td) td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  document.getElementById('sheet-grid-wrap').focus();
+}
+// 範囲コピー / 貼り付け
+function sheetCopySel(){
+  const s = sheetRect(_sheetSel); const raw = [], disp = [];
+  for (let r = s.r1; r <= s.r2; r++){
+    const rr = [], dr = [];
+    for (let c = s.c1; c <= s.c2; c++){ rr.push((_sheet.data[r] && _sheet.data[r][c]) || ''); dr.push(sheetCompDisplay(_sheet, r, c).text); }
+    raw.push(rr); disp.push(dr);
+  }
+  _sheetClip = raw;                                   // アプリ内貼り付け用＝式のまま
+  _sheetClipDisp = disp.map(r => r.join('\t')).join('\n');   // 外部へは計算結果（値）
+  try { if (navigator.clipboard) navigator.clipboard.writeText(_sheetClipDisp); } catch (e) {}
+}
+function sheetPasteBlock(block){
+  if (!block || !block.length) return;
+  const bR = block.length, bC = Math.max(1, ...block.map(row => row.length));
+  const sel = sheetRect(_sheetSel);
+  const selR = sel.r2 - sel.r1 + 1, selC = sel.c2 - sel.c1 + 1;
+  // 選択範囲がコピー元の整数倍なら範囲全体に敷き詰め（単体→複数貼り付け含む）
+  let tR = bR, tC = bC;
+  if ((selR > 1 || selC > 1) && selR % bR === 0 && selC % bC === 0){ tR = selR; tC = selC; }
+  const r0 = sel.r1, c0 = sel.c1;
+  while (sheetNRows(_sheet) < r0 + tR) _sheet.data.push(Array.from({ length: sheetNCols(_sheet) }, () => ''));
+  while (sheetNCols(_sheet) < c0 + tC) _sheet.data.forEach(row => row.push(''));
+  for (let i = 0; i < tR; i++) for (let j = 0; j < tC; j++){
+    const row = block[i % bR]; const v = (row && row[j % bC] != null) ? row[j % bC] : '';
+    _sheet.data[r0 + i][c0 + j] = v;
+  }
+  _sheetSel = { r1: r0, c1: c0, r2: r0 + tR - 1, c2: c0 + tC - 1 };
+  renderSheetGrid();
+}
+function parseClipText(t){
+  let lines = t.replace(/\r/g, '').split('\n');
+  if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+  return lines.map(line => line.split('\t'));
+}
+function sheetRowAdd(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const at = s.r2 + 1; _sheet.data.splice(at, 0, Array.from({ length: sheetNCols(_sheet) }, () => '')); _sheet.merges.forEach(m => { if (at <= m.r) m.r++; else if (at <= m.r + m.rs - 1) m.rs++; }); renderSheetGrid(); }
+function sheetRowDel(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const n = s.r2 - s.r1 + 1; if (sheetNRows(_sheet) - n < 1){ alert('最後の行は削除できません'); return; } _sheet.data.splice(s.r1, n); _sheet.merges = _sheet.merges.filter(m => m.r + m.rs - 1 < s.r1 || m.r > s.r2).map(m => { if (m.r > s.r2) m.r -= n; return m; }); const r = Math.min(s.r1, sheetNRows(_sheet) - 1); _sheetSel = { r1: r, c1: s.c1, r2: r, c2: s.c1 }; renderSheetGrid(); }
+function sheetColAdd(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const at = s.c2 + 1; _sheet.data.forEach(row => row.splice(at, 0, '')); _sheet.colW.splice(at, 0, undefined); _sheet.merges.forEach(m => { if (at <= m.c) m.c++; else if (at <= m.c + m.cs - 1) m.cs++; }); renderSheetGrid(); }
+function sheetColDel(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const n = s.c2 - s.c1 + 1; if (sheetNCols(_sheet) - n < 1){ alert('最後の列は削除できません'); return; } _sheet.data.forEach(row => row.splice(s.c1, n)); _sheet.colW.splice(s.c1, n); _sheet.merges = _sheet.merges.filter(m => m.c + m.cs - 1 < s.c1 || m.c > s.c2).map(m => { if (m.c > s.c2) m.c -= n; return m; }); const c = Math.min(s.c1, sheetNCols(_sheet) - 1); _sheetSel = { r1: s.r1, c1: c, r2: s.r1, c2: c }; renderSheetGrid(); }
+function sheetRowCopy(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const block = []; for (let r = s.r1; r <= s.r2; r++) block.push(_sheet.data[r].slice()); const at = s.r2 + 1; _sheet.data.splice(at, 0, ...block); _sheet.merges.forEach(m => { if (m.r >= at) m.r += block.length; }); renderSheetGrid(); }
+function sheetColCopy(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const w = s.c2 - s.c1 + 1; const at = s.c2 + 1; _sheet.data.forEach(row => { const block = row.slice(s.c1, s.c2 + 1); row.splice(at, 0, ...block); }); const wb = _sheet.colW.slice(s.c1, s.c2 + 1); _sheet.colW.splice(at, 0, ...wb); _sheet.merges.forEach(m => { if (m.c >= at) m.c += w; }); renderSheetGrid(); }
+function sheetMergeSel(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const rs = s.r2 - s.r1 + 1, cs = s.c2 - s.c1 + 1; if (rs < 2 && cs < 2) return; _sheet.merges = _sheet.merges.filter(m => m.r + m.rs - 1 < s.r1 || m.r > s.r2 || m.c + m.cs - 1 < s.c1 || m.c > s.c2); _sheet.merges.push({ r: s.r1, c: s.c1, rs, cs }); renderSheetGrid(); }
+function sheetUnmergeSel(){ commitSheetEdit(); const s = sheetRect(_sheetSel); _sheet.merges = _sheet.merges.filter(m => m.r + m.rs - 1 < s.r1 || m.r > s.r2 || m.c + m.cs - 1 < s.c1 || m.c > s.c2); renderSheetGrid(); }
+function sheetClearSel(){ commitSheetEdit(); const s = sheetRect(_sheetSel); for (let r = s.r1; r <= s.r2; r++) for (let c = s.c1; c <= s.c2; c++) if (_sheet.data[r]) _sheet.data[r][c] = ''; renderSheetGrid(); }
+// 数式中のセル参照を行・列方向にずらす（フィル用。引用符内の文字列は保護）
+function sheetShiftRef(ref, dR, dC){ const rc = sheetRefToRC(ref); if (!rc) return ref; return sheetColLetter(Math.max(0, rc.c + dC)) + (Math.max(0, rc.r + dR) + 1); }
+function sheetShiftFormula(body, dR, dC){
+  return body.split(/("(?:[^"\\]|\\.)*")/).map((seg, i) => (i % 2 === 1) ? seg : seg.replace(/\b([A-Za-z]+)(\d+)\b/g, m => sheetShiftRef(m, dR, dC))).join('');
+}
+// 値として貼り付け（コピーした内容を式ではなく計算結果で貼り付け）
+function sheetPasteValues(){ if (!_sheetClipDisp){ if (_sheetClip) sheetPasteBlock(_sheetClip); return; } sheetPasteBlock(parseClipText(_sheetClipDisp)); }
+// 選択セルの数式を、その時点の計算結果（値）に変換して固定
+function sheetFreezeValues(){
+  commitSheetEdit(); const s = sheetRect(_sheetSel); const vals = [];
+  for (let r = s.r1; r <= s.r2; r++) for (let c = s.c1; c <= s.c2; c++){ const raw = String((_sheet.data[r] && _sheet.data[r][c]) || ''); if (raw[0] === '=') vals.push([r, c, sheetCompDisplay(_sheet, r, c).text]); }
+  vals.forEach(([r, c, t]) => { _sheet.data[r][c] = t; });
+  renderSheetGrid();
+}
+// 固定長コピー（Fortran風書式）。例: "2f10.3,i5" → 先頭2列をf10.3、次の列をi5。範囲が広ければ最後の書式を繰り返す。
+let _sheetFmtLast = '2f10.3,i5';
+function parseFortranFmt(str){
+  const specs = [];
+  str.split(',').forEach(tok => {
+    tok = tok.trim(); if (!tok) return;
+    const m = tok.match(/^(\d*)([fFiIeEaA])(\d+)(?:\.(\d+))?$/);
+    if (!m) return;
+    const rep = m[1] ? parseInt(m[1], 10) : 1;
+    const spec = { type: m[2].toLowerCase(), width: parseInt(m[3], 10), dec: m[4] ? parseInt(m[4], 10) : 0 };
+    for (let i = 0; i < rep; i++) specs.push(spec);
+  });
+  return specs;
+}
+// 表示幅（全角＝2文字）
+function sheetCharW(ch){ const c = ch.codePointAt(0); return ((c >= 0x1100 && c <= 0x115F) || (c >= 0x2E80 && c <= 0xA4CF) || (c >= 0xAC00 && c <= 0xD7A3) || (c >= 0xF900 && c <= 0xFAFF) || (c >= 0xFE30 && c <= 0xFE4F) || (c >= 0xFF00 && c <= 0xFF60) || (c >= 0xFFE0 && c <= 0xFFE6) || (c >= 0x3000 && c <= 0x303F)) ? 2 : 1; }
+function sheetDispW(s){ let w = 0; for (const ch of String(s)) w += sheetCharW(ch); return w; }
+function sheetPadStartW(s, w){ const d = sheetDispW(s); return d >= w ? s : ' '.repeat(w - d) + s; }
+function sheetPadEndW(s, w){ const d = sheetDispW(s); return d >= w ? s : s + ' '.repeat(w - d); }
+function sheetTruncW(s, w){ let out = '', cur = 0; for (const ch of String(s)){ const cw = sheetCharW(ch); if (cur + cw > w) break; out += ch; cur += cw; } return out; }
+function fmtFortranField(val, spec){
+  const w = spec.width;
+  if (spec.type === 'a'){ return sheetPadEndW(sheetTruncW(String(val), w), w); }   // 文字: 左詰め（全角=2幅）
+  const num = parseFloat(String(val).replace(/,/g, ''));
+  if (isNaN(num)) return ' '.repeat(w);
+  let str;
+  if (spec.type === 'f') str = num.toFixed(spec.dec);
+  else if (spec.type === 'e') str = num.toExponential(spec.dec).replace('e', 'E');
+  else str = String(Math.round(num));   // i
+  return sheetDispW(str) > w ? '*'.repeat(w) : sheetPadStartW(str, w);
+}
+function sheetFixedCopy(){
+  commitSheetEdit();
+  const fmt = prompt('固定長の書式（Fortran風）\n例: 2f10.3,i5 → 先頭2列を f10.3、次の列を i5。\n範囲が書式より広ければ最後の書式を繰り返します。', _sheetFmtLast);
+  if (fmt == null) return; const f = fmt.trim(); if (!f) return;
+  const specs = parseFortranFmt(f);
+  if (!specs.length){ alert('書式を解釈できませんでした（例: 2f10.3,i5）'); return; }
+  _sheetFmtLast = f;
+  const s = sheetRect(_sheetSel); const ncols = s.c2 - s.c1 + 1; const lines = [];
+  for (let r = s.r1; r <= s.r2; r++){
+    let line = '';
+    for (let cc = 0; cc < ncols; cc++){
+      const spec = specs[Math.min(cc, specs.length - 1)];
+      const raw = String((_sheet.data[r] && _sheet.data[r][s.c1 + cc]) || '');
+      const val = raw[0] === '=' ? sheetCompDisplay(_sheet, r, s.c1 + cc).text : raw;
+      line += fmtFortranField(val, spec);
+    }
+    lines.push(line);
+  }
+  const out = lines.join('\n');
+  try { if (navigator.clipboard) navigator.clipboard.writeText(out); } catch (e) {}
+  alert('固定長テキストをコピーしました（' + lines.length + '行）。\n書式: ' + f);
+}
+// 連続値で埋める（数式: 相対参照をずらす／数値: 等差／「項目1」のような末尾数字: 連番）。先頭1〜2セルから推測。
+function sheetFillSeries(){
+  commitSheetEdit(); const s = sheetRect(_sheetSel);
+  const vertical = (s.r2 - s.r1) >= (s.c2 - s.c1);
+  const lines = vertical ? (s.c2 - s.c1 + 1) : (s.r2 - s.r1 + 1);
+  const len = vertical ? (s.r2 - s.r1 + 1) : (s.c2 - s.c1 + 1);
+  if (len < 2){ alert('2セル以上の範囲を選んでください'); return; }
+  const cell = (k, idx) => vertical ? { r: s.r1 + idx, c: s.c1 + k } : { r: s.r1 + k, c: s.c1 + idx };
+  for (let k = 0; k < lines; k++){
+    const a = cell(k, 0), b = cell(k, 1);
+    const v0 = String(_sheet.data[a.r][a.c] || '').trim();
+    const v1 = String(_sheet.data[b.r][b.c] || '').trim();
+    const n0 = parseFloat(v0), n1 = parseFloat(v1);
+    if (v0[0] === '='){
+      const base = v0.slice(1);
+      for (let idx = 0; idx < len; idx++){ const p = cell(k, idx); _sheet.data[p.r][p.c] = '=' + sheetShiftFormula(base, vertical ? idx : 0, vertical ? 0 : idx); }
+    } else if (v0 !== '' && /^-?\d*\.?\d+$/.test(v0)){
+      const step = (/^-?\d*\.?\d+$/.test(v1)) ? (n1 - n0) : 1;
+      for (let idx = 0; idx < len; idx++){ const p = cell(k, idx); _sheet.data[p.r][p.c] = String(n0 + step * idx); }
+    } else {
+      const m0 = v0.match(/^(.*?)(\d+)$/);
+      if (m0){
+        const prefix = m0[1]; let num = parseInt(m0[2], 10); let step = 1;
+        const m1 = v1.match(/^(.*?)(\d+)$/); if (m1 && m1[1] === prefix) step = parseInt(m1[2], 10) - num;
+        for (let idx = 0; idx < len; idx++){ const p = cell(k, idx); _sheet.data[p.r][p.c] = prefix + (num + step * idx); }
+      }
+    }
+  }
+  renderSheetGrid();
+}
+// 選択セルを連結する式（=A1&B1&…）を範囲の右隣に作成
+function sheetConcatSel(){
+  commitSheetEdit(); const s = sheetRect(_sheetSel);
+  const refs = [];
+  for (let r = s.r1; r <= s.r2; r++) for (let c = s.c1; c <= s.c2; c++) refs.push(sheetColLetter(c) + (r + 1));
+  if (refs.length < 1) return;
+  const tc = s.c2 + 1;
+  while (sheetNCols(_sheet) <= tc) _sheet.data.forEach(row => row.push(''));
+  _sheet.data[s.r1][tc] = '=' + refs.join('&');
+  _sheetSel = { r1: s.r1, c1: tc, r2: s.r1, c2: tc };
+  renderSheetGrid();
+}
+// 配線
+(function sheetWire(){
+  const $ = id => document.getElementById(id); if (!$('sheet-ov')) return;
+  $('sheet-close').onclick = () => closeSheetEditor(true);
+  $('sheet-back').onclick = () => closeSheetEditor(false);
+  $('sheet-row-add').onclick = sheetRowAdd; $('sheet-row-del').onclick = sheetRowDel;
+  $('sheet-col-add').onclick = sheetColAdd; $('sheet-col-del').onclick = sheetColDel;
+  $('sheet-row-copy').onclick = sheetRowCopy; $('sheet-col-copy').onclick = sheetColCopy;
+  $('sheet-merge').onclick = sheetMergeSel; $('sheet-unmerge').onclick = sheetUnmergeSel;
+  $('sheet-fill').onclick = sheetFillSeries; $('sheet-concat').onclick = sheetConcatSel;
+  $('sheet-paste-values').onclick = sheetPasteValues; $('sheet-freeze').onclick = sheetFreezeValues;
+  $('sheet-fixedcopy').onclick = sheetFixedCopy;
+  $('sheet-clear').onclick = sheetClearSel;
+  $('sheet-csv').onclick = () => { if (_sheet) dl(sheetToCSV(_sheet), (_sheet.name || 'sheet') + '.csv', 'text/csv'); };
+  // 数式バー
+  const fx = $('sheet-fx-input');
+  const fxCommit = () => { if (!_sheet || !_fxCell) return false; if (fx.value !== _fxOrig){ _sheet.data[_fxCell.r][_fxCell.c] = fx.value; renderSheetGrid(); return true; } return false; };
+  fx.addEventListener('focus', () => { _fxCell = { r: _sheetSel.r1, c: _sheetSel.c1 }; _fxOrig = fx.value; });
+  fx.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); const c = _fxCell; fxCommit(); _fxCell = null; if (c){ _sheetSel = { r1: c.r, c1: c.c, r2: c.r, c2: c.c }; sheetMove(1, 0); } }
+    else if (e.key === 'Escape'){ e.preventDefault(); fx.value = _fxOrig; _fxCell = null; $('sheet-grid-wrap').focus(); syncSheetFx(); }
+  });
+  fx.addEventListener('blur', () => { fxCommit(); _fxCell = null; });
+  $('sheet-grid-wrap').addEventListener('keydown', e => {
+    if (_sheetEditing) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && (e.key === 'c' || e.key === 'C')){ e.preventDefault(); sheetCopySel(); return; }
+    if (mod && (e.key === 'x' || e.key === 'X')){ e.preventDefault(); sheetCopySel(); sheetClearSel(); return; }
+    if (mod && e.shiftKey && (e.key === 'v' || e.key === 'V')){ e.preventDefault(); sheetPasteValues(); return; }   // 値で貼り付け
+    if (mod && (e.key === 'v' || e.key === 'V')){
+      e.preventDefault();
+      if (navigator.clipboard && navigator.clipboard.readText){
+        navigator.clipboard.readText().then(t => {
+          if (t && _sheetClip && t === _sheetClipDisp) sheetPasteBlock(_sheetClip);   // 自分のコピー → 式を保持
+          else if (t) sheetPasteBlock(parseClipText(t));                              // 外部 → 値
+          else if (_sheetClip) sheetPasteBlock(_sheetClip);
+        }).catch(() => { if (_sheetClip) sheetPasteBlock(_sheetClip); });
+      } else if (_sheetClip) sheetPasteBlock(_sheetClip);
+      return;
+    }
+    if (mod) return;
+    if (e.key === 'ArrowDown'){ e.preventDefault(); sheetMove(1, 0); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); sheetMove(-1, 0); }
+    else if (e.key === 'ArrowRight'){ e.preventDefault(); sheetMove(0, 1); }
+    else if (e.key === 'ArrowLeft'){ e.preventDefault(); sheetMove(0, -1); }
+    else if (e.key === 'Enter'){ e.preventDefault(); startSheetEdit(_sheetSel.r1, _sheetSel.c1); }
+    else if (e.key === 'Delete' || e.key === 'Backspace'){ e.preventDefault(); sheetClearSel(); }
+    else if (e.key === 'Escape'){ e.preventDefault(); closeSheetEditor(true); }
+    else if (e.key.length === 1 && !e.altKey){ startSheetEdit(_sheetSel.r1, _sheetSel.c1, e.key); e.preventDefault(); }
+  });
+  $('sheet-grid-wrap').addEventListener('paste', e => {
+    if (_sheetEditing) return;
+    const t = (e.clipboardData || window.clipboardData).getData('text');
+    if (t){ e.preventDefault(); sheetPasteBlock(parseClipText(t)); }
+  });
+  document.addEventListener('mouseup', () => { _sheetDrag = false; });
+})();
+
 // 表の行・列を追加／削除（編集エリア内のキャレット位置の表が対象）
 function modifyTable(cmd, targetEl){
   const sel = window.getSelection(); if (!sel || !sel.rangeCount) return;
@@ -4320,6 +5058,31 @@ function makeSelCheck(m, wrap) {
   return c;
 }
 
+// メモへ移動（バックリンク／別ルームも考慮）
+function navToMemo(memoId){
+  const m = S.memos.find(x => x.id === memoId); if (!m) return;
+  if (m.board){ openBoard(memoId); return; }
+  const go = () => { const el = document.getElementById('memo-' + memoId); if (el){ el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('jump-highlight'); setTimeout(() => el.classList.remove('jump-highlight'), 1800); } };
+  if (m.roomId !== roomId){ switchRoom(m.roomId); setTimeout(go, 160); } else go();
+}
+// バックリンク欄（このメモにジャンプリンクしている他メモ）
+function appendBacklinks(bubble, m){
+  if (!S.showBacklinks) return;
+  const srcIds = _backlinks.get(m.id); if (!srcIds || !srcIds.length) return;
+  const box = document.createElement('div'); box.className = 'backlinks';
+  const head = document.createElement('div'); head.className = 'backlinks-head'; head.textContent = '🔗 リンク元 ' + srcIds.length + '件';
+  box.appendChild(head);
+  srcIds.forEach(sid => {
+    const src = S.memos.find(x => x.id === sid); if (!src) return;
+    const a = document.createElement('button'); a.type = 'button'; a.className = 'backlink';
+    a.textContent = (src.board ? '🧩 ' : '') + (memoFirstLine(src) || '無題');
+    a.title = a.textContent;
+    a.onclick = (e) => { e.stopPropagation(); navToMemo(sid); };
+    box.appendChild(a);
+  });
+  bubble.appendChild(box);
+}
+
 function renderBubble(m, q = '', showRoom = false, container = null) {
   if (m.board) { renderBoardBubble(m, q, showRoom, container); return; }
   const wrap = document.createElement('div');
@@ -4367,6 +5130,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
 
   const cnt = document.createElement('div'); cnt.className = 'bc'; cnt.innerHTML = m.html;
   hydrateImages(cnt);   // マーカー画像を遅延読み込み
+  hydrateSheetEmbeds(cnt);   // 埋め込みシートをサムネイル化
   if (m.titleLine !== false) {
     const fc = cnt.firstChild;
     const isTable = el => el.nodeType === Node.ELEMENT_NODE &&
@@ -4501,6 +5265,8 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
     bubble.appendChild(tg);
   }
 
+  appendBacklinks(bubble, m);
+
   const meta = document.createElement('div'); meta.className = 'bubble-meta';
   const ti = document.createElement('span'); ti.className='bubble-time'; ti.textContent=fmtTime(m.updatedAt||m.createdAt);
   meta.appendChild(ti); bubble.appendChild(meta);
@@ -4568,6 +5334,7 @@ async function openEdit(id) {
   if (!m) return;
   editId = id;
   editEd.innerHTML = await internalizeHtml(m.html);   // 編集中は画像実体を表示
+  hydrateSheetEmbeds(editEd);
   editEd.querySelectorAll('.cl input[type="checkbox"]').forEach(cb => { cb.contentEditable = 'false'; if (cb.hasAttribute('checked')) cb.checked = true; });
   document.getElementById('edit-tag-input').value = (m.tags||[]).join(', ');
   renderEditExistingTags();
@@ -4581,7 +5348,8 @@ document.getElementById('edit-save').onclick = async () => {
   if (m) {
     const oldTags = (m.tags || []).join(',');
     syncCheckboxAttrs(editEd);
-    m.html = await externalizeAndStore(editEd.innerHTML);   // 画像を分離してから保存
+    m.html = await externalizeAndStore(sheetStripHtml(editEd.innerHTML));   // シートサムネ除去＋画像分離
+
     m.tags = parseTags(document.getElementById('edit-tag-input').value);
     m.titleLine = document.getElementById('edit-title-line-chk').checked;
     m.updatedAt = new Date().toISOString();
@@ -6098,6 +6866,7 @@ document.getElementById('bulk-delete-btn').onclick = () => {
 function qlEnrich(m) {
   const cnt = document.createElement('div'); cnt.className = 'bc'; cnt.innerHTML = m.html;
   hydrateImages(cnt);   // マーカー画像を遅延読み込み
+  hydrateSheetEmbeds(cnt);   // 埋め込みシートをサムネイル化
   cnt.querySelectorAll('table').forEach(tbl => {
     if (!tbl.closest('.tbl-wrap')) { const tw = document.createElement('div'); tw.className = 'tbl-wrap'; tbl.parentNode.insertBefore(tw, tbl); tw.appendChild(tbl); }
   });
@@ -6383,6 +7152,8 @@ async function initApp() {
   if (!S.graph)            S.graph            = { tagBase: 7, tagRange: 14, fontScale: 1, sat: 45 };
   if (!S.sort)             S.sort             = { by: 'created', dir: 'desc' };
   if (!S.drafts)           S.drafts           = [];
+  if (!S.sheets)           S.sheets           = {};
+  if (S.showBacklinks === undefined) S.showBacklinks = false;
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
 
@@ -6411,6 +7182,7 @@ async function initApp() {
   applyInputMode();
   applySortUI();
   renderDraftList();   // 下書きボタンの件数を反映
+  { const bl = document.getElementById('backlinks-chk'); if (bl){ bl.checked = !!S.showBacklinks; bl.onchange = () => { S.showBacklinks = bl.checked; persist(); _bubbleCache.clear(); renderMemos(); }; } }
   { const _sr = document.getElementById('search-regex'); if (_sr) _sr.checked = !!S.searchRegex; }
   applyLayout();
 
@@ -6579,6 +7351,16 @@ function fbCreateNode(el){
       fbWireRichText(t, el);
     }
     if (el.type === 'image'){ const img = document.createElement('img'); img.src = el.src || ''; img.draggable = false; node.appendChild(img); }
+    if (el.type === 'sheet'){
+      node.classList.add('fb-sheet');
+      const thumb = sheetThumb(el.sheet || (el.sheet = makeSheet()), 12, 8);
+      thumb.style.width = '100%'; thumb.style.height = '100%'; thumb.style.overflow = 'hidden'; thumb.style.cursor = 'default';
+      node.appendChild(thumb);
+      const open = (e) => { e.stopPropagation(); openSheetEditor(el.sheet, (res) => { el.sheet = res; fbRender(); fbCommit(); }); };
+      thumb.addEventListener('dblclick', open);
+      let _lt = 0;
+      thumb.addEventListener('click', e => { const now = Date.now(); if (now - _lt < 350){ open(e); _lt = 0; } else _lt = now; });
+    }
   }
   node.dataset.id = el.id;
   fbAttachDrag(node, el);
@@ -6753,6 +7535,7 @@ function fbCreate(type){
   else if (type === 'ellipse') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: fbFaint(fbColor), stroke: fbColor };
   else if (type === 'line') el = { id, type, x: cx - 80, y: cy, x2: cx + 80, y2: cy, stroke: fbColor };
   else if (type === 'arrow') el = { id, type, x: cx - 80, y: cy, x2: cx + 80, y2: cy, stroke: fbColor };
+  else if (type === 'sheet') el = { id, type, x: cx - 130, y: cy - 80, w: 280, h: 180, sheet: makeSheet(8, 5) };
   fbEls.push(el); fbRender(); fbSelect(id); fbCommit();
 }
 function fbDeleteSel(){ if (!fbSel) return; if (fbEditingId === fbSel) fbEditingId = null; const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'none'; fbEls = fbEls.filter(e => e.id !== fbSel); fbSel = null; fbRender(); fbSyncOrderBtns(); fbCommit(); }
@@ -6768,6 +7551,7 @@ function fbFaint(hex){   // 枠線色の薄い塗り（同系色）。rgba を�
 }
 function fbColorApply(c, noteFill){   // c=線/文字/枠用の色, noteFill=付箋の背景色
   const el = fbEls.find(e => e.id === fbSel); if (!el) return;
+  if (el.type === 'sheet' || el.type === 'image') return;   // 色の概念がないオブジェクトは対象外
   const node = document.querySelector('#fb-world [data-id="' + el.id + '"]');
   if (el.type === 'text'){ el.color = c; const t = node && node.querySelector('.fb-text'); if (t) t.style.color = c; }
   else if (el.type === 'note'){ el.fill = noteFill; if (node) node.style.background = noteFill; }
@@ -6927,6 +7711,7 @@ function fbThumbEl(e, minx, miny, s){
     d.textContent = txt;
   }
   else if (e.type === 'image'){ const img = document.createElement('img'); img.src = e.src; img.style.cssText = 'width:100%;height:100%;object-fit:cover'; d.appendChild(img); }
+  else if (e.type === 'sheet'){ d.style.overflow = 'hidden'; d.style.background = '#fff'; const t = sheetThumb(e.sheet || makeSheet(), 6, 5); t.style.transform = 'scale(' + Math.max(0.3, s) + ')'; t.style.transformOrigin = 'top left'; d.appendChild(t); }
   return d;
 }
 function fbThumb(m){
@@ -6972,6 +7757,7 @@ function renderBoardBubble(m, q, showRoom, container){
     bubble.appendChild(thumb);
   }
   if ((m.tags && m.tags.length) || (_rmMode === 'fixed' && S.layoutMode === 'note')){ const tg = document.createElement('div'); tg.className = 'bubble-tags'; (m.tags || []).forEach(tag => { const sp = document.createElement('button'); sp.className = 'b-tag'; sp.textContent = tag; sp.onclick = () => { setOnlyIncludedTag(tag); renderTagBar(); renderMemos(); }; tg.appendChild(sp); }); bubble.appendChild(tg); }
+  appendBacklinks(bubble, m);
   const meta = document.createElement('div'); meta.className = 'bubble-meta'; const ti = document.createElement('span'); ti.className = 'bubble-time'; ti.textContent = fmtTime(m.updatedAt || m.createdAt); meta.appendChild(ti); bubble.appendChild(meta);
   if (m.pinned){ wrap.appendChild(acts); wrap.appendChild(bubble); } else { wrap.appendChild(bubble); wrap.appendChild(acts); }
   if (isMobile()){ wrap.addEventListener('click', e => { if (e.target.closest('.abtn')) return; if (e.target.closest('.fb-thumb')) return; document.querySelectorAll('.bubble-wrap.tapped').forEach(w => { if (w !== wrap) w.classList.remove('tapped'); }); wrap.classList.toggle('tapped'); }); }
@@ -7006,6 +7792,7 @@ function renderBoardBubble(m, q, showRoom, container){
   fbInitCanvas();
   document.addEventListener('keydown', e => {
     if (!$('fb-ov').classList.contains('open')) return;
+    if (document.getElementById('sheet-ov').classList.contains('open')) return;   // シート編集中はフリーボードのキー操作を無効化
     if (e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName)) return;
     const mod = e.ctrlKey || e.metaKey;
     if (mod && (e.key === 'z' || e.key === 'Z')){ e.preventDefault(); if (e.shiftKey) fbRedoAct(); else fbUndoAct(); return; }
