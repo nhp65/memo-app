@@ -16,7 +16,7 @@
   --th-bubble:  #ffffff;   --th-pin:     #d0e8f0;
   --th-edit:    #ffffff;   --th-toolbar: #f0f7fa;  --th-tbdr:    #d0e8f2;
   --th-text:    #2D3B45;   --th-muted:   #888;     --th-sep:     #d8e8ef;
-  --code-bg: #f4ece2;  --code-bdr: #e2d2bd;  --code-fg: #c0532b;
+  --code-bg: #e8f1f6;  --code-bdr: #cfe0ea;  --code-fg: #3a6d8c;
 }
 body.theme-dark {
   --c1: #4a8aae;  --c3: #15202c;  --c4: #141e28;
@@ -24,7 +24,7 @@ body.theme-dark {
   --th-bubble:  #1c2b3a;   --th-pin:     #18303f;
   --th-edit:    #192634;   --th-toolbar: #192634;  --th-tbdr:    #243548;
   --th-text:    #b8cdd8;   --th-muted:   #607888;  --th-sep:     #243548;
-  --code-bg: #233649;  --code-bdr: #355068;  --code-fg: #e3a878;
+  --code-bg: #213444;  --code-bdr: #345066;  --code-fg: #8fc4e6;
 }
 body.theme-sepia {
   --c1: #8a6820;  --c3: #3a2e20;  --c4: #f0e8d4;
@@ -338,7 +338,8 @@ header {
 .bc .tg-body { display: none; padding: 8px 13px; background: white; border-top: 1px solid #ddeef7; }
 .bc .toggle-block.open .tg-body { display: block; }
 .bc h1 { font-size: 1.45em; margin: 3px 0; } .bc h2 { font-size: 1.2em; margin: 3px 0; } .bc h3 { font-size: 1.05em; margin: 3px 0; }
-.bc ul, .bc ol { padding-left: 20px; margin: 3px 0; }
+.bc ul, .bc ol { padding-left: 1.5em; margin: 4px 0; box-sizing: border-box; }
+.bc li { overflow-wrap: anywhere; }
 .bc .cl { list-style: none; padding-left: 2px; margin: 3px 0; }
 .bc .cl li { display: block; position: relative; padding-left: 25px; margin: 4px 0; line-height: 1.6; min-height: 1.5em; }
 .bc .cl li input[type="checkbox"] { position: absolute; left: 2px; top: 0.28em; margin: 0; width: 15px; height: 15px; cursor: pointer; accent-color: var(--c1); }
@@ -7480,6 +7481,22 @@ function fbCreateNode(el){
         else _lastTap = now;
       });
       fbWireRichText(t, el);
+      // 貼り付けたMarkdownを書式に変換（メモと同じ。AI生成MDをペッと貼ると整形される）
+      t.addEventListener('paste', async e => {
+        const items = [...(e.clipboardData?.items || [])];
+        const htmlItem = items.find(it => it.type === 'text/html');
+        const textItem = items.find(it => it.type === 'text/plain');
+        if (!htmlItem && textItem){
+          const text = await new Promise(r => textItem.getAsString(r));
+          e.preventDefault(); t.focus();
+          // 常に自前で挿入（pre-wrap環境でのブラウザ既定貼り付けによる二重改行を防ぐ）
+          const html = looksLikeMarkdown(text) ? mdToHtml(text) : escH(text).replace(/\n/g, '<br>');
+          document.execCommand('insertHTML', false, html);
+          fbWireRichText(t, el);   // 貼り付けたチェックボックス等を操作可能に
+          el.html = t.innerHTML;
+          if (el.type === 'boxtext') fbFitBoxText(node);
+        }
+      });
     }
     if (el.type === 'image'){ const img = document.createElement('img'); img.src = el.src || ''; img.draggable = false; node.appendChild(img); }
     if (el.type === 'sheet'){
