@@ -859,7 +859,7 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 #fb-canvas:active{cursor:grabbing}
 #fb-world{position:absolute;left:0;top:0;transform-origin:0 0;width:0;height:0}
 .fb-el{position:absolute;box-sizing:border-box}
-.fb-text{width:100%;height:100%;outline:none;overflow:hidden;white-space:pre-wrap;word-break:break-word;cursor:move}
+.fb-text{width:100%;height:100%;outline:none;overflow:hidden;white-space:normal;word-break:break-word;cursor:move}
 .fb-rect{border:2px solid #4C7C9D}
 .fb-ellipse{border:2px solid #4C7C9D;border-radius:50%}
 .fb-note{border-radius:4px;box-shadow:2px 3px 8px rgba(0,0,0,.18);padding:6px}
@@ -3217,17 +3217,24 @@ function mdToHtml(md) {
       while (i < lines.length && /^>\s?/.test(lines[i])) { ql.push(lines[i].replace(/^>\s?/,'')); i++; }
       out.push(`<blockquote>${ql.map(mdInline).join('<br>')}</blockquote>`); continue;
     }
-    // unordered list (supports checklist)
-    if (/^[-*+]\s/.test(line)) {
+    // checklist（- [ ] / - [] / * [x] / 先頭の中黒なし [ ] など。角カッコ内は空も可）
+    if (/^(?:[-*+]\s+)?\[[ xX]?\]/.test(line)) {
       const items = [];
-      while (i < lines.length && /^[-*+]\s/.test(lines[i])) {
-        const txt = lines[i].replace(/^[-*+]\s/, '');
-        const ck = txt.match(/^\[( |x)\]\s?(.*)/i);
-        if (ck) items.push(`<li><input type="checkbox"${ck[1]==='x'?' checked':''}> ${mdInline(ck[2])}</li>`);
-        else     items.push(`<li>${mdInline(txt)}</li>`);
+      while (i < lines.length && /^(?:[-*+]\s+)?\[[ xX]?\]/.test(lines[i])) {
+        const ck = lines[i].match(/^(?:[-*+]\s+)?\[([ xX]?)\]\s?(.*)/);
+        items.push(`<li><input type="checkbox" contenteditable="false"${ck[1].toLowerCase()==='x'?' checked':''}>&nbsp;${mdInline(ck[2])}</li>`);
         i++;
       }
       out.push(`<ul class="cl">${items.join('')}</ul>`); continue;
+    }
+    // unordered list（チェックリストは上の分岐で処理済み）
+    if (/^[-*+]\s/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^[-*+]\s/.test(lines[i]) && !/^(?:[-*+]\s+)?\[[ xX]?\]/.test(lines[i])) {
+        items.push(`<li>${mdInline(lines[i].replace(/^[-*+]\s/, ''))}</li>`); i++;
+      }
+      if (!items.length){ out.push(mdInline(line) + '<br>'); i++; continue; }
+      out.push(`<ul>${items.join('')}</ul>`); continue;
     }
     // ordered list
     if (/^\d+\.\s/.test(line)) {
@@ -3250,51 +3257,51 @@ function looksLikeMarkdown(text) {
   return /^#{1,6}\s/m.test(text) || /\*\*.+\*\*/m.test(text) ||
          /^[-*+]\s/m.test(text)  || /^\d+\.\s/m.test(text)   ||
          /^>\s/m.test(text)       || /^```/m.test(text)        ||
-         /~~.+~~/m.test(text)     || /^\[[ x]\]/im.test(text);
+         /~~.+~~/m.test(text)     || /^(?:[-*+]\s+)?\[[ xX]?\]/im.test(text);
 }
 
-// Paste image / Markdown
+// ── 貼り付け処理（画像 / Markdown / コード）──────────────────────────
+// クリップボードのプレーンテキストが Markdown なら整形して挿入。処理したら true。
+function pasteMarkdownIfAny(e, el){
+  const cd = e.clipboardData || window.clipboardData; if (!cd) return false;
+  const text = cd.getData('text/plain');
+  if (text && looksLikeMarkdown(text)){
+    e.preventDefault(); el.focus();
+    insertHtmlAtCaret(mdToHtml(text));
+    return true;
+  }
+  return false;
+}
 [editor, editEd].forEach(el => {
   el.addEventListener('paste', async e => {
-    const items = [...(e.clipboardData?.items || [])];
-    const imgItem  = items.find(it => it.type.startsWith('image/'));
-    const htmlItem = items.find(it => it.type === 'text/html');
-    const textItem = items.find(it => it.type === 'text/plain');
-    if (imgItem) {
+    const cd = e.clipboardData || window.clipboardData; if (!cd) return;
+    const items = [...(cd.items || [])];
+    const imgItem = items.find(it => it.type.startsWith('image/'));
+    // 1) 画像
+    if (imgItem){
       e.preventDefault();
       const src = await resizeImg(imgItem.getAsFile());
       el.focus();
-      document.execCommand('insertHTML', false,
-        `<img src="${src}" style="max-width:260px;border-radius:8px;display:block;margin:3px 0;">`);
+      insertHtmlAtCaret(`<img src="${src}" style="max-width:260px;border-radius:8px;display:block;margin:3px 0;">`);
       return;
     }
-    // コードブロック内へのペースト: タブ・空白・改行をそのまま保持
-    {
-      const psel = window.getSelection();
-      const pAnc = psel && psel.rangeCount ? psel.getRangeAt(0).commonAncestorContainer : null;
-      const pPre = pAnc ? (pAnc.nodeType === 3 ? pAnc.parentElement : pAnc)?.closest?.('pre') : null;
-      if (pPre && el.contains(pPre) && textItem) {
-        e.preventDefault();
-        const text = await new Promise(r => textItem.getAsString(r));
-        insertTextAtCaret(text);
-        return;
-      }
+    const text = cd.getData('text/plain');
+    const html = cd.getData('text/html');
+    if (!text) return;
+    // 2) コードブロック内なら生テキストのまま
+    const sel = window.getSelection();
+    const anc = sel && sel.rangeCount ? sel.getRangeAt(0).commonAncestorContainer : null;
+    const inPre = anc ? (anc.nodeType === 3 ? anc.parentElement : anc)?.closest?.('pre') : null;
+    if (inPre && el.contains(inPre)){ e.preventDefault(); insertTextAtCaret(text); return; }
+    // 3) Markdown（HTML同梱でもプレーンがMDなら優先）
+    if (pasteMarkdownIfAny(e, el)) return;
+    // 4) インデント付き複数行 → コードブロック（リッチHTMLが無いとき）
+    if (!html && /\n/.test(text) && (/\t/.test(text) || /\n[ ]{2,}\S/.test(text))){
+      e.preventDefault(); el.focus();
+      insertHtmlAtCaret('<pre><code>' + escH(text) + '</code></pre><br>');
+      return;
     }
-    // Markdown変換 / コード貼り付け（text/htmlがなく text/plain のとき）
-    if (!htmlItem && textItem) {
-      const text = await new Promise(r => textItem.getAsString(r));
-      if (looksLikeMarkdown(text)) {
-        e.preventDefault();
-        el.focus();
-        document.execCommand('insertHTML', false, mdToHtml(text));
-      } else if (/\n/.test(text) && (/\t/.test(text) || /\n[ ]{2,}\S/.test(text))) {
-        // タブ or インデント付きの複数行 → コードブロックとして貼り付け（空白を保持）
-        e.preventDefault();
-        el.focus();
-        const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        document.execCommand('insertHTML', false, '<pre><code>' + esc + '</code></pre><br>');
-      }
-    }
+    // それ以外は既定の貼り付けに任せる
   });
 });
 
@@ -4404,6 +4411,17 @@ function insertTextAtCaret(text){
   r.insertNode(node);
   r.setStartAfter(node); r.collapse(true);
   sel.removeAllRanges(); sel.addRange(r);
+}
+// HTMLをキャレット位置にDOMとして挿入（execCommandのサニタイズで <input> 等が壊れるのを回避）
+function insertHtmlAtCaret(html){
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const r = sel.getRangeAt(0);
+  r.deleteContents();
+  const tpl = document.createElement('template'); tpl.innerHTML = html;
+  const frag = tpl.content; const last = frag.lastChild;
+  r.insertNode(frag);
+  if (last){ r.setStartAfter(last); r.collapse(true); sel.removeAllRanges(); sel.addRange(r); }
 }
 const HL_GENERIC_KEY = new Set('const,let,var,function,func,fn,return,if,else,elif,for,while,do,switch,case,default,break,continue,class,struct,interface,enum,extends,implements,new,delete,this,self,super,import,export,from,as,package,using,namespace,module,try,catch,finally,throw,raise,typeof,instanceof,in,of,await,async,yield,def,lambda,pass,with,global,nonlocal,public,private,protected,static,final,abstract,void,int,long,float,double,char,bool,boolean,string,str,val,select,insert,into,values,update,set,where,join,inner,outer,left,right,on,group,order,having,limit,distinct,union,echo,then,fi,done,esac,local,print,foreach,end'.split(','));
 // 言語プロファイル: コメント/文字列/変数などの規則を言語ごとに定義
@@ -7481,18 +7499,21 @@ function fbCreateNode(el){
         else _lastTap = now;
       });
       fbWireRichText(t, el);
-      // 貼り付けたMarkdownを書式に変換（メモと同じ。AI生成MDをペッと貼ると整形される）
-      t.addEventListener('paste', async e => {
-        const items = [...(e.clipboardData?.items || [])];
-        const htmlItem = items.find(it => it.type === 'text/html');
-        const textItem = items.find(it => it.type === 'text/plain');
-        if (!htmlItem && textItem){
-          const text = await new Promise(r => textItem.getAsString(r));
+      // 貼り付けたMarkdownを書式に変換（同期処理。await後のpreventDefaultだと既定貼り付けが二重に走る）
+      t.addEventListener('paste', e => {
+        const cd = e.clipboardData || window.clipboardData; if (!cd) return;
+        const htmlData = cd.getData('text/html');
+        const text = cd.getData('text/plain');
+        // プレーンがMarkdownならHTML同梱でも変換優先。それ以外でHTMLが無いときは改行を保持して挿入
+        if (text && looksLikeMarkdown(text)){
           e.preventDefault(); t.focus();
-          // 常に自前で挿入（pre-wrap環境でのブラウザ既定貼り付けによる二重改行を防ぐ）
-          const html = looksLikeMarkdown(text) ? mdToHtml(text) : escH(text).replace(/\n/g, '<br>');
-          document.execCommand('insertHTML', false, html);
+          insertHtmlAtCaret(mdToHtml(text));
           fbWireRichText(t, el);   // 貼り付けたチェックボックス等を操作可能に
+          el.html = t.innerHTML;
+          if (el.type === 'boxtext') fbFitBoxText(node);
+        } else if (!htmlData && text){
+          e.preventDefault(); t.focus();
+          insertHtmlAtCaret(escH(text).replace(/\n/g, '<br>'));
           el.html = t.innerHTML;
           if (el.type === 'boxtext') fbFitBoxText(node);
         }
