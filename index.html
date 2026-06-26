@@ -1365,10 +1365,22 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
 <div class="ov" id="link-ov">
   <div class="modal">
     <h3>🔗 リンクを挿入</h3>
-    <input type="url" id="link-url" placeholder="https://...">
+    <input type="url" id="link-url" placeholder="リンクURL（https://...）">
+    <input type="text" id="link-text" placeholder="表示テキスト（省略時はURLをそのまま表示）">
     <div class="mact">
       <button class="bcl" id="link-cancel">キャンセル</button>
       <button class="bpr" id="link-ok">挿入</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="imgurl-ov">
+  <div class="modal">
+    <h3>🖼 画像URLを挿入</h3>
+    <input type="url" id="imgurl-url" placeholder="画像URL（https://...）">
+    <div class="mact">
+      <button class="bcl" id="imgurl-cancel">キャンセル</button>
+      <button class="bpr" id="imgurl-ok">挿入</button>
     </div>
   </div>
 </div>
@@ -2856,7 +2868,7 @@ function buildToolbar(barId) {
   // 画像・スニペットはツールバーへ（新規入力・編集の両方／フリーボードのテキストには付けない）
   if (barId !== 'fb-fmt-bar') {
     document.getElementById(barId).insertAdjacentHTML('beforeend',
-      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button><button class="fb" data-c="sheet" title="スプレッドシートを挿入">📊</button>');
+      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="imgurl" title="画像URLを挿入">🔗🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button><button class="fb" data-c="sheet" title="スプレッドシートを挿入">📊</button>');
   }
 }
 buildToolbar('main-fmt-bar');
@@ -3047,12 +3059,22 @@ function applyFmt(cmd, targetEl, e) {
       pdfTargetEl = targetEl;
       openPdfInsert();
       break;
-    case 'link':
+    case 'link': {
       savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
       linkTargetEl = targetEl;
+      const selText = savedRange ? savedRange.toString().trim() : '';
       openOv('link-ov');
       document.getElementById('link-url').value = '';
+      document.getElementById('link-text').value = selText;   // 選択テキストを表示テキストの初期値に
       setTimeout(() => document.getElementById('link-url').focus(), 50);
+      break;
+    }
+    case 'imgurl':
+      savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
+      imgurlTargetEl = targetEl;
+      openOv('imgurl-ov');
+      document.getElementById('imgurl-url').value = '';
+      setTimeout(() => document.getElementById('imgurl-url').focus(), 50);
       break;
     case 'table':
       savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
@@ -3083,6 +3105,7 @@ function applyFmt(cmd, targetEl, e) {
 }
 
 let linkTargetEl  = editor;
+let imgurlTargetEl = editor;
 let tableTargetEl = editor;
 let mapTargetEl   = editor;
 let jumpTargetEl  = editor;
@@ -3359,7 +3382,35 @@ function sanitizeHtmlImport(html){
   d.querySelectorAll('*').forEach(el => { [...el.attributes].forEach(a => { if (/^on/i.test(a.name)) el.removeAttribute(a.name); }); });
   return d.innerHTML;
 }
-function mdiToHtml(src){ return _mdiMode === 'html' ? sanitizeHtmlImport(src) : mdToHtml(src); }
+// <style>付きHTMLのCSSを各要素のinlineスタイルへ焼き込む（メモにstyleを入れず色・装飾を保持）
+function flattenHtmlStyles(html){
+  if (!/<style[\s>]/i.test(html)) return sanitizeHtmlImport(html);   // styleが無ければそのまま
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-99999px;top:0;width:440px;';
+  document.body.appendChild(host);
+  let out = '';
+  try {
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = html;
+    root.querySelectorAll('script, link, meta, title, iframe, object, embed').forEach(n => n.remove());
+    const border = [];
+    ['top','right','bottom','left'].forEach(s => ['width','style','color'].forEach(k => border.push('border-' + s + '-' + k)));
+    const props = ['color','background-color','background-image','border-radius','padding','margin','font-size','font-weight','font-style','text-align','text-decoration-line','line-height','box-shadow','display','max-width', ...border];
+    const walk = (el) => {
+      const cs = getComputedStyle(el); let s = '';
+      props.forEach(p => { const v = cs.getPropertyValue(p); if (v && v !== 'none' && v !== 'normal' && v !== 'auto') s += p + ':' + v + ';'; });
+      [...el.attributes].forEach(a => { if (a.name !== 'href' && a.name !== 'src' && a.name !== 'alt') el.removeAttribute(a.name); });
+      if (s) el.setAttribute('style', s);
+      [...el.children].forEach(walk);
+    };
+    const kids = [...root.children].filter(n => n.tagName !== 'STYLE');
+    kids.forEach(walk);
+    out = kids.map(n => n.outerHTML).join('');
+  } catch (e){ out = sanitizeHtmlImport(html); }
+  host.remove();
+  return out;
+}
+function mdiToHtml(src){ return _mdiMode === 'html' ? flattenHtmlStyles(src) : mdToHtml(src); }
 function mdiRender(){
   const pv = document.getElementById('mdi-preview');
   pv.innerHTML = mdiToHtml(document.getElementById('mdi-input').value || '');
@@ -3467,14 +3518,26 @@ document.getElementById('map-ov').addEventListener('click', e => { if (e.target=
 // ── Link modal ────────────────────────────────────────────────────
 document.getElementById('link-ok').onclick = () => {
   const url = document.getElementById('link-url').value.trim();
+  const text = document.getElementById('link-text').value.trim();
   if (url) {
     restoreRange(linkTargetEl);
-    document.execCommand('createLink', false, url);
-    linkTargetEl.querySelectorAll('a').forEach(a => { a.target='_blank'; a.rel='noopener'; });
+    const label = escH(text || url);
+    insertHtmlAtCaret(`<a href="${url.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">${label}</a>`);
   }
   closeOv('link-ov');
 };
 document.getElementById('link-cancel').onclick = () => { closeOv('link-ov'); restoreRange(linkTargetEl); };
+document.getElementById('imgurl-ok').onclick = () => {
+  const url = document.getElementById('imgurl-url').value.trim();
+  if (url) {
+    restoreRange(imgurlTargetEl);
+    insertHtmlAtCaret(`<img src="${url.replace(/"/g, '&quot;')}" style="max-width:260px;border-radius:8px;display:block;margin:3px 0;cursor:zoom-in;">`);
+  }
+  closeOv('imgurl-ov');
+};
+document.getElementById('imgurl-cancel').onclick = () => { closeOv('imgurl-ov'); restoreRange(imgurlTargetEl); };
+document.getElementById('imgurl-url').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('imgurl-ok').click(); });
+document.getElementById('imgurl-ov').addEventListener('click', e => { if (e.target === document.getElementById('imgurl-ov')) { closeOv('imgurl-ov'); restoreRange(imgurlTargetEl); } });
 document.getElementById('link-url').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('link-ok').click(); });
 document.getElementById('link-ov').addEventListener('click', e => { if (e.target===document.getElementById('link-ov')) { closeOv('link-ov'); restoreRange(linkTargetEl); } });
 
