@@ -1579,8 +1579,12 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
 <!-- Markdown 取り込み -->
 <div class="ov" id="mdimport-ov">
   <div class="modal" id="mdi-modal">
-    <h3 style="margin-bottom:2px">📥 Markdown を取り込み</h3>
+    <h3 style="margin-bottom:2px">📥 取り込み（Markdown / HTML）</h3>
     <div class="mdi-tools">
+      <span style="font-size:.8rem;color:var(--th-muted)">モード:</span>
+      <button class="rm-h-btn mdi-mode" data-mode="md">Markdown</button>
+      <button class="rm-h-btn mdi-mode" data-mode="html">HTML</button>
+      <span style="flex-basis:12px"></span>
       <span style="font-size:.8rem;color:var(--th-muted)">プレビュー文字サイズ:</span>
       <button class="rm-h-btn mdi-fs" data-fs="0.85">小</button>
       <button class="rm-h-btn mdi-fs" data-fs="1">標準</button>
@@ -3347,18 +3351,32 @@ function pasteMarkdownIfAny(e, el){
   });
 });
 
-// ── Markdown 取り込み画面（明示的に貼り付け→プレビュー→挿入。スマホでも確実）──
-let _mdiApply = null, _mdiFs = 1;
+// ── 取り込み画面（Markdown / HTML を選択。明示的に貼り付け→プレビュー→挿入。スマホでも確実）──
+let _mdiApply = null, _mdiFs = 1, _mdiMode = 'md';
+function sanitizeHtmlImport(html){
+  const d = document.createElement('div'); d.innerHTML = html;
+  d.querySelectorAll('script, style, link, meta, iframe, object, embed, title').forEach(n => n.remove());
+  d.querySelectorAll('*').forEach(el => { [...el.attributes].forEach(a => { if (/^on/i.test(a.name)) el.removeAttribute(a.name); }); });
+  return d.innerHTML;
+}
+function mdiToHtml(src){ return _mdiMode === 'html' ? sanitizeHtmlImport(src) : mdToHtml(src); }
 function mdiRender(){
   const pv = document.getElementById('mdi-preview');
-  pv.innerHTML = mdToHtml(document.getElementById('mdi-input').value || '');
+  pv.innerHTML = mdiToHtml(document.getElementById('mdi-input').value || '');
   pv.style.fontSize = _mdiFs + 'em';
+}
+function mdiSetMode(m){
+  _mdiMode = m;
+  document.querySelectorAll('.mdi-mode').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  const ta = document.getElementById('mdi-input');
+  if (ta) ta.placeholder = (m === 'html') ? 'ここに HTML を貼り付け（長押し → ペースト）' : 'ここに Markdown を貼り付け（長押し → ペースト）';
+  mdiRender();
 }
 function openMdImport(applyFn){
   _mdiApply = applyFn || null; _mdiFs = 1;
   const ta = document.getElementById('mdi-input'); ta.value = '';
   document.querySelectorAll('.mdi-fs').forEach(b => b.classList.toggle('active', b.dataset.fs === '1'));
-  mdiRender();
+  mdiSetMode('md');
   openOv('mdimport-ov');
   setTimeout(() => ta.focus(), 60);
 }
@@ -3366,12 +3384,13 @@ function openMdImport(applyFn){
   const ta = document.getElementById('mdi-input');
   if (ta){
     ta.addEventListener('input', mdiRender);
+    document.querySelectorAll('.mdi-mode').forEach(b => { b.onclick = () => mdiSetMode(b.dataset.mode); });
     document.querySelectorAll('.mdi-fs').forEach(b => { b.onclick = () => { _mdiFs = parseFloat(b.dataset.fs) || 1; document.querySelectorAll('.mdi-fs').forEach(x => x.classList.remove('active')); b.classList.add('active'); document.getElementById('mdi-preview').style.fontSize = _mdiFs + 'em'; }; });
     document.getElementById('mdi-cancel').onclick = () => closeOv('mdimport-ov');
     document.getElementById('mdi-apply').onclick = () => {
-      const md = ta.value || '';
-      if (!md.trim()){ closeOv('mdimport-ov'); return; }
-      let html = mdToHtml(md);
+      const src = ta.value || '';
+      if (!src.trim()){ closeOv('mdimport-ov'); return; }
+      let html = mdiToHtml(src);
       if (_mdiFs !== 1) html = `<div style="font-size:${_mdiFs}em">${html}</div>`;
       closeOv('mdimport-ov');
       if (_mdiApply) _mdiApply(html);
