@@ -995,6 +995,16 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
 .cmdp-hint { flex: 0 0 auto; font-size: .7rem; color: var(--th-muted); }
 .cmdp-sec { font-size: .68rem; color: var(--th-muted); font-weight: 700; padding: 6px 8px 2px; }
 .cmdp-empty { color: var(--th-muted); font-size: .82rem; padding: 16px; text-align: center; }
+/* Markdown 取り込み */
+#mdi-modal { max-width: 920px; width: 94%; height: 86vh; height: 86dvh; }
+.mdi-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0 4px; }
+#mdi-panes { flex: 1; min-height: 0; display: flex; gap: 10px; }
+#mdi-input { flex: 1 1 50%; min-width: 0; resize: none; border: 1.5px solid var(--th-tbdr); border-radius: 8px; padding: 10px; font-family: 'Consolas', monospace; font-size: .85rem; line-height: 1.5; outline: none; color: var(--c3); background: var(--th-edit); }
+#mdi-input:focus { border-color: var(--c1); }
+#mdi-preview { flex: 1 1 50%; min-width: 0; overflow: auto; border: 1px solid var(--th-sep); border-radius: 8px; padding: 12px; background: var(--th-bubble); color: var(--th-text); }
+#mdi-preview:empty::before { content: '（プレビュー）'; color: var(--th-muted); font-size: .85rem; }
+@media (max-width: 640px){ #mdi-panes { flex-direction: column; } }
+body.force-mobile #mdi-panes { flex-direction: column; }
 /* スプレッドシート */
 #sheet-ov { display: none; position: fixed; inset: 0; z-index: 640; background: var(--c4); flex-direction: column; }
 #sheet-ov.open { display: flex; }
@@ -1563,6 +1573,28 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <h3>📊 統計</h3>
     <div id="stats-body"></div>
     <div class="mact"><button class="bcl" id="stats-close">閉じる</button></div>
+  </div>
+</div>
+
+<!-- Markdown 取り込み -->
+<div class="ov" id="mdimport-ov">
+  <div class="modal" id="mdi-modal">
+    <h3 style="margin-bottom:2px">📥 Markdown を取り込み</h3>
+    <div class="mdi-tools">
+      <span style="font-size:.8rem;color:var(--th-muted)">プレビュー文字サイズ:</span>
+      <button class="rm-h-btn mdi-fs" data-fs="0.85">小</button>
+      <button class="rm-h-btn mdi-fs" data-fs="1">標準</button>
+      <button class="rm-h-btn mdi-fs" data-fs="1.25">大</button>
+      <button class="rm-h-btn mdi-fs" data-fs="1.6">特大</button>
+    </div>
+    <div id="mdi-panes">
+      <textarea id="mdi-input" placeholder="ここに Markdown を貼り付け（長押し → ペースト）"></textarea>
+      <div id="mdi-preview" class="bc"></div>
+    </div>
+    <div class="mact">
+      <button class="bcl" id="mdi-cancel">キャンセル</button>
+      <button class="bpr" id="mdi-apply">この内容を挿入</button>
+    </div>
   </div>
 </div>
 
@@ -2814,6 +2846,7 @@ function buildToolbar(barId) {
     <button class="fb" data-c="checklist" title="チェックリスト">☑</button>
     <div class="fs"></div>
     <button class="fb" data-c="tmpl" title="テンプレートを挿入">📄</button>
+    <button class="fb" data-c="mdimport" title="Markdownを取り込み（貼り付け→プレビュー→挿入）">📥MD</button>
     <div class="fs"></div>
     <button class="fb" data-c="emoji" title="絵文字">😊</button>`;
   // 画像・スニペットはツールバーへ（新規入力・編集の両方／フリーボードのテキストには付けない）
@@ -2938,6 +2971,15 @@ function applyFmt(cmd, targetEl, e) {
     }
     case 'quote':         document.execCommand('formatBlock', false, 'blockquote'); break;
     case 'hr':            document.execCommand('insertHorizontalRule', false, null); break;
+    case 'mdimport': {
+      savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
+      const tgt = targetEl;
+      openMdImport((html) => {
+        tgt.focus(); restoreRange(tgt); insertHtmlAtCaret(html);
+        if (tgt.id === 'fb-editing'){ const fel = fbEls.find(x => x.id === fbEditingId); if (fel){ fbWireRichText(tgt, fel); fel.html = tgt.innerHTML; const fn = tgt.closest('.fb-el'); if (fel.type === 'boxtext' && fn) fbFitBoxText(fn); } }
+      });
+      break;
+    }
     case 'sheet': {
       const id = 'sh' + Date.now().toString(36);
       S.sheets = S.sheets || {}; S.sheets[id] = makeSheet(8, 5); persist();
@@ -3304,6 +3346,39 @@ function pasteMarkdownIfAny(e, el){
     // それ以外は既定の貼り付けに任せる
   });
 });
+
+// ── Markdown 取り込み画面（明示的に貼り付け→プレビュー→挿入。スマホでも確実）──
+let _mdiApply = null, _mdiFs = 1;
+function mdiRender(){
+  const pv = document.getElementById('mdi-preview');
+  pv.innerHTML = mdToHtml(document.getElementById('mdi-input').value || '');
+  pv.style.fontSize = _mdiFs + 'em';
+}
+function openMdImport(applyFn){
+  _mdiApply = applyFn || null; _mdiFs = 1;
+  const ta = document.getElementById('mdi-input'); ta.value = '';
+  document.querySelectorAll('.mdi-fs').forEach(b => b.classList.toggle('active', b.dataset.fs === '1'));
+  mdiRender();
+  openOv('mdimport-ov');
+  setTimeout(() => ta.focus(), 60);
+}
+{
+  const ta = document.getElementById('mdi-input');
+  if (ta){
+    ta.addEventListener('input', mdiRender);
+    document.querySelectorAll('.mdi-fs').forEach(b => { b.onclick = () => { _mdiFs = parseFloat(b.dataset.fs) || 1; document.querySelectorAll('.mdi-fs').forEach(x => x.classList.remove('active')); b.classList.add('active'); document.getElementById('mdi-preview').style.fontSize = _mdiFs + 'em'; }; });
+    document.getElementById('mdi-cancel').onclick = () => closeOv('mdimport-ov');
+    document.getElementById('mdi-apply').onclick = () => {
+      const md = ta.value || '';
+      if (!md.trim()){ closeOv('mdimport-ov'); return; }
+      let html = mdToHtml(md);
+      if (_mdiFs !== 1) html = `<div style="font-size:${_mdiFs}em">${html}</div>`;
+      closeOv('mdimport-ov');
+      if (_mdiApply) _mdiApply(html);
+    };
+    document.getElementById('mdimport-ov').addEventListener('click', e => { if (e.target === document.getElementById('mdimport-ov')) closeOv('mdimport-ov'); });
+  }
+}
 
 // ── Image upload ──────────────────────────────────────────────────
 let fmtImgTarget = null;   // ツールバーの画像ボタンが対象とするエディタ
