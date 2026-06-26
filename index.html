@@ -1050,6 +1050,17 @@ body.force-mobile .sheet-cellref { display: none; }
 .sheet-thumb th { background: var(--th-toolbar); color: var(--th-muted); font-weight: 600; font-size: .64rem; text-align: center; }
 .sheet-thumb td.num { text-align: right; }
 .sheet-embed { margin: 6px 0; }
+/* シートのヘルプ */
+#sheet-help-ov { display: none; position: absolute; inset: 0; z-index: 5; background: rgba(20,28,38,0.45); align-items: center; justify-content: center; padding: 14px; }
+#sheet-help-ov.open { display: flex; }
+#sheet-help-box { background: var(--th-bubble); color: var(--th-text); border-radius: 12px; width: 100%; max-width: 560px; max-height: 86%; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,.4); overflow: hidden; }
+#sheet-help-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--c1); color: #fff; font-weight: 700; }
+#sheet-help-head button { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 7px; padding: 5px 11px; cursor: pointer; font-size: .82rem; }
+#sheet-help-body { padding: 12px 16px; overflow-y: auto; font-size: .85rem; line-height: 1.7; }
+#sheet-help-body h4 { margin: 12px 0 4px; font-size: .9rem; color: var(--c1); }
+#sheet-help-body h4:first-child { margin-top: 0; }
+#sheet-help-body code { background: var(--code-bg); border: 1px solid var(--code-bdr); color: var(--code-fg); border-radius: 5px; padding: 1px 5px; font-family: 'Consolas', monospace; font-size: .82em; }
+#sheet-help-body .hrow { margin: 2px 0; }
 /* ジャンプ: メモ選択画面 */
 .jump-tools { display: flex; align-items: center; gap: 8px; }
 .jump-tools #jump-search { flex: 1; padding: 7px 12px; border: 1.5px solid #b5d5e5; border-radius: 8px; font-size: .88rem; outline: none; color: var(--c3); }
@@ -1822,6 +1833,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
   <div id="sheet-head">
     <input id="sheet-title" type="text" placeholder="シート名">
     <span id="sheet-cellref" class="sheet-cellref"></span>
+    <button id="sheet-help" title="使える関数・操作のヘルプ">？ ヘルプ</button>
     <button id="sheet-csv" title="CSVで書き出し">CSV</button>
     <button id="sheet-back">← 保存せず戻る</button>
     <button id="sheet-close">✓ 保存して閉じる</button>
@@ -1853,6 +1865,12 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <input id="sheet-fx-input" type="text" placeholder="値や数式を入力（例: =SUM(A1:A5)）">
   </div>
   <div id="sheet-grid-wrap" tabindex="0"><table id="sheet-grid"></table></div>
+  <div id="sheet-help-ov">
+    <div id="sheet-help-box">
+      <div id="sheet-help-head"><span>📊 スプレッドシート ヘルプ</span><button id="sheet-help-close">✕ 閉じる</button></div>
+      <div id="sheet-help-body"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Lightbox -->
@@ -4562,10 +4580,40 @@ function sheetEvalString(grid, body, vis){
     return p;
   }).join('');
 }
+function sheetSplitArgs(s){ const out = []; let cur = '', q = false; for (const ch of s){ if (ch === '"'){ q = !q; cur += ch; } else if (ch === ',' && !q){ out.push(cur); cur = ''; } else cur += ch; } out.push(cur); return out; }
+function sheetUnquote(s){ s = String(s).trim(); const m = s.match(/^"([\s\S]*)"$/); return m ? m[1] : s; }
+function sheetRangeCells(str){
+  str = String(str).trim();
+  const rg = str.match(/^([A-Za-z]+\d+):([A-Za-z]+\d+)$/);
+  if (rg){ const a = sheetRefToRC(rg[1]), b = sheetRefToRC(rg[2]); if (!a || !b) return []; const r1 = Math.min(a.r, b.r), r2 = Math.max(a.r, b.r), c1 = Math.min(a.c, b.c), c2 = Math.max(a.c, b.c); const list = []; for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) list.push({ r, c }); return list; }
+  const rc = sheetRefToRC(str); return rc ? [{ r: rc.r, c: rc.c }] : [];
+}
+function sheetCritTest(cellText, crit){
+  crit = String(crit).trim(); let op = '=', val = crit;
+  const m = crit.match(/^(<=|>=|<>|=|<|>)([\s\S]*)$/); if (m){ op = m[1]; val = m[2].trim(); }
+  const ctxt = String(cellText); const valNum = parseFloat(val); const cellNum = parseFloat(ctxt.replace(/,/g, ''));
+  const bothNum = !isNaN(valNum) && !isNaN(cellNum) && /^-?[\d.,]+$/.test(ctxt.trim());
+  switch (op){
+    case '=': return bothNum ? cellNum === valNum : ctxt === val;
+    case '<>': return bothNum ? cellNum !== valNum : ctxt !== val;
+    case '>': return bothNum && cellNum > valNum;
+    case '<': return bothNum && cellNum < valNum;
+    case '>=': return bothNum && cellNum >= valNum;
+    case '<=': return bothNum && cellNum <= valNum;
+  }
+  return false;
+}
 function sheetEvalFormula(grid, body, vis){
   vis = vis || new Set();
   body = body.replace(/\bCONCAT\s*\(([^()]*)\)/gi, (mm, args) => args.split(',').map(x => x.trim()).join('&'));
   if (/&/.test(body)) return sheetEvalString(grid, body, vis);
+  body = body.replace(/\b(COUNTIF|SUMIF)\s*\(([^()]*)\)/gi, (mm, fn, args) => {
+    const a = sheetSplitArgs(args); fn = fn.toUpperCase();
+    const cells = sheetRangeCells(a[0] || ''); const crit = sheetUnquote(a[1] != null ? a[1] : ''); const sumCells = (a[2] != null) ? sheetRangeCells(a[2]) : cells;
+    let count = 0, sum = 0;
+    cells.forEach((cell, i) => { const txt = sheetCellText(grid, cell.r, cell.c, vis); if (sheetCritTest(txt, crit)){ count++; const sc = sumCells[i] || cell; sum += sheetCellNum(grid, sc.r, sc.c, vis); } });
+    return '(' + (fn === 'COUNTIF' ? count : sum) + ')';
+  });
   body = body.replace(/\b(SUM|AVERAGE|AVG|MEDIAN|MIN|MAX|COUNT|PRODUCT|ROUND|ABS|INT)\s*\(([^()]*)\)/gi, (mm, fn, args) => {
     const nums = sheetCollect(grid, args, vis); fn = fn.toUpperCase(); let v = 0;
     if (fn === 'SUM') v = nums.reduce((a, b) => a + b, 0);
@@ -4663,7 +4711,40 @@ function sheetStripHtml(raw){
 
 // 全画面エディタ
 let _sheet = null, _sheetSel = { r1: 0, c1: 0, r2: 0, c2: 0 }, _sheetOnDone = null, _sheetEditing = false, _sheetEditCell = null, _sheetClip = null, _sheetDrag = false;
-let _sheetCellEls = [], _sheetColHdrEls = [], _sheetRowHdrEls = [], _sheetPrev = null, _fxCell = null, _fxOrig = '', _sheetClipDisp = null;
+let _sheetCellEls = [], _sheetColHdrEls = [], _sheetRowHdrEls = [], _sheetPrev = null, _fxCell = null, _fxOrig = '', _sheetClipDisp = null, _refIns = null;
+// 式入力中のセルクリック参照入力
+function sheetRefStr(r1, c1, r2, c2){
+  const rr1 = Math.min(r1, r2), rr2 = Math.max(r1, r2), cc1 = Math.min(c1, c2), cc2 = Math.max(c1, c2);
+  const a = sheetColLetter(cc1) + (rr1 + 1);
+  return (rr1 === rr2 && cc1 === cc2) ? a : a + ':' + sheetColLetter(cc2) + (rr2 + 1);
+}
+function sheetActiveFx(){
+  const fx = document.getElementById('sheet-fx-input');
+  if (fx && document.activeElement === fx && (fx.value.trim()[0] === '=')) return { type: 'fx', el: fx };
+  if (_sheetEditing && _sheetEditCell){ const td = sheetTd(_sheetEditCell.r, _sheetEditCell.c); const span = td && td.querySelector('.scell'); if (span && span.isContentEditable && (span.textContent.trim()[0] === '=')) return { type: 'span', el: span }; }
+  return null;
+}
+function sheetSpanCaret(span){
+  const sel = window.getSelection(); if (!sel.rangeCount) return span.textContent.length;
+  const r = sel.getRangeAt(0); if (!span.contains(r.endContainer)) return span.textContent.length;
+  let pos = 0; for (const node of span.childNodes){ if (node === r.endContainer){ return pos + (node.nodeType === 3 ? r.endOffset : 0); } pos += node.textContent.length; }
+  return pos;
+}
+function sheetEditorState(fi){
+  if (fi.type === 'fx') return { text: fi.el.value, caret: (fi.el.selectionStart != null ? fi.el.selectionStart : fi.el.value.length) };
+  return { text: fi.el.textContent, caret: sheetSpanCaret(fi.el) };
+}
+function sheetSetEditorText(fi, text, caret){
+  if (fi.type === 'fx'){ fi.el.value = text; fi.el.focus(); try { fi.el.setSelectionRange(caret, caret); } catch (e) {} }
+  else { fi.el.textContent = text; fi.el.focus(); const tn = fi.el.firstChild; const rng = document.createRange(); if (tn) rng.setStart(tn, Math.min(caret, tn.textContent.length)); else rng.setStart(fi.el, 0); rng.collapse(true); const s = window.getSelection(); s.removeAllRanges(); s.addRange(rng); }
+}
+function sheetInsertRef(fi, ar, ac, r2, c2){
+  const ref = sheetRefStr(ar, ac, r2, c2);
+  const base = _refIns ? _refIns.base : sheetEditorState(fi).text;
+  const caret = _refIns ? _refIns.caret : sheetEditorState(fi).caret;
+  sheetSetEditorText(fi, base.slice(0, caret) + ref + base.slice(caret), caret + ref.length);
+  if (!_refIns) _refIns = { fi, base, caret, ar, ac };
+}
 function syncSheetFx(){
   const ref = document.getElementById('sheet-fx-ref'); const inp = document.getElementById('sheet-fx-input');
   if (ref) ref.textContent = sheetColLetter(_sheetSel.c1) + (_sheetSel.r1 + 1);
@@ -4716,8 +4797,21 @@ function renderSheetGrid(){
       td.dataset.r = r; td.dataset.c = c;
       _sheetCellEls[r][c] = td;
       const rr = r, cc = c;
-      td.onmousedown = (e) => { if (e.button !== 0) return; if (_sheetEditing) commitSheetEdit(); if (e.shiftKey){ _sheetSel.r2 = rr; _sheetSel.c2 = cc; } else { _sheetSel = { r1: rr, c1: cc, r2: rr, c2: cc }; _sheetDrag = true; } updateSheetSelUI(); document.getElementById('sheet-grid-wrap').focus(); };
-      td.onmouseenter = () => { if (_sheetDrag){ _sheetSel.r2 = rr; _sheetSel.c2 = cc; updateSheetSelUI(); } };
+      td.onmousedown = (e) => {
+        if (e.button !== 0) return;
+        const fi = sheetActiveFx();
+        if (fi){
+          if (fi.type === 'span' && _sheetEditCell && _sheetEditCell.r === rr && _sheetEditCell.c === cc) return;   // 編集中セル自身: キャレット移動
+          e.preventDefault(); _refIns = null; sheetInsertRef(fi, rr, cc, rr, cc); return;
+        }
+        if (_sheetEditing) commitSheetEdit();
+        if (e.shiftKey){ _sheetSel.r2 = rr; _sheetSel.c2 = cc; } else { _sheetSel = { r1: rr, c1: cc, r2: rr, c2: cc }; _sheetDrag = true; }
+        updateSheetSelUI(); document.getElementById('sheet-grid-wrap').focus();
+      };
+      td.onmouseenter = () => {
+        if (_refIns){ sheetInsertRef(_refIns.fi, _refIns.ar, _refIns.ac, rr, cc); return; }
+        if (_sheetDrag){ _sheetSel.r2 = rr; _sheetSel.c2 = cc; updateSheetSelUI(); }
+      };
       td.ondblclick = () => startSheetEdit(rr, cc);
       tr.appendChild(td);
     }
@@ -4928,6 +5022,27 @@ function sheetConcatSel(){
   _sheetSel = { r1: s.r1, c1: tc, r2: s.r1, c2: tc };
   renderSheetGrid();
 }
+function renderSheetHelp(){
+  const b = document.getElementById('sheet-help-body'); if (!b) return;
+  b.innerHTML =
+    '<h4>数式の基本</h4>' +
+    '<div class="hrow">セルに <code>=</code> で始まる式を入れると計算します。参照は <code>A1</code>、範囲は <code>A1:A5</code>。<code>+ - * /</code> とカッコが使えます。</div>' +
+    '<div class="hrow">式の入力中に他のセルをクリックすると参照（例 <code>B2</code>）が入ります。ドラッグで範囲（<code>B2:B6</code>）になります。</div>' +
+    '<h4>集計関数</h4>' +
+    '<div class="hrow"><code>SUM(範囲)</code> 合計 ／ <code>AVERAGE</code>(=AVG) 平均 ／ <code>MEDIAN</code> 中央値</div>' +
+    '<div class="hrow"><code>MIN</code> 最小 ／ <code>MAX</code> 最大 ／ <code>COUNT</code> 数値の個数 ／ <code>PRODUCT</code> 総乗</div>' +
+    '<div class="hrow"><code>COUNTIF(範囲, 条件)</code> 条件に合う個数。例 <code>=COUNTIF(A1:A9,"&gt;3")</code></div>' +
+    '<div class="hrow"><code>SUMIF(範囲, 条件, [合計範囲])</code> 条件に合う行を合計。例 <code>=SUMIF(A1:A9,"&gt;=5",B1:B9)</code></div>' +
+    '<div class="hrow">条件は <code>"&gt;3"</code> <code>"&lt;=10"</code> <code>"&lt;&gt;x"</code> <code>"りんご"</code> のように。等号は省略可。</div>' +
+    '<h4>数値関数</h4>' +
+    '<div class="hrow"><code>ROUND(値, 桁)</code> 四捨五入 ／ <code>ABS</code> 絶対値 ／ <code>INT</code> 切り捨て整数</div>' +
+    '<h4>文字列</h4>' +
+    '<div class="hrow"><code>=A1&amp;B1</code> または <code>=CONCAT(A1,B1)</code> で連結。固定文字は <code>=A1&amp;"件"</code> のように <code>"</code> で囲みます。</div>' +
+    '<h4>便利ツール（ツールバー）</h4>' +
+    '<div class="hrow">行/列の追加・削除・コピー、結合/解除、🔢連続データ（連番・等差）、🔗連結、値で貼付/値に変換、固定長コピー、CSV。</div>' +
+    '<h4>コピー＆貼り付け</h4>' +
+    '<div class="hrow">範囲選択して Ctrl+C / Ctrl+V（Excel等とTSVでやり取り）。Ctrl+Shift+V で値貼り付け。単体を広い範囲に貼ると敷き詰め。</div>';
+}
 // 配線
 (function sheetWire(){
   const $ = id => document.getElementById(id); if (!$('sheet-ov')) return;
@@ -4942,6 +5057,9 @@ function sheetConcatSel(){
   $('sheet-fixedcopy').onclick = sheetFixedCopy;
   $('sheet-clear').onclick = sheetClearSel;
   $('sheet-csv').onclick = () => { if (_sheet) dl(sheetToCSV(_sheet), (_sheet.name || 'sheet') + '.csv', 'text/csv'); };
+  $('sheet-help').onclick = () => { renderSheetHelp(); $('sheet-help-ov').classList.add('open'); };
+  $('sheet-help-close').onclick = () => $('sheet-help-ov').classList.remove('open');
+  $('sheet-help-ov').addEventListener('click', e => { if (e.target === $('sheet-help-ov')) $('sheet-help-ov').classList.remove('open'); });
   // 数式バー
   const fx = $('sheet-fx-input');
   const fxCommit = () => { if (!_sheet || !_fxCell) return false; if (fx.value !== _fxOrig){ _sheet.data[_fxCell.r][_fxCell.c] = fx.value; renderSheetGrid(); return true; } return false; };
@@ -4983,7 +5101,7 @@ function sheetConcatSel(){
     const t = (e.clipboardData || window.clipboardData).getData('text');
     if (t){ e.preventDefault(); sheetPasteBlock(parseClipText(t)); }
   });
-  document.addEventListener('mouseup', () => { _sheetDrag = false; });
+  document.addEventListener('mouseup', () => { _sheetDrag = false; _refIns = null; });
 })();
 
 // 表の行・列を追加／削除（編集エリア内のキャレット位置の表が対象）
