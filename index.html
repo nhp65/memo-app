@@ -6316,14 +6316,18 @@ function renderJumpList() {
       row.classList.toggle('on', on); chk.textContent = on ? '☑' : '☐';
       updateJumpPickerUI();
     };
-    row.addEventListener('mouseenter', () => jumpShowThumb(m, row, false));
-    row.addEventListener('mouseleave', jumpHideThumbSoon);
+    if (jumpCanHover){   // スマホ等タッチ端末では行ホバーでサムネを出さない（チェック操作を妨げないため）
+      row.addEventListener('mouseenter', () => jumpShowThumb(m, row, false));
+      row.addEventListener('mouseleave', jumpHideThumbSoon);
+    }
     list.appendChild(row);
   });
   updateJumpPickerUI();
 }
 
 // ジャンプ選択画面のサムネイルプレビュー（グラフのサムネと同様の見た目・拡大可）
+// 真のマウス環境のみ行ホバーでサムネ表示（タッチ端末はプレビュー⤢ボタンから明示的に開く）
+const jumpCanHover = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 let jumpThumbTimer = null;
 function jumpThumbCard(m) {
   const card = document.createElement('div');
