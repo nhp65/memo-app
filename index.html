@@ -3658,13 +3658,28 @@ document.getElementById('link-ok').onclick = () => {
   closeOv('link-ov');
 };
 document.getElementById('link-cancel').onclick = () => { closeOv('link-ov'); restoreRange(linkTargetEl); };
-document.getElementById('imgurl-ok').onclick = () => {
+document.getElementById('imgurl-ok').onclick = async () => {
   const url = document.getElementById('imgurl-url').value.trim();
-  if (url) {
-    restoreRange(imgurlTargetEl);
-    insertHtmlAtCaret(`<img src="${url.replace(/"/g, '&quot;')}" style="max-width:260px;border-radius:8px;display:block;margin:3px 0;cursor:zoom-in;">`);
-  }
   closeOv('imgurl-ov');
+  if (!url) return;
+  const okBtn = document.getElementById('imgurl-ok');
+  // 挿入時に取得して内部データ化（以後は通信不要）。取得できなければURLのまま。
+  let src = url;
+  try {
+    const resp = await fetch(url, { mode: 'cors' });
+    if (resp.ok) {
+      const blob = await resp.blob();
+      if (blob && /^image\//.test(blob.type)) {
+        src = await resizeImg(blob);
+      }
+    }
+  } catch (e) {
+    flashToast && flashToast('画像を取得できなかったためURLのまま挿入します');
+  }
+  restoreRange(imgurlTargetEl);
+  imgurlTargetEl.focus();
+  restoreRange(imgurlTargetEl);
+  insertHtmlAtCaret(`<img src="${src.replace(/"/g, '&quot;')}" style="max-width:260px;border-radius:8px;display:block;margin:3px 0;cursor:zoom-in;">`);
 };
 document.getElementById('imgurl-cancel').onclick = () => { closeOv('imgurl-ov'); restoreRange(imgurlTargetEl); };
 document.getElementById('imgurl-url').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('imgurl-ok').click(); });
