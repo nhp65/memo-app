@@ -2025,6 +2025,8 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button id="mm-add-sib" title="兄弟トピックを追加 (Enter)">＋兄弟</button>
     <button id="mm-add-central" title="中心トピックを追加">＋中心</button>
     <button id="mm-add-text" title="独立テキストを追加">＋テキスト</button>
+    <button id="mm-img" title="画像URLをノードに挿入">🖼</button>
+    <button id="mm-link" title="リンクをノードに挿入">🔗</button>
     <button id="mm-del" title="トピック削除 (Delete)">🗑</button>
     <button id="mm-collapse" title="折りたたみ切替">⊟</button>
     <button id="mm-arrange" title="自動整列">⇲ 整列</button>
@@ -5553,20 +5555,24 @@ function mmEnsureXY(map){
 function mmApproxW(n){ const t = (n.text || ''); const longest = Math.max(1, ...t.split('\n').map(l => l.length)); return Math.min(240, Math.max(70, longest * 13 + 20)); }
 function mmApproxH(n){ return 18 * (n.text || '').split('\n').length + 16; }
 // サムネイル（保存済みの x/y で描画）
+function mmNodeW(n){ return n.w ? n.w : Math.max(n.central ? 170 : 90, mmApproxW(n)); }
+function mmNodeH(n){ return (n.central ? 14 : 8) + 16 * (n.text || '').split('\n').length; }
 function mmThumb(map){
   mmEnsureXY(map);
   const box = document.createElement('div'); box.className = 'mm-thumb';
   const bar = document.createElement('div'); bar.className = 'mm-thumb-bar'; bar.textContent = '🧠 ' + (map.name || 'マインドマップ'); box.appendChild(bar);
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  mmEachVisible(map, n => { minX = Math.min(minX, n.x); minY = Math.min(minY, n.y); maxX = Math.max(maxX, n.x + mmApproxW(n)); maxY = Math.max(maxY, n.y + mmApproxH(n)); });
-  const w = Math.max(1, maxX - minX), h = Math.max(1, maxY - minY), s = Math.min(280 / w, 150 / h, 1);
+  mmEachVisible(map, n => { minX = Math.min(minX, n.x); minY = Math.min(minY, n.y); maxX = Math.max(maxX, n.x + mmNodeW(n)); maxY = Math.max(maxY, n.y + mmNodeH(n)); });
+  if (minX === Infinity){ return box; }
+  const PAD = 8; const w = Math.max(1, maxX - minX) + PAD * 2, h = Math.max(1, maxY - minY) + PAD * 2, s = Math.min(280 / w, 160 / h, 1);
+  const ox = n => (n.x - minX + PAD) * s, oy = n => (n.y - minY + PAD) * s;
   const inner = document.createElement('div'); inner.style.cssText = 'position:relative;width:' + (w * s) + 'px;height:' + (h * s) + 'px';
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('width', w * s); svg.setAttribute('height', h * s); svg.style.position = 'absolute';
-  mmEachVisible(map, n => { if (n.collapsed) return; (n.children || []).forEach(c => { const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line'); ln.setAttribute('x1', (n.x + mmApproxW(n) - minX) * s); ln.setAttribute('y1', (n.y + mmApproxH(n) / 2 - minY) * s); ln.setAttribute('x2', (c.x - minX) * s); ln.setAttribute('y2', (c.y + mmApproxH(c) / 2 - minY) * s); ln.setAttribute('stroke', n.color || '#4C7C9D'); ln.setAttribute('stroke-width', '1'); svg.appendChild(ln); }); });
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('width', w * s); svg.setAttribute('height', h * s); svg.style.cssText = 'position:absolute;left:0;top:0;overflow:visible';
+  mmEachVisible(map, n => { if (n.collapsed) return; (n.children || []).forEach(c => { const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); const x1 = ox(n) + mmNodeW(n) * s, y1 = oy(n) + mmNodeH(n) / 2 * s, x2 = ox(c), y2 = oy(c) + mmNodeH(c) / 2 * s, mx = (x1 + x2) / 2; path.setAttribute('d', 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2); path.setAttribute('fill', 'none'); path.setAttribute('stroke', n.color || '#4C7C9D'); path.setAttribute('stroke-width', '1'); svg.appendChild(path); }); });
   inner.appendChild(svg);
   mmEachVisible(map, n => {
-    const d = document.createElement('div'); d.textContent = (n.text || '').split('\n')[0].slice(0, 14);
-    d.style.cssText = 'position:absolute;left:' + ((n.x - minX) * s) + 'px;top:' + ((n.y - minY) * s) + 'px;max-width:' + (mmApproxW(n) * s) + 'px;font-size:' + Math.max(5, 11 * s) + 'px;border:1px solid ' + (n.color || '#4C7C9D') + ';border-radius:4px;padding:1px 3px;background:' + (n.fill || 'var(--th-bubble)') + ';color:var(--th-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    const d = document.createElement('div'); d.textContent = (n.text || '').split('\n')[0].slice(0, 16);
+    d.style.cssText = 'position:absolute;left:' + ox(n) + 'px;top:' + oy(n) + 'px;width:' + (mmNodeW(n) * s) + 'px;height:' + (mmNodeH(n) * s) + 'px;box-sizing:border-box;font-size:' + Math.max(5, (n.central ? 12 : 10) * s) + 'px;font-weight:' + (n.central ? 700 : 400) + ';border:1px ' + (n.plain ? 'dashed' : 'solid') + ' ' + (n.color || '#4C7C9D') + ';border-radius:4px;padding:1px 3px;background:' + (n.fill || 'var(--th-bubble)') + ';color:var(--th-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center';
     inner.appendChild(d);
   });
   box.appendChild(inner); return box;
@@ -5627,7 +5633,8 @@ function mmMakeNode(n){
   const d = document.createElement('div'); d.className = 'mm-node' + (isRoot && !n.plain ? ' central' : '') + (n.plain ? ' plain' : '') + (n.id === _mmSel ? ' sel' : '');
   d.style.left = n.x + 'px'; d.style.top = n.y + 'px'; d.style.borderColor = n.color || '#4C7C9D'; d.style.background = n.fill || 'var(--th-bubble)';
   if (n.w){ d.style.width = n.w + 'px'; d.style.maxWidth = 'none'; }   // ノードごとの指定幅
-  d.textContent = n.text || ''; d.dataset.id = n.id;
+  if (n.html) d.innerHTML = n.html; else d.textContent = n.text || '';
+  d.dataset.id = n.id;
   if ((n.children || []).length){ const tg = document.createElement('div'); tg.className = 'mm-toggle'; tg.textContent = n.collapsed ? '+' : '−'; tg.onclick = (e) => { e.stopPropagation(); n.collapsed = !n.collapsed; mmRender(); }; d.appendChild(tg); }
   d.ondblclick = (e) => { e.stopPropagation(); mmStartEdit(n); };
   d.addEventListener('pointerdown', (e) => {
@@ -5651,14 +5658,14 @@ function mmRender(){
 function mmStartEdit(n){
   mmCommitEdit(); _mmSel = n.id; _mmEditing = true;
   const el = mmNodeEl(n.id); if (!el) return;
-  el.setAttribute('contenteditable', 'true'); el.textContent = n.text || ''; el.focus();
-  const r = document.createRange(); r.selectNodeContents(el); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  el.setAttribute('contenteditable', 'true'); if (n.html) el.innerHTML = n.html; else el.textContent = n.text || ''; try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+  const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
   el.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); mmCommitEdit(); mmAddSibling(); } else if (e.key === 'Escape'){ e.preventDefault(); mmCommitEdit(); } };
 }
 function mmCommitEdit(){
   if (!_mmEditing) return;
   const el = document.querySelector('#mm-nodes .mm-node[contenteditable="true"]');
-  if (el){ const n = mmFind(_mm, el.dataset.id); if (n) n.text = el.textContent.replace(/\n+$/, ''); el.removeAttribute('contenteditable'); }
+  if (el){ const n = mmFind(_mm, el.dataset.id); if (n){ const hasRich = el.querySelector('img,a,b,i'); if (hasRich){ n.html = el.innerHTML; n.text = el.textContent; } else { n.text = el.textContent.replace(/\n+$/, ''); delete n.html; } } el.removeAttribute('contenteditable'); }
   _mmEditing = false; mmRender();
 }
 function mmAddChild(){
@@ -5695,6 +5702,15 @@ function mmDelete(){
   }
   const p = mmFindParent(_mm, _mmSel); if (!p) return; p.children = p.children.filter(c => c.id !== _mmSel); _mmSel = p.id; mmRender();
 }
+function mmInsertInNode(html){
+  const n = mmFind(_mm, _mmSel); if (!n) return;
+  if (!_mmEditing) mmStartEdit(n);
+  const el = mmNodeEl(n.id); if (!el) return;
+  el.focus(); document.execCommand('insertHTML', false, html);
+  n.html = el.innerHTML; n.text = el.textContent; mmDrawConnectors();
+}
+function mmInsertImage(){ const url = prompt('画像URL（https://...）'); if (!url) return; mmInsertInNode('<img src="' + url.replace(/"/g, '&quot;') + '" style="max-width:220px;max-height:160px;display:block;border-radius:6px;margin:3px 0">'); }
+function mmInsertLink(){ const url = prompt('リンクURL（https://...）'); if (!url) return; const t = (prompt('表示テキスト（省略時はURL）', '') || url).replace(/</g, '&lt;').replace(/>/g, '&gt;'); mmInsertInNode('<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + t + '</a>'); }
 function mmColor(c){ const n = mmFind(_mm, _mmSel); if (!n) return; n.color = c; mmRender(); }
 function mmFill(c){ const n = mmFind(_mm, _mmSel); if (!n) return; n.fill = c; mmRender(); }
 function mmToggleCollapse(){ const n = mmFind(_mm, _mmSel); if (!n || !(n.children || []).length) return; n.collapsed = !n.collapsed; mmRender(); }
@@ -5721,6 +5737,8 @@ function mmZoomFit(){
   $('mm-add-child').onclick = mmAddChild; $('mm-add-sib').onclick = mmAddSibling; $('mm-del').onclick = mmDelete; $('mm-collapse').onclick = mmToggleCollapse;
   if ($('mm-add-central')) $('mm-add-central').onclick = () => mmAddTopLevel(false);
   if ($('mm-add-text')) $('mm-add-text').onclick = () => mmAddTopLevel(true);
+  if ($('mm-img')) $('mm-img').onclick = mmInsertImage;
+  if ($('mm-link')) $('mm-link').onclick = mmInsertLink;
   if ($('mm-arrange')) $('mm-arrange').onclick = () => { mmCommitEdit(); mmAutoArrange(_mm); mmRender(); mmZoomFit(); };
   $('mm-zoom-in').onclick = () => mmZoom(1.2); $('mm-zoom-out').onclick = () => mmZoom(1 / 1.2); $('mm-zoom-fit').onclick = mmZoomFit;
   $('mm-close').onclick = () => closeMmEditor(true); $('mm-back').onclick = () => closeMmEditor(false);
