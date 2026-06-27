@@ -863,9 +863,11 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 .fb-rect{border:2px solid #4C7C9D}
 .fb-ellipse{border:2px solid #4C7C9D;border-radius:50%}
 .fb-note{border-radius:4px;box-shadow:2px 3px 8px rgba(0,0,0,.18);padding:6px}
-.fb-note .fb-text{padding:0;overflow-y:auto;overflow-x:hidden}
+.fb-note .fb-text{padding:0;overflow-y:auto;overflow-x:hidden;touch-action:none}
 .fb-note .fb-text::-webkit-scrollbar{width:6px}
 .fb-note .fb-text::-webkit-scrollbar-thumb{background:rgba(0,0,0,.22);border-radius:3px}
+/* プレビュー中はタッチで縦スクロール可（編集中はドラッグ移動を優先）*/
+#fb-canvas.fb-preview .fb-note .fb-text{touch-action:pan-y}
 .fb-boxtext{display:flex;align-items:center;justify-content:center;padding:5px}
 .fb-boxtext .fb-text{height:auto;width:100%;text-align:center;white-space:normal;line-height:1.15}
 .fb-image img{width:100%;height:100%;object-fit:contain;pointer-events:none;display:block}
@@ -2924,6 +2926,9 @@ function buildToolbar(barId) {
   if (barId !== 'fb-fmt-bar') {
     document.getElementById(barId).insertAdjacentHTML('beforeend',
       '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="imgurl" title="画像URLを挿入">🔗🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button><button class="fb" data-c="sheet" title="スプレッドシートを挿入">📊</button><button class="fb" data-c="copyfmt" title="選択範囲（無ければ全体）の書式をコピー">⧉コピー</button><button class="fb" data-c="pastefmt" title="コピーした書式を貼り付け">📋貼</button>');
+  } else {
+    document.getElementById(barId).insertAdjacentHTML('beforeend',
+      '<div class="fs"></div><button class="fb" data-c="copyfmt" title="選択範囲（無ければ全体）の書式をコピー">⧉コピー</button><button class="fb" data-c="pastefmt" title="コピーした書式を貼り付け">📋貼</button>');
   }
 }
 buildToolbar('main-fmt-bar');
@@ -4732,6 +4737,10 @@ async function pasteFormat(el){
   el.focus();
   insertHtmlAtCaret(await internalizeHtml(_richClip));
   hydrateSheetEmbeds(el);
+  if (el.id === 'fb-editing'){   // 付箋: 貼り付け内容を反映＋配線
+    const fel = fbEls.find(x => x.id === fbEditingId);
+    if (fel){ fbWireRichText(el, fel); fel.html = el.innerHTML; const fn = el.closest('.fb-el'); if (fel.type === 'boxtext' && fn) fbFitBoxText(fn); }
+  }
 }
 // HTMLをキャレット位置にDOMとして挿入（execCommandのサニタイズで <input> 等が壊れるのを回避）
 function insertHtmlAtCaret(html){
