@@ -357,6 +357,17 @@ body.theme-dark .bc table td.sheet-calc, body.theme-sepia .bc table td.sheet-cal
 .map-wrap iframe { display: block; width: 100%; border: none; }
 .map-caption { font-size: 0.78rem; color: var(--c1); padding: 4px 9px; background: #f0f7fa; display: flex; align-items: center; gap: 5px; }
 .map-caption::before { content: '📍'; }
+/* YouTube 埋め込み */
+.yt-block { margin: 8px 0; max-width: 480px; position: relative; }
+.yt-edit { position: absolute; top: 5px; right: 5px; z-index: 3; width: 26px; height: 26px; border: none; border-radius: 6px; background: rgba(20,28,38,.6); color: #fff; font-size: .8rem; line-height: 1; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+.yt-edit:hover { background: rgba(20,28,38,.85); }
+.yt-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: #000; }
+.yt-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.yt-chapters { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+a.yt-seek { color: var(--c1); text-decoration: none; background: rgba(76,124,157,0.1); border: 1px solid rgba(76,124,157,0.28); border-radius: 6px; padding: 2px 9px; font-size: .82rem; cursor: pointer; white-space: nowrap; display: inline-block; }
+a.yt-seek:hover { background: rgba(76,124,157,0.22); }
+a.yt-seek::before { content: '▶ '; font-size: .8em; opacity: .8; }
+a.yt-seek .yt-t { font-variant-numeric: tabular-nums; opacity: .75; margin-right: 3px; }
 
 /* Cork board overlay */
 #corkboard-overlay {
@@ -1448,6 +1459,22 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <div class="mact">
       <button class="bcl" id="imgurl-cancel">キャンセル</button>
       <button class="bpr" id="imgurl-ok">挿入</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="yt-ov">
+  <div class="modal">
+    <h3>▶ YouTubeを埋め込み</h3>
+    <input type="url" id="yt-url" placeholder="YouTube URL（https://youtu.be/... など）">
+    <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;margin:8px 0 4px">
+      <input type="checkbox" id="yt-embed-chk" checked> プレーヤーを埋め込む（オフでリンクのみ挿入）
+    </label>
+    <div style="font-size:.8rem;color:#888;margin:8px 0 3px">指定時間リンク（任意・複数可）</div>
+    <textarea id="yt-times" rows="4" placeholder="1行に1つ。  時間 ラベル  の形式&#10;例：&#10;0:00 イントロ&#10;1:30 本題&#10;5:40 まとめ&#10;（時間のみでも可。 90 や 1:02:03 もOK）" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #b5d5e5;border-radius:8px;font:inherit;font-size:.86rem;resize:vertical;outline:none"></textarea>
+    <div class="mact">
+      <button class="bcl" id="yt-cancel">キャンセル</button>
+      <button class="bpr" id="yt-ok">挿入</button>
     </div>
   </div>
 </div>
@@ -2970,6 +2997,7 @@ function buildToolbar(barId) {
     <div class="fs"></div>
     <button class="fb" data-c="link"   title="リンク">🔗</button>
     <button class="fb" data-c="map"    title="地図を挿入">📍</button>
+    <button class="fb" data-c="yt"     title="YouTubeを埋め込み（指定時間リンク付き）">▶YT</button>
     <button class="fb" data-c="pdfref" title="出典PDF（該当ページ）を挿入">📑</button>
     <button class="fb" data-c="table"  title="表">表</button>
     <button class="fb" data-c="row-add" title="行を下に追加">＋行</button>
@@ -3183,6 +3211,16 @@ function applyFmt(cmd, targetEl, e) {
       openOv('map-ov');
       document.getElementById('map-preview').style.display = 'none';
       break;
+    case 'yt':
+      savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
+      ytTargetEl = targetEl;
+      _ytEditBlock = null;
+      openOv('yt-ov');
+      document.getElementById('yt-url').value = '';
+      document.getElementById('yt-times').value = '';
+      document.getElementById('yt-embed-chk').checked = true;
+      setTimeout(() => document.getElementById('yt-url').focus(), 50);
+      break;
     case 'pdfref':
       savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
       pdfTargetEl = targetEl;
@@ -3240,6 +3278,7 @@ let mapTargetEl   = editor;
 let jumpTargetEl  = editor;
 let tmplTargetEl  = editor;
 let emojiTargetEl = editor;
+let ytTargetEl    = editor;
 
 function restoreRange(targetEl) {
   targetEl.focus();
@@ -3684,6 +3723,124 @@ document.getElementById('imgurl-ok').onclick = async () => {
 document.getElementById('imgurl-cancel').onclick = () => { closeOv('imgurl-ov'); restoreRange(imgurlTargetEl); };
 document.getElementById('imgurl-url').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('imgurl-ok').click(); });
 document.getElementById('imgurl-ov').addEventListener('click', e => { if (e.target === document.getElementById('imgurl-ov')) { closeOv('imgurl-ov'); restoreRange(imgurlTargetEl); } });
+
+// ── YouTube 埋め込み ──────────────────────────────────────────────
+function ytParseId(url){
+  url = url.trim(); let m;
+  if ((m = url.match(/[?&]v=([\w-]{11})/))) return m[1];
+  if ((m = url.match(/youtu\.be\/([\w-]{11})/))) return m[1];
+  if ((m = url.match(/\/embed\/([\w-]{11})/))) return m[1];
+  if ((m = url.match(/\/shorts\/([\w-]{11})/))) return m[1];
+  if ((m = url.match(/\/live\/([\w-]{11})/))) return m[1];
+  if ((m = url.match(/^([\w-]{11})$/))) return m[1];
+  return null;
+}
+function ytParseTime(s){
+  s = (s || '').trim(); if (!s) return null;
+  if (/^\d+$/.test(s)) return +s;                                  // 秒だけ
+  if (/^(\d+:)?\d{1,2}:\d{2}$/.test(s)){                           // h:m:s / m:s
+    return s.split(':').reduce((t, n) => t * 60 + (+n), 0);
+  }
+  let t = 0, mm, hit = false;                                       // 1h2m3s 形式
+  if ((mm = s.match(/(\d+)\s*h/i))) { t += +mm[1] * 3600; hit = true; }
+  if ((mm = s.match(/(\d+)\s*m/i))) { t += +mm[1] * 60; hit = true; }
+  if ((mm = s.match(/(\d+)\s*s/i))) { t += +mm[1]; hit = true; }
+  return hit ? t : null;
+}
+function ytFmtTime(sec){
+  sec = Math.max(0, Math.floor(sec));
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  const ss = String(s).padStart(2, '0');
+  return h ? (h + ':' + String(m).padStart(2, '0') + ':' + ss) : (m + ':' + ss);
+}
+let _ytEditBlock = null;   // 編集対象の .yt-block（新規挿入時は null）
+// 設定からブロックHTMLを生成（cfg = {id, embed, chapters:[{sec,label}]}）
+function ytBuildBlock(cfg){
+  const first = cfg.chapters.length ? cfg.chapters[0].sec : 0;
+  let inner = '<button type="button" class="yt-edit" title="この埋め込みを編集">✏</button>';
+  if (cfg.embed){
+    inner += `<div class="yt-embed"><iframe src="https://www.youtube-nocookie.com/embed/${cfg.id}?start=${first}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`;
+  }
+  if (cfg.chapters.length){
+    const links = cfg.chapters.map(ch => {
+      const lbl = ch.label ? escH(ch.label) : '';
+      return `<a class="yt-seek" data-yt="${cfg.id}" data-t="${ch.sec}" href="https://youtu.be/${cfg.id}?t=${ch.sec}" target="_blank" rel="noopener"><span class="yt-t">${ytFmtTime(ch.sec)}</span>${lbl}</a>`;
+    }).join('');
+    inner += `<div class="yt-chapters">${links}</div>`;
+  } else if (!cfg.embed){
+    inner += `<div class="yt-chapters"><a class="yt-seek" data-yt="${cfg.id}" data-t="0" href="https://youtu.be/${cfg.id}" target="_blank" rel="noopener">YouTubeで開く</a></div>`;
+  }
+  const data = encodeURIComponent(JSON.stringify(cfg));
+  return `<div class="yt-block" contenteditable="false" data-cfg="${data}">${inner}</div>`;
+}
+// DOMから設定を復元（data-cfgが無い古いブロック用フォールバック）
+function ytCfgFromDom(block){
+  const ifr = block.querySelector('.yt-embed iframe');
+  let id = (ifr && (ifr.src.match(/embed\/([\w-]{11})/) || [])[1]) || '';
+  const chapters = [];
+  block.querySelectorAll('a.yt-seek').forEach(a => {
+    if (a.dataset.yt){ id = id || a.dataset.yt; if (a.textContent.trim() !== 'YouTubeで開く') chapters.push({ sec: +a.dataset.t || 0, label: (a.querySelector('.yt-t') ? a.textContent.replace(a.querySelector('.yt-t').textContent, '') : '').trim() }); }
+  });
+  return { id, embed: !!ifr, chapters };
+}
+// モーダルの入力欄から設定を読む
+function ytReadModal(){
+  const id = ytParseId(document.getElementById('yt-url').value.trim());
+  if (!id) return null;
+  const embed = document.getElementById('yt-embed-chk').checked;
+  const chapters = [];
+  document.getElementById('yt-times').value.split('\n').forEach(line => {
+    line = line.trim(); if (!line) return;
+    const sp = line.match(/^(\S+)\s*(.*)$/); if (!sp) return;
+    const sec = ytParseTime(sp[1]); if (sec == null) return;
+    chapters.push({ sec, label: sp[2].trim() });
+  });
+  return { id, embed, chapters };
+}
+document.getElementById('yt-ok').onclick = () => {
+  const cfg = ytReadModal();
+  if (!cfg){ alert('YouTubeのURLを認識できませんでした'); return; }
+  const blockHtml = ytBuildBlock(cfg);
+  if (_ytEditBlock){
+    // 既存ブロックを置き換え（消さずに更新）
+    const editorEl = _ytEditBlock.closest('[contenteditable=true]');
+    _ytEditBlock.outerHTML = blockHtml;
+    _ytEditBlock = null;
+    if (editorEl) editorEl.dispatchEvent(new Event('input', { bubbles: true }));
+  } else {
+    restoreRange(ytTargetEl);
+    document.execCommand('insertHTML', false, blockHtml + '<br>');
+  }
+  closeOv('yt-ov');
+};
+document.getElementById('yt-cancel').onclick = () => { _ytEditBlock = null; closeOv('yt-ov'); restoreRange(ytTargetEl); };
+document.getElementById('yt-ov').addEventListener('click', e => { if (e.target === document.getElementById('yt-ov')) { _ytEditBlock = null; closeOv('yt-ov'); restoreRange(ytTargetEl); } });
+// 埋め込みブロック内のクリック（編集 / 指定時間の頭出し）
+document.addEventListener('click', e => {
+  const eb = e.target.closest('.yt-edit');
+  if (eb){
+    e.preventDefault(); e.stopPropagation();
+    const block = eb.closest('.yt-block'); if (!block) return;
+    _ytEditBlock = block;
+    let cfg = null;
+    try { if (block.dataset.cfg) cfg = JSON.parse(decodeURIComponent(block.dataset.cfg)); } catch (_) {}
+    if (!cfg) cfg = ytCfgFromDom(block);
+    document.getElementById('yt-url').value = cfg.id ? ('https://youtu.be/' + cfg.id) : '';
+    document.getElementById('yt-embed-chk').checked = !!cfg.embed;
+    document.getElementById('yt-times').value = (cfg.chapters || []).map(c => ytFmtTime(c.sec) + (c.label ? ' ' + c.label : '')).join('\n');
+    openOv('yt-ov');
+    setTimeout(() => document.getElementById('yt-url').focus(), 50);
+    return;
+  }
+  const a = e.target.closest('a.yt-seek'); if (!a) return;
+  const block = a.closest('.yt-block');
+  const ifr = block && block.querySelector('.yt-embed iframe');
+  if (ifr){
+    e.preventDefault();
+    const id = a.dataset.yt, t = a.dataset.t || '0';
+    ifr.src = `https://www.youtube-nocookie.com/embed/${id}?start=${t}&autoplay=1`;
+  }   // 埋め込みが無い場合は通常の<a>として新規タブで開く
+});
 document.getElementById('link-url').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('link-ok').click(); });
 document.getElementById('link-ov').addEventListener('click', e => { if (e.target===document.getElementById('link-ov')) { closeOv('link-ov'); restoreRange(linkTargetEl); } });
 
