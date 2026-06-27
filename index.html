@@ -5537,6 +5537,42 @@ function renderSheetHelp(){
     if (t){ e.preventDefault(); sheetPasteBlock(parseClipText(t)); }
   });
   document.addEventListener('mouseup', () => { _sheetDrag = false; _refIns = null; });
+
+  // ── スマホ: 長押し→ドラッグで範囲選択（タップ=単一セル / 通常ドラッグ=スクロールは維持）──
+  let _tsTimer = null, _tsActive = false, _tsX = 0, _tsY = 0;
+  const tsCellFromPoint = (x, y) => { const el = document.elementFromPoint(x, y); return el ? el.closest('td[data-r]') : null; };
+  const tsWrap = $('sheet-grid-wrap');
+  tsWrap.addEventListener('touchstart', e => {
+    if (_sheetEditing || sheetActiveFx()) return;          // 編集中・数式入力中はタップ動作を優先
+    if (e.touches.length !== 1) return;                    // ピンチ等は無視
+    const t = e.touches[0];
+    const td = tsCellFromPoint(t.clientX, t.clientY);
+    if (!td) return;
+    _tsX = t.clientX; _tsY = t.clientY;
+    clearTimeout(_tsTimer);
+    _tsTimer = setTimeout(() => {
+      _tsActive = true;
+      const r = +td.dataset.r, c = +td.dataset.c;
+      _sheetSel = { r1: r, c1: c, r2: r, c2: c };
+      updateSheetSelUI();
+      try { document.getElementById('sheet-grid-wrap').focus({ preventScroll: true }); } catch (_) {}
+      if (navigator.vibrate) navigator.vibrate(15);
+    }, 280);
+  }, { passive: true });
+  tsWrap.addEventListener('touchmove', e => {
+    if (!_tsActive){
+      const t = e.touches[0];
+      if (t && (Math.abs(t.clientX - _tsX) > 10 || Math.abs(t.clientY - _tsY) > 10)) clearTimeout(_tsTimer);  // 動いたらスクロール扱い
+      return;
+    }
+    if (e.cancelable) e.preventDefault();                  // 範囲選択中はスクロール抑止
+    const t = e.touches[0]; if (!t) return;
+    const td = tsCellFromPoint(t.clientX, t.clientY);
+    if (td){ _sheetSel.r2 = +td.dataset.r; _sheetSel.c2 = +td.dataset.c; updateSheetSelUI(); }
+  }, { passive: false });
+  const tsEnd = (e) => { if (_tsActive && e && e.cancelable) e.preventDefault(); clearTimeout(_tsTimer); _tsActive = false; };
+  tsWrap.addEventListener('touchend', tsEnd, { passive: false });
+  tsWrap.addEventListener('touchcancel', tsEnd, { passive: false });
 })();
 
 // ── マインドマップ（メモ/フリーボードに埋め込み。表計算と同じ運用）──────────
