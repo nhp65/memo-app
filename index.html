@@ -868,8 +868,8 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 .fb-note .fb-text{padding:0;overflow-y:auto;overflow-x:hidden;touch-action:none}
 .fb-note .fb-text::-webkit-scrollbar{width:6px}
 .fb-note .fb-text::-webkit-scrollbar-thumb{background:rgba(0,0,0,.22);border-radius:3px}
-/* プレビュー中はタッチで縦スクロール可（編集中はドラッグ移動を優先）*/
-#fb-canvas.fb-preview .fb-note .fb-text{touch-action:pan-y}
+/* あふれている付箋だけ、プレビュー中はタッチ縦スクロールを許可（その他はパン優先）*/
+#fb-canvas.fb-preview .fb-note .fb-text.fb-scrollable{touch-action:pan-y}
 .fb-boxtext{display:flex;align-items:center;justify-content:center;padding:5px}
 .fb-boxtext .fb-text{height:auto;width:100%;text-align:center;white-space:normal;line-height:1.15}
 .fb-image img{width:100%;height:100%;object-fit:contain;pointer-events:none;display:block}
@@ -4012,7 +4012,7 @@ function calShowList(memos, title){
   if (!memos.length){ box.insertAdjacentHTML('beforeend', '<div class="jump-empty">メモがありません</div>'); return; }
   memos.forEach(m => {
     const row = document.createElement('div'); row.className = 'jump-row';
-    const txt = document.createElement('span'); txt.className = 'jump-txt'; txt.textContent = (m.board ? '🧩 ' : '') + (memoFirstLine(m) || '無題'); txt.title = txt.textContent;
+    const txt = document.createElement('span'); txt.className = 'jump-txt'; txt.textContent = (m.board ? '🧩 ' : '') + gLabel(m); txt.title = txt.textContent;
     const meta = document.createElement('span'); meta.className = 'jump-meta'; meta.textContent = fmtTime(m.createdAt);
     const prev = document.createElement('button'); prev.type = 'button'; prev.className = 'jump-prev'; prev.textContent = '⤢'; prev.title = 'プレビュー';
     prev.onclick = (e) => { e.stopPropagation(); jumpShowThumb(m, row, true); };
@@ -7734,7 +7734,7 @@ function fbSetPreview(on){
   document.getElementById('fb-canvas').classList.toggle('fb-preview', on);
   const b = document.getElementById('fb-preview-btn');
   if (b){ b.textContent = on ? '✏️ 編集' : '👁 プレビュー'; b.classList.toggle('active', on); }
-  if (on){ fbEndEdit(); fbSelect(null); }
+  if (on){ fbEndEdit(); fbSelect(null); if (typeof fbMarkScrollable === 'function') fbMarkScrollable(); }
 }
 let fbMatch = [], fbMatchIdx = -1;
 function fbNewId(){ return 'e' + Date.now().toString(36) + Math.floor(Math.abs(Math.sin(fbEls.length + Date.now())) * 1e6).toString(36); }
@@ -7793,9 +7793,15 @@ function fbRender(){
   const world = document.getElementById('fb-world');
   world.innerHTML = '';
   fbEls.forEach(el => world.appendChild(fbCreateNode(el)));
-  requestAnimationFrame(() => world.querySelectorAll('.fb-boxtext').forEach(n => fbFitBoxText(n)));
+  requestAnimationFrame(() => { world.querySelectorAll('.fb-boxtext').forEach(n => fbFitBoxText(n)); fbMarkScrollable(); });
   if (fbSel) fbSelect(fbSel);
   fbSyncOrderBtns();
+}
+// あふれている付箋テキストだけ .fb-scrollable を付与（パン引っかかり防止）
+function fbMarkScrollable(){
+  document.querySelectorAll('#fb-world .fb-note .fb-text').forEach(t => {
+    t.classList.toggle('fb-scrollable', t.scrollHeight > t.clientHeight + 1);
+  });
 }
 // ── フリーボードの元に戻す/やり直し（スナップショット方式） ───────────
 let fbUndo = [], fbRedo = [], fbApplyingHist = false;
