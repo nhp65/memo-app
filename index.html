@@ -1120,6 +1120,7 @@ body.force-mobile .sheet-cellref { display: none; }
 .mm-node.plain { border-style: dashed; color: var(--th-muted); }
 .mm-node[contenteditable="true"] { cursor: text; background: #fff; }
 .mm-toggle { position: absolute; right: -9px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border-radius: 50%; background: var(--c1); color: #fff; font-size: .6rem; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #fff; }
+.mm-resize { position: absolute; right: -5px; bottom: -5px; width: 14px; height: 14px; border-radius: 4px; background: var(--c5); border: 2px solid #fff; cursor: ew-resize; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 /* サムネイル */
 .mm-thumb { border: 1px solid var(--th-tbdr); border-radius: 8px; overflow: hidden; background: var(--th-bubble); cursor: pointer; display: inline-block; max-width: 100%; }
 .mm-thumb-bar { font-size: .72rem; color: var(--th-muted); padding: 3px 7px; background: var(--th-toolbar); border-bottom: 1px solid var(--th-tbdr); }
@@ -5572,7 +5573,7 @@ function mmThumb(map){
 }
 
 // 全画面エディタ
-let _mm = null, _mmSel = null, _mmOnDone = null, _mmView = { x: 60, y: 60, scale: 1 }, _mmEditing = false;
+let _mm = null, _mmSel = null, _mmOnDone = null, _mmView = { x: 60, y: 60, scale: 1 }, _mmEditing = false, _mmPinch = false;
 function openMmEditor(map, onDone){
   _mm = JSON.parse(JSON.stringify(map)); mmEnsureXY(_mm); _mmOnDone = onDone || null; _mmSel = (mmRoots(_mm)[0] || {}).id || null; _mmEditing = false; _mmView = { x: 60, y: 60, scale: 1 };
   document.getElementById('mm-title').value = _mm.name || 'マインドマップ';
@@ -5608,14 +5609,25 @@ function mmMakeNode(n){
   const isRoot = mmIsRoot(_mm, n);
   const d = document.createElement('div'); d.className = 'mm-node' + (isRoot && !n.plain ? ' central' : '') + (n.plain ? ' plain' : '') + (n.id === _mmSel ? ' sel' : '');
   d.style.left = n.x + 'px'; d.style.top = n.y + 'px'; d.style.borderColor = n.color || '#4C7C9D'; d.style.background = n.fill || 'var(--th-bubble)';
+  if (n.w){ d.style.width = n.w + 'px'; d.style.maxWidth = 'none'; }   // ノードごとの指定幅
   d.textContent = n.text || ''; d.dataset.id = n.id;
   if ((n.children || []).length){ const tg = document.createElement('div'); tg.className = 'mm-toggle'; tg.textContent = n.collapsed ? '+' : '−'; tg.onclick = (e) => { e.stopPropagation(); n.collapsed = !n.collapsed; mmRender(); }; d.appendChild(tg); }
+  if (n.id === _mmSel){   // 右端ハンドルで幅変更（ダブルクリックで自動幅に戻す）
+    const rz = document.createElement('div'); rz.className = 'mm-resize'; d.appendChild(rz);
+    rz.addEventListener('pointerdown', (e) => {
+      e.stopPropagation(); const sx = e.clientX, ow = d.offsetWidth;
+      const mv = (ev) => { if (_mmPinch) return; const w = Math.max(70, ow + (ev.clientX - sx) / _mmView.scale); n.w = w; d.style.width = w + 'px'; d.style.maxWidth = 'none'; mmDrawConnectors(); };
+      const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
+      document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+    });
+    rz.ondblclick = (e) => { e.stopPropagation(); delete n.w; mmRender(); };
+  }
   d.ondblclick = (e) => { e.stopPropagation(); mmStartEdit(n); };
   d.addEventListener('pointerdown', (e) => {
     if (_mmEditing) return; if (e.target.classList.contains('mm-toggle')) return;
     e.stopPropagation(); _mmSel = n.id; mmUpdateSel();
     const sx = e.clientX, sy = e.clientY, ox = n.x, oy = n.y;
-    const mv = (ev) => { n.x = ox + (ev.clientX - sx) / _mmView.scale; n.y = oy + (ev.clientY - sy) / _mmView.scale; d.style.left = n.x + 'px'; d.style.top = n.y + 'px'; mmDrawConnectors(); };
+    const mv = (ev) => { if (_mmPinch) return; n.x = ox + (ev.clientX - sx) / _mmView.scale; n.y = oy + (ev.clientY - sy) / _mmView.scale; d.style.left = n.x + 'px'; d.style.top = n.y + 'px'; mmDrawConnectors(); };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
@@ -5704,11 +5716,27 @@ function mmZoomFit(){
   if ($('mm-arrange')) $('mm-arrange').onclick = () => { mmCommitEdit(); mmAutoArrange(_mm); mmRender(); mmZoomFit(); };
   $('mm-zoom-in').onclick = () => mmZoom(1.2); $('mm-zoom-out').onclick = () => mmZoom(1 / 1.2); $('mm-zoom-fit').onclick = mmZoomFit;
   $('mm-close').onclick = () => closeMmEditor(true); $('mm-back').onclick = () => closeMmEditor(false);
-  const canvas = $('mm-canvas'); let pan = null;
-  canvas.addEventListener('pointerdown', e => { if (e.target.closest('.mm-node')) return; if (_mmEditing) mmCommitEdit(); pan = { sx: e.clientX, sy: e.clientY, x: _mmView.x, y: _mmView.y }; });
-  canvas.addEventListener('pointermove', e => { if (!pan) return; _mmView.x = pan.x + (e.clientX - pan.sx); _mmView.y = pan.y + (e.clientY - pan.sy); mmApplyView(); });
-  const end = () => { pan = null; }; canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
-  canvas.addEventListener('wheel', e => { e.preventDefault(); mmZoom(e.deltaY < 0 ? 1.1 : 1 / 1.1); }, { passive: false });
+  const canvas = $('mm-canvas'); const ptrs = new Map(); let gesture = null;
+  const snap = () => {
+    const pts = [...ptrs.values()];
+    if (pts.length === 1) return { mode: 'pan', sx: pts[0].x, sy: pts[0].y, vx: _mmView.x, vy: _mmView.y };
+    if (pts.length >= 2){ const r = canvas.getBoundingClientRect(), a = pts[0], b = pts[1]; const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top; const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1; return { mode: 'pinch', dist, scale: _mmView.scale, wx: (mx - _mmView.x) / _mmView.scale, wy: (my - _mmView.y) / _mmView.scale }; }
+    return null;
+  };
+  canvas.addEventListener('pointerdown', e => {
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size >= 2){ _mmPinch = true; gesture = snap(); }                          // 2本指: ピンチ（ノード上でも優先）
+    else if (!e.target.closest('.mm-node')){ if (_mmEditing) mmCommitEdit(); gesture = snap(); }   // 空き1本指: パン
+    else gesture = null;                                                                // ノード1本指: ノード側ドラッグに任せる
+  }, true);
+  canvas.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (_mmPinch && ptrs.size >= 2){ e.preventDefault(); const pts = [...ptrs.values()], r = canvas.getBoundingClientRect(), a = pts[0], b = pts[1]; const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1; const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top; const ns = Math.min(3, Math.max(0.2, gesture.scale * (dist / gesture.dist))); _mmView.scale = ns; _mmView.x = mx - gesture.wx * ns; _mmView.y = my - gesture.wy * ns; mmApplyView(); return; }
+    if (gesture && gesture.mode === 'pan' && ptrs.size === 1){ e.preventDefault(); const p = [...ptrs.values()][0]; _mmView.x = gesture.vx + (p.x - gesture.sx); _mmView.y = gesture.vy + (p.y - gesture.sy); mmApplyView(); }
+  }, true);
+  const end = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) _mmPinch = false; if (ptrs.size === 1){ const p = [...ptrs.values()][0]; gesture = { mode: 'pan', sx: p.x, sy: p.y, vx: _mmView.x, vy: _mmView.y }; } if (ptrs.size === 0) gesture = null; };
+  canvas.addEventListener('pointerup', end, true); canvas.addEventListener('pointercancel', end, true);
+  canvas.addEventListener('wheel', e => { e.preventDefault(); const rect = canvas.getBoundingClientRect(), f = e.deltaY < 0 ? 1.1 : 1 / 1.1, ns = Math.min(3, Math.max(0.2, _mmView.scale * f)); const wx = (e.clientX - rect.left - _mmView.x) / _mmView.scale, wy = (e.clientY - rect.top - _mmView.y) / _mmView.scale; _mmView.scale = ns; _mmView.x = e.clientX - rect.left - wx * ns; _mmView.y = e.clientY - rect.top - wy * ns; mmApplyView(); }, { passive: false });
   document.addEventListener('keydown', e => {
     if (!$('mm-ov').classList.contains('open')) return;
     if (_mmEditing || /INPUT|TEXTAREA/.test(e.target.tagName)) return;
