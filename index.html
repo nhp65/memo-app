@@ -849,6 +849,8 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 #fb-toolbar{display:flex;align-items:center;gap:5px;padding:6px 12px;background:var(--th-toolbar);border-bottom:1px solid var(--th-tbdr);flex-shrink:0;overflow-x:auto}
 #fb-toolbar button{background:#fff;border:1px solid var(--th-tbdr);border-radius:7px;padding:5px 9px;cursor:pointer;font-size:.8rem;white-space:nowrap;color:var(--c3)}
 #fb-toolbar button:hover{background:#eef5f9}
+#fb-snap-btn.active{background:#dceaf2;color:var(--c1);font-weight:600}
+#fb-snap-size{border:1px solid var(--th-tbdr);border-radius:6px;padding:4px 6px;font-size:.78rem;color:var(--c3);background:#fff;cursor:pointer}
 #fb-toolbar button:disabled{opacity:.4;cursor:default}
 .fb-tb-sep{width:1px;height:20px;background:var(--th-tbdr);flex-shrink:0}
 #fb-colors{display:flex;gap:4px}
@@ -1892,6 +1894,14 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
   <div id="fb-toolbar">
     <button id="fb-undo" title="元に戻す (Ctrl+Z)" disabled>↶</button>
     <button id="fb-redo" title="やり直し (Ctrl+Y)" disabled>↷</button>
+    <span class="fb-tb-sep"></span>
+    <button id="fb-snap-btn" title="グリッドにスナップ">⊞ スナップ</button>
+    <select id="fb-snap-size" title="スナップ単位">
+      <option value="10">10px</option>
+      <option value="20">20px</option>
+      <option value="40">40px</option>
+      <option value="80">80px</option>
+    </select>
     <span class="fb-tb-sep"></span>
     <button data-add="text">📝 テキスト</button>
     <button data-add="boxtext">🔠 ボックス文字</button>
@@ -7706,6 +7716,19 @@ function setupDragScroll(el) {
 const FB_SVGNS = 'http://www.w3.org/2000/svg';
 const FB_PALETTE = ['#4C7C9D','#E0746A','#E0A85B','#5BA86B','#9B7BD0','#444b52','#ffffff','#1f2a33'];
 let fbMemoId = null, fbEls = [], fbView = { x: 60, y: 60, scale: 1 }, fbSel = null, fbColor = '#4C7C9D', fbIsNew = false, fbPinch = false, fbPreview = false;
+let fbSnapOn = false, fbSnapSize = 20;
+function fbSnapV(v){ return fbSnapOn ? Math.round(v / fbSnapSize) * fbSnapSize : v; }
+function fbApplySnapUI(){
+  const b = document.getElementById('fb-snap-btn'); if (b){ b.classList.toggle('active', fbSnapOn); b.textContent = fbSnapOn ? '⊞ スナップON' : '⊞ スナップ'; }
+  const sel = document.getElementById('fb-snap-size'); if (sel) sel.value = String(fbSnapSize);
+  const world = document.getElementById('fb-world');
+  if (world){
+    if (fbSnapOn){ world.style.backgroundImage = 'linear-gradient(rgba(76,124,157,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(76,124,157,.18) 1px,transparent 1px)'; world.style.backgroundSize = fbSnapSize + 'px ' + fbSnapSize + 'px'; }
+    else { world.style.backgroundImage = ''; }
+  }
+}
+function fbSetSnap(on){ fbSnapOn = on; S.fbSnap = { on: fbSnapOn, size: fbSnapSize }; persist(); fbApplySnapUI(); }
+function fbSetSnapSize(sz){ fbSnapSize = sz; S.fbSnap = { on: fbSnapOn, size: fbSnapSize }; persist(); fbApplySnapUI(); }
 function fbSetPreview(on){
   fbPreview = on;
   document.getElementById('fb-canvas').classList.toggle('fb-preview', on);
@@ -7736,7 +7759,9 @@ function openBoard(memoId, isNew){
   fbBuildColors();
   fbRender(); fbApplyView();
   fbHistReset();   // 履歴を初期化（開いた状態を基点に）
-  fbSetPreview(false);   // 開くたびに編集モードから
+  fbSetPreview(true);   // 開いた直後はプレビュー（閲覧）から
+  if (S.fbSnap){ fbSnapOn = !!S.fbSnap.on; fbSnapSize = S.fbSnap.size || 20; }
+  fbApplySnapUI();
   document.getElementById('fb-ov').classList.add('open');
 }
 function fbClose(save){
@@ -7917,8 +7942,8 @@ function fbAttachDrag(node, el){
     const mv = ev => {
       if (fbPinch) return;   // 2本指ピンチ中はオブジェクト移動を止める
       const dx = (ev.clientX - sx) / fbView.scale, dy = (ev.clientY - sy) / fbView.scale;
-      el.x = ox + dx; el.y = oy + dy;
-      if (el.type === 'line' || el.type === 'arrow'){ el.x2 = ox2 + dx; el.y2 = oy2 + dy; }
+      el.x = fbSnapV(ox + dx); el.y = fbSnapV(oy + dy);
+      if (el.type === 'line' || el.type === 'arrow'){ el.x2 = fbSnapV(ox2 + dx); el.y2 = fbSnapV(oy2 + dy); }
       fbPositionNode(node, el); fbUpdateHandles(node, el); fbPositionElActions();
     };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); fbCommit(); };
@@ -7975,7 +8000,7 @@ function fbResizeDrag(h, el, node){
   h.addEventListener('pointerdown', e => {
     e.stopPropagation();
     const sx = e.clientX, sy = e.clientY, ow = el.w, oh = el.h;
-    const mv = ev => { if (fbPinch) return; el.w = Math.max(20, ow + (ev.clientX - sx) / fbView.scale); el.h = Math.max(20, oh + (ev.clientY - sy) / fbView.scale); fbPositionNode(node, el); fbPositionElActions(); };
+    const mv = ev => { if (fbPinch) return; el.w = Math.max(20, fbSnapV(ow + (ev.clientX - sx) / fbView.scale)); el.h = Math.max(20, fbSnapV(oh + (ev.clientY - sy) / fbView.scale)); fbPositionNode(node, el); fbPositionElActions(); };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); fbCommit(); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
@@ -7987,7 +8012,7 @@ function fbEndpointDrag(h, el, which, node){
       if (fbPinch) return;
       const rect = document.getElementById('fb-canvas').getBoundingClientRect();
       const wx = (ev.clientX - rect.left - fbView.x) / fbView.scale, wy = (ev.clientY - rect.top - fbView.y) / fbView.scale;
-      if (which === 'p1'){ el.x = wx; el.y = wy; } else { el.x2 = wx; el.y2 = wy; }
+      if (which === 'p1'){ el.x = fbSnapV(wx); el.y = fbSnapV(wy); } else { el.x2 = fbSnapV(wx); el.y2 = fbSnapV(wy); }
       fbDrawLine(node, el);
     };
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); fbCommit(); };
@@ -8108,9 +8133,9 @@ function fbInitCanvas(){
   // capture で全ポインタを捕捉（オブジェクト上で始めた指も数える）→ 2本指ならピンチ優先
   canvas.addEventListener('pointerdown', e => {
     fbPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (fbPtrs.size >= 2) { fbPinch = true; fbGesture = fbSnap(); }                       // 2本指: ピンチ（オブジェクト上でも優先）
-    else if (e.target === canvas || e.target.id === 'fb-world') { fbSelect(null); fbGesture = fbSnap(); }   // 空キャンバス1本指: パン
-    else { fbGesture = null; }                                                            // オブジェクト1本指: ドラッグはオブジェクト側に任せる
+    if (fbPtrs.size >= 2) { fbPinch = true; fbGesture = fbSnap(); }
+    else if (fbPreview || e.target === canvas || e.target.id === 'fb-world') { if (!fbPreview) fbSelect(null); fbGesture = fbSnap(); }
+    else { fbGesture = null; }
   }, true);
   canvas.addEventListener('pointermove', e => {
     if (!fbPtrs.has(e.pointerId)) return;
@@ -8132,7 +8157,15 @@ function fbInitCanvas(){
       fbApplyView();
     }
   }, true);
-  const fbPtrEnd = e => { fbPtrs.delete(e.pointerId); if (fbPtrs.size < 2) fbPinch = false; if (fbPtrs.size === 0) fbGesture = null; };
+  const fbPtrEnd = e => {
+    fbPtrs.delete(e.pointerId);
+    if (fbPtrs.size < 2) fbPinch = false;
+    if (fbPtrs.size === 1){   // ピンチ終了→残り1本でパンを継続できるよう作り直す
+      const p = [...fbPtrs.values()][0];
+      fbGesture = { mode: 'pan', sx: p.x, sy: p.y, vx: fbView.x, vy: fbView.y };
+    }
+    if (fbPtrs.size === 0) fbGesture = null;
+  };
   canvas.addEventListener('pointerup', fbPtrEnd, true);
   canvas.addEventListener('pointercancel', fbPtrEnd, true);
   canvas.addEventListener('wheel', e => {
@@ -8292,6 +8325,8 @@ function renderBoardBubble(m, q, showRoom, container){
   $('fb-zoom-out').onclick = () => fbZoomBy(1 / 1.2);
   $('fb-zoom-fit').onclick = fbZoomFit;
   if ($('fb-preview-btn')) $('fb-preview-btn').onclick = () => fbSetPreview(!fbPreview);
+  if ($('fb-snap-btn')) $('fb-snap-btn').onclick = () => fbSetSnap(!fbSnapOn);
+  if ($('fb-snap-size')) $('fb-snap-size').onchange = function(){ fbSetSnapSize(parseInt(this.value, 10) || 20); };
   if ($('fb-undo')) $('fb-undo').onclick = fbUndoAct;
   if ($('fb-redo')) $('fb-redo').onclick = fbRedoAct;
   $('fb-toolbar').querySelectorAll('[data-add]').forEach(b => b.onclick = () => fbCreate(b.dataset.add));
