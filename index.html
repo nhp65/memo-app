@@ -863,11 +863,17 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 .fb-rect{border:2px solid #4C7C9D}
 .fb-ellipse{border:2px solid #4C7C9D;border-radius:50%}
 .fb-note{border-radius:4px;box-shadow:2px 3px 8px rgba(0,0,0,.18);padding:6px}
-.fb-note .fb-text{padding:0}
+.fb-note .fb-text{padding:0;overflow-y:auto;overflow-x:hidden}
+.fb-note .fb-text::-webkit-scrollbar{width:6px}
+.fb-note .fb-text::-webkit-scrollbar-thumb{background:rgba(0,0,0,.22);border-radius:3px}
 .fb-boxtext{display:flex;align-items:center;justify-content:center;padding:5px}
 .fb-boxtext .fb-text{height:auto;width:100%;text-align:center;white-space:normal;line-height:1.15}
 .fb-image img{width:100%;height:100%;object-fit:contain;pointer-events:none;display:block}
 .fb-el:hover{outline:1.5px solid rgba(76,124,157,.4)}
+#fb-canvas.fb-preview .fb-el,#fb-canvas.fb-preview .fb-line{cursor:default}
+#fb-canvas.fb-preview .fb-el:hover{outline:none}
+#fb-canvas.fb-preview .fb-handle{display:none!important}
+#fb-preview-btn.active{background:rgba(255,255,255,.45)}
 .fb-el.fb-selected,.fb-line.fb-selected{outline:2px solid var(--c1)}
 .fb-line{position:absolute;pointer-events:none}
 .fb-line svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
@@ -1005,6 +1011,35 @@ a.jump-link::before { content: '⚓ '; font-size: .72em; opacity: .7; }
 #mdi-preview:empty::before { content: '（プレビュー）'; color: var(--th-muted); font-size: .85rem; }
 @media (max-width: 640px){ #mdi-panes { flex-direction: column; } }
 body.force-mobile #mdi-panes { flex-direction: column; }
+/* カレンダー */
+#cal-ov { display: none; position: fixed; inset: 0; z-index: 620; background: var(--c4); flex-direction: column; }
+#cal-ov.open { display: flex; }
+#cal-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--c1); color: #fff; flex-shrink: 0; flex-wrap: wrap; }
+#cal-head button { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 7px; padding: 6px 11px; cursor: pointer; font-size: .82rem; }
+#cal-head button:hover { background: rgba(255,255,255,.32); }
+#cal-title { font-weight: 700; font-size: 1rem; cursor: pointer; padding: 4px 10px; border-radius: 7px; }
+#cal-title:hover { background: rgba(255,255,255,.18); }
+.cal-mode { font-size: .76rem !important; }
+.cal-mode.active { background: rgba(255,255,255,.45) !important; font-weight: 700; }
+#cal-close { margin-left: 4px; }
+#cal-body { flex: 1; min-height: 0; overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+#cal-grid { display: flex; flex-direction: column; gap: 3px; }
+.cal-dow { display: flex; gap: 3px; }
+.cal-dow > span { flex: 1; text-align: center; font-size: .72rem; color: var(--th-muted); padding: 2px 0; }
+.cal-dow .cal-wkhead { flex: 0 0 32px; }
+.cal-wkrow { display: flex; gap: 3px; }
+.cal-wknum { flex: 0 0 32px; display: flex; align-items: center; justify-content: center; font-size: .68rem; color: var(--th-muted); cursor: pointer; border-radius: 6px; background: var(--th-toolbar); }
+.cal-wknum:hover { background: var(--c2); color: var(--c8); }
+.cal-cell { flex: 1; min-width: 0; min-height: 48px; border: 1px solid var(--th-sep); border-radius: 8px; padding: 3px 2px 2px; background: var(--th-bubble); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.cal-cell.other { opacity: .35; }
+.cal-cell.today { outline: 2px solid var(--c1); }
+.cal-cell.has:hover { background: var(--c4); }
+.cal-dnum { font-size: .74rem; color: var(--th-text); }
+.cal-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c1); }
+.cal-cnt { font-size: .6rem; color: var(--c6); line-height: 1; }
+.cal-list-head { font-weight: 700; font-size: .9rem; color: var(--c3); margin-bottom: 6px; }
+#cal-list { display: flex; flex-direction: column; gap: 3px; }
+#cal-list:empty { display: none; }
 /* スプレッドシート */
 #sheet-ov { display: none; position: fixed; inset: 0; z-index: 640; background: var(--c4); flex-direction: column; }
 #sheet-ov.open { display: flex; }
@@ -1253,6 +1288,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button class="hbtn" id="corkboard-btn">📌 ピン止め</button>
     <button class="hbtn" id="graph-btn" title="タグ・グラフ">🕸 グラフ</button>
     <button class="hbtn" id="stats-btn" title="統計">📊 統計</button>
+    <button class="hbtn" id="cal-btn" title="カレンダー">📅 カレンダー</button>
   </header>
 
   <div class="search-bar">
@@ -1847,6 +1883,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
       <button id="fb-zoom-out">－</button><span id="fb-zoom-lvl">100%</span><button id="fb-zoom-in">＋</button>
       <button id="fb-zoom-fit" title="全体表示">⤢</button>
     </div>
+    <button id="fb-preview-btn" title="プレビュー（編集ロック）">👁 プレビュー</button>
     <button id="fb-back">← 保存せず戻る</button>
     <button id="fb-close">✓ 保存して閉じる</button>
   </div>
@@ -1875,6 +1912,24 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button id="fbe-del" title="削除">🗑</button>
   </div>
   <input type="file" id="fb-img-input" accept="image/*" style="display:none">
+</div>
+
+<!-- カレンダー -->
+<div id="cal-ov">
+  <div id="cal-head">
+    <button id="cal-prev" title="前の月">‹</button>
+    <span id="cal-title" title="この月のメモ一覧">　</span>
+    <button id="cal-next" title="次の月">›</button>
+    <span style="flex:1"></span>
+    <span style="font-size:.78rem;color:rgba(255,255,255,.85)">対象:</span>
+    <button id="cal-mode-created" class="cal-mode active">作成のみ</button>
+    <button id="cal-mode-both" class="cal-mode">作成＆編集</button>
+    <button id="cal-close">✕ 閉じる</button>
+  </div>
+  <div id="cal-body">
+    <div id="cal-grid"></div>
+    <div id="cal-list"></div>
+  </div>
 </div>
 
 <!-- スプレッドシート 全画面エディタ -->
@@ -2868,7 +2923,7 @@ function buildToolbar(barId) {
   // 画像・スニペットはツールバーへ（新規入力・編集の両方／フリーボードのテキストには付けない）
   if (barId !== 'fb-fmt-bar') {
     document.getElementById(barId).insertAdjacentHTML('beforeend',
-      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="imgurl" title="画像URLを挿入">🔗🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button><button class="fb" data-c="sheet" title="スプレッドシートを挿入">📊</button>');
+      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="imgurl" title="画像URLを挿入">🔗🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button><button class="fb" data-c="sheet" title="スプレッドシートを挿入">📊</button><button class="fb" data-c="copyfmt" title="選択範囲（無ければ全体）の書式をコピー">⧉コピー</button><button class="fb" data-c="pastefmt" title="コピーした書式を貼り付け">📋貼</button>');
   }
 }
 buildToolbar('main-fmt-bar');
@@ -3140,6 +3195,8 @@ document.querySelectorAll('.fmt-bar').forEach(bar => {
       if (cmd === 'tc-pick') { showMiniPal('tc-picker', e, getTarget()); return; }
       if (cmd === 'image') { fmtImgTarget = getTarget(); document.getElementById('file-input').click(); return; }
       if (cmd === 'snippet') { e.stopPropagation(); openSnipPop(btn, getTarget()); return; }
+      if (cmd === 'copyfmt') { copyFormat(getTarget()); return; }
+      if (cmd === 'pastefmt') { pasteFormat(getTarget()); return; }
       applyFmt(cmd, getTarget(), e); return;
     }
   });
@@ -3922,6 +3979,86 @@ document.getElementById('stats-btn').onclick = () => { renderStats(); openOv('st
 document.getElementById('stats-close').onclick = () => closeOv('stats-ov');
 document.getElementById('stats-ov').addEventListener('click', e => { if (e.target === document.getElementById('stats-ov')) closeOv('stats-ov'); });
 
+// ── カレンダー ────────────────────────────────────────────────────
+let calYear, calMonth, calMode = 'created';
+function calMemoOnDay(m, key){
+  const c = ymd(new Date(m.createdAt)) === key;
+  if (calMode === 'created') return c;
+  return c || ymd(new Date(m.updatedAt || m.createdAt)) === key;
+}
+function calMemoInRange(m, s, e){
+  const c = new Date(m.createdAt); const inC = c >= s && c <= e;
+  if (calMode === 'created') return inC;
+  const u = new Date(m.updatedAt || m.createdAt); return inC || (u >= s && u <= e);
+}
+function calShowList(memos, title){
+  const box = document.getElementById('cal-list'); box.innerHTML = '';
+  const h = document.createElement('div'); h.className = 'cal-list-head'; h.textContent = title + '（' + memos.length + '件）'; box.appendChild(h);
+  if (!memos.length){ box.insertAdjacentHTML('beforeend', '<div class="jump-empty">メモがありません</div>'); return; }
+  memos.forEach(m => {
+    const row = document.createElement('div'); row.className = 'jump-row';
+    const txt = document.createElement('span'); txt.className = 'jump-txt'; txt.textContent = (m.board ? '🧩 ' : '') + (memoFirstLine(m) || '無題'); txt.title = txt.textContent;
+    const meta = document.createElement('span'); meta.className = 'jump-meta'; meta.textContent = fmtTime(m.createdAt);
+    const prev = document.createElement('button'); prev.type = 'button'; prev.className = 'jump-prev'; prev.textContent = '⤢'; prev.title = 'プレビュー';
+    prev.onclick = (e) => { e.stopPropagation(); jumpShowThumb(m, row, true); };
+    row.appendChild(txt); row.appendChild(meta); row.appendChild(prev);
+    row.onclick = () => { jumpHideThumb(); closeOv('cal-ov'); navToMemo(m.id); };
+    row.addEventListener('mouseenter', () => jumpShowThumb(m, row, false));
+    row.addEventListener('mouseleave', jumpHideThumbSoon);
+    box.appendChild(row);
+  });
+  box.scrollIntoView({ block: 'nearest' });
+}
+function calRender(){
+  document.getElementById('cal-title').textContent = calYear + '年' + (calMonth + 1) + '月';
+  const grid = document.getElementById('cal-grid'); grid.innerHTML = '';
+  const dow = document.createElement('div'); dow.className = 'cal-dow';
+  const wh = document.createElement('span'); wh.className = 'cal-wkhead'; wh.textContent = '週'; dow.appendChild(wh);
+  ['日','月','火','水','木','金','土'].forEach(d => { const s = document.createElement('span'); s.textContent = d; dow.appendChild(s); });
+  grid.appendChild(dow);
+  const first = new Date(calYear, calMonth, 1);
+  const start = new Date(calYear, calMonth, 1 - first.getDay());
+  const todayKey = ymd(new Date());
+  for (let w = 0; w < 6; w++){
+    const wkStart = new Date(start); wkStart.setDate(start.getDate() + w * 7);
+    if (w >= 4 && wkStart.getMonth() !== calMonth) break;   // 不要な末尾週は省く
+    const row = document.createElement('div'); row.className = 'cal-wkrow';
+    const wn = document.createElement('div'); wn.className = 'cal-wknum'; wn.textContent = '第' + (w + 1); wn.title = 'この週のメモ一覧';
+    const wkS = new Date(wkStart); wkS.setHours(0,0,0,0); const wkE = new Date(wkStart); wkE.setDate(wkStart.getDate() + 6); wkE.setHours(23,59,59,999);
+    wn.onclick = () => calShowList(S.memos.filter(m => calMemoInRange(m, wkS, wkE)).sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt)), (calMonth+1)+'月 第'+(w+1)+'週のメモ');
+    row.appendChild(wn);
+    for (let dd = 0; dd < 7; dd++){
+      const date = new Date(wkStart); date.setDate(wkStart.getDate() + dd);
+      const key = ymd(date);
+      const memos = S.memos.filter(m => calMemoOnDay(m, key));
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell' + (date.getMonth() !== calMonth ? ' other' : '') + (key === todayKey ? ' today' : '') + (memos.length ? ' has' : '');
+      const dn = document.createElement('div'); dn.className = 'cal-dnum'; dn.textContent = date.getDate(); cell.appendChild(dn);
+      if (memos.length){
+        const dot = document.createElement('div'); dot.className = 'cal-dot'; cell.appendChild(dot);
+        const cnt = document.createElement('div'); cnt.className = 'cal-cnt'; cnt.textContent = memos.length; cell.appendChild(cnt);
+        const show = () => calShowList(S.memos.filter(m => calMemoOnDay(m, key)).sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt)), (date.getMonth()+1)+'/'+date.getDate()+' のメモ');
+        cell.addEventListener('mouseenter', show);
+        cell.onclick = show;
+      }
+      row.appendChild(cell);
+    }
+    grid.appendChild(row);
+  }
+}
+function calSetMode(m){ calMode = m; document.getElementById('cal-mode-created').classList.toggle('active', m === 'created'); document.getElementById('cal-mode-both').classList.toggle('active', m === 'both'); document.getElementById('cal-list').innerHTML = ''; calRender(); }
+function calOpen(){ const d = new Date(); calYear = d.getFullYear(); calMonth = d.getMonth(); document.getElementById('cal-list').innerHTML = ''; calRender(); openOv('cal-ov'); }
+document.getElementById('cal-btn').onclick = calOpen;
+document.getElementById('cal-close').onclick = () => closeOv('cal-ov');
+document.getElementById('cal-prev').onclick = () => { calMonth--; if (calMonth < 0){ calMonth = 11; calYear--; } document.getElementById('cal-list').innerHTML = ''; calRender(); };
+document.getElementById('cal-next').onclick = () => { calMonth++; if (calMonth > 11){ calMonth = 0; calYear++; } document.getElementById('cal-list').innerHTML = ''; calRender(); };
+document.getElementById('cal-mode-created').onclick = () => calSetMode('created');
+document.getElementById('cal-mode-both').onclick = () => calSetMode('both');
+document.getElementById('cal-title').onclick = () => {
+  const s = new Date(calYear, calMonth, 1, 0, 0, 0); const e = new Date(calYear, calMonth + 1, 0, 23, 59, 59);
+  calShowList(S.memos.filter(m => calMemoInRange(m, s, e)).sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt)), calYear+'年'+(calMonth+1)+'月のメモ');
+};
+
 // ── コマンドパレット（Ctrl+K） ───────────────────────────────────
 let cmdpItems = [], cmdpSel = 0;
 function cmdpClick(id){ const el = document.getElementById(id); if (el) el.click(); }
@@ -4568,6 +4705,33 @@ function insertTextAtCaret(text){
   r.insertNode(node);
   r.setStartAfter(node); r.collapse(true);
   sel.removeAllRanges(); sel.addRange(r);
+}
+// 書式コピー用の内部クリップボード
+let _richClip = '';
+function flashToast(msg){
+  let t = document.getElementById('_toast');
+  if (!t){ t = document.createElement('div'); t.id = '_toast'; t.style.cssText = 'position:fixed;left:50%;bottom:46px;transform:translateX(-50%);background:rgba(40,50,60,.92);color:#fff;padding:8px 16px;border-radius:20px;font-size:.85rem;z-index:2000;opacity:0;transition:opacity .2s;pointer-events:none;max-width:80%;text-align:center'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.opacity = '1'; clearTimeout(t._h); t._h = setTimeout(() => t.style.opacity = '0', 1400);
+}
+function copyFormat(el){
+  const sel = window.getSelection();
+  let html = '';
+  if (sel && sel.rangeCount && !sel.isCollapsed){
+    const range = sel.getRangeAt(0);
+    if (el.contains(range.commonAncestorContainer)){
+      const div = document.createElement('div'); div.appendChild(range.cloneContents());
+      html = div.innerHTML;
+    }
+  }
+  if (!html) html = el.innerHTML;   // 選択が無ければ全体
+  _richClip = sheetStripHtml(html);
+  flashToast('書式をコピーしました（別メモで「📋貼」）');
+}
+async function pasteFormat(el){
+  if (!_richClip){ flashToast('先に「⧉コピー」で書式をコピーしてください'); return; }
+  el.focus();
+  insertHtmlAtCaret(await internalizeHtml(_richClip));
+  hydrateSheetEmbeds(el);
 }
 // HTMLをキャレット位置にDOMとして挿入（execCommandのサニタイズで <input> 等が壊れるのを回避）
 function insertHtmlAtCaret(html){
@@ -7532,7 +7696,14 @@ function setupDragScroll(el) {
 // ── フリーボード（無限キャンバス） ───────────────────────────────────
 const FB_SVGNS = 'http://www.w3.org/2000/svg';
 const FB_PALETTE = ['#4C7C9D','#E0746A','#E0A85B','#5BA86B','#9B7BD0','#444b52','#ffffff','#1f2a33'];
-let fbMemoId = null, fbEls = [], fbView = { x: 60, y: 60, scale: 1 }, fbSel = null, fbColor = '#4C7C9D', fbIsNew = false, fbPinch = false;
+let fbMemoId = null, fbEls = [], fbView = { x: 60, y: 60, scale: 1 }, fbSel = null, fbColor = '#4C7C9D', fbIsNew = false, fbPinch = false, fbPreview = false;
+function fbSetPreview(on){
+  fbPreview = on;
+  document.getElementById('fb-canvas').classList.toggle('fb-preview', on);
+  const b = document.getElementById('fb-preview-btn');
+  if (b){ b.textContent = on ? '✏️ 編集' : '👁 プレビュー'; b.classList.toggle('active', on); }
+  if (on){ fbEndEdit(); fbSelect(null); }
+}
 let fbMatch = [], fbMatchIdx = -1;
 function fbNewId(){ return 'e' + Date.now().toString(36) + Math.floor(Math.abs(Math.sin(fbEls.length + Date.now())) * 1e6).toString(36); }
 function boardText(m){ if (!m.board || !m.board.els) return ''; return (m.board.title || '') + ' ' + m.board.els.map(e => e.html ? stripHtml(e.html) : '').join(' '); }
@@ -7556,6 +7727,7 @@ function openBoard(memoId, isNew){
   fbBuildColors();
   fbRender(); fbApplyView();
   fbHistReset();   // 履歴を初期化（開いた状態を基点に）
+  fbSetPreview(false);   // 開くたびに編集モードから
   document.getElementById('fb-ov').classList.add('open');
 }
 function fbClose(save){
@@ -7727,6 +7899,7 @@ function fbPositionNode(node, el){
 }
 function fbAttachDrag(node, el){
   node.addEventListener('pointerdown', e => {
+    if (fbPreview) return;   // プレビュー中は移動・選択しない
     if (e.target.isContentEditable) return;
     if (e.target.classList.contains('fb-handle')) return;
     e.stopPropagation();
@@ -7814,6 +7987,7 @@ function fbEndpointDrag(h, el, which, node){
 }
 let fbEditingId = null;
 function fbStartEdit(el, t){
+  if (fbPreview) return;   // プレビュー中は編集しない
   if (fbEditingId && fbEditingId !== el.id) fbEndEdit();
   fbEditingId = el.id;
   t.innerHTML = el.html || '';   // 検索ハイライトのmarkを除いた素のHTMLで編集
@@ -8108,6 +8282,7 @@ function renderBoardBubble(m, q, showRoom, container){
   $('fb-zoom-in').onclick = () => fbZoomBy(1.2);
   $('fb-zoom-out').onclick = () => fbZoomBy(1 / 1.2);
   $('fb-zoom-fit').onclick = fbZoomFit;
+  if ($('fb-preview-btn')) $('fb-preview-btn').onclick = () => fbSetPreview(!fbPreview);
   if ($('fb-undo')) $('fb-undo').onclick = fbUndoAct;
   if ($('fb-redo')) $('fb-redo').onclick = fbRedoAct;
   $('fb-toolbar').querySelectorAll('[data-add]').forEach(b => b.onclick = () => fbCreate(b.dataset.add));
