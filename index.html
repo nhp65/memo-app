@@ -5588,7 +5588,24 @@ function closeMmEditor(save){
 }
 function mmApplyView(){ document.getElementById('mm-world').style.transform = 'translate(' + _mmView.x + 'px,' + _mmView.y + 'px) scale(' + _mmView.scale + ')'; document.getElementById('mm-zoom-lvl').textContent = Math.round(_mmView.scale * 100) + '%'; }
 function mmNodeEl(id){ return document.querySelector('#mm-nodes .mm-node[data-id="' + id + '"]'); }
-function mmUpdateSel(){ document.querySelectorAll('#mm-nodes .mm-node').forEach(el => el.classList.toggle('sel', el.dataset.id === _mmSel)); }
+function mmAttachResize(d, n){
+  if (d.querySelector('.mm-resize')) return;
+  const rz = document.createElement('div'); rz.className = 'mm-resize'; d.appendChild(rz);
+  rz.addEventListener('pointerdown', (e) => {
+    e.stopPropagation(); const sx = e.clientX, ow = d.offsetWidth;
+    const mv = (ev) => { if (_mmPinch) return; const w = Math.max(70, ow + (ev.clientX - sx) / _mmView.scale); n.w = w; d.style.width = w + 'px'; d.style.maxWidth = 'none'; mmDrawConnectors(); };
+    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  });
+  rz.ondblclick = (e) => { e.stopPropagation(); delete n.w; mmRender(); };
+}
+function mmUpdateSel(){
+  document.querySelectorAll('#mm-nodes .mm-node').forEach(el => {
+    const on = el.dataset.id === _mmSel; el.classList.toggle('sel', on);
+    const ex = el.querySelector('.mm-resize'); if (ex) ex.remove();
+    if (on){ const n = mmFind(_mm, el.dataset.id); if (n) mmAttachResize(el, n); }
+  });
+}
 function mmDrawConnectors(){
   const svg = document.getElementById('mm-svg'); svg.innerHTML = '';
   let maxX = 0, maxY = 0;
@@ -5612,16 +5629,6 @@ function mmMakeNode(n){
   if (n.w){ d.style.width = n.w + 'px'; d.style.maxWidth = 'none'; }   // ノードごとの指定幅
   d.textContent = n.text || ''; d.dataset.id = n.id;
   if ((n.children || []).length){ const tg = document.createElement('div'); tg.className = 'mm-toggle'; tg.textContent = n.collapsed ? '+' : '−'; tg.onclick = (e) => { e.stopPropagation(); n.collapsed = !n.collapsed; mmRender(); }; d.appendChild(tg); }
-  if (n.id === _mmSel){   // 右端ハンドルで幅変更（ダブルクリックで自動幅に戻す）
-    const rz = document.createElement('div'); rz.className = 'mm-resize'; d.appendChild(rz);
-    rz.addEventListener('pointerdown', (e) => {
-      e.stopPropagation(); const sx = e.clientX, ow = d.offsetWidth;
-      const mv = (ev) => { if (_mmPinch) return; const w = Math.max(70, ow + (ev.clientX - sx) / _mmView.scale); n.w = w; d.style.width = w + 'px'; d.style.maxWidth = 'none'; mmDrawConnectors(); };
-      const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
-      document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
-    });
-    rz.ondblclick = (e) => { e.stopPropagation(); delete n.w; mmRender(); };
-  }
   d.ondblclick = (e) => { e.stopPropagation(); mmStartEdit(n); };
   d.addEventListener('pointerdown', (e) => {
     if (_mmEditing) return; if (e.target.classList.contains('mm-toggle')) return;
@@ -5638,6 +5645,7 @@ function mmRender(){
   const nodesEl = document.getElementById('mm-nodes'); nodesEl.innerHTML = '';
   mmEachVisible(_mm, n => nodesEl.appendChild(mmMakeNode(n)));
   mmDrawConnectors();
+  mmUpdateSel();
   mmApplyView();
 }
 function mmStartEdit(n){
