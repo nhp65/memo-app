@@ -9414,4 +9414,76 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
     if ($('g-settings') && $('g-settings').classList.contains('show') && !e.target.closest('#g-settings') && !e.target.closest('#g-settings-btn')) $('g-settings').classList.remove('show');
   }, true);
   $('g-filter-all').onclick = () => { gVisibleTags = new Set(gAllRoomTags()); gRenderFilter(); gRebuild(); };
-  $('g-filter-none').onclick = ()
+  $('g-filter-none').onclick = () => { gVisibleTags = new Set(); gRenderFilter(); gRebuild(); };
+  if ($('g-and-filter')) $('g-and-filter').onclick = () => { gAndFilter = $('g-and-filter').checked; gRebuild(); };
+  if ($('g-spread')) $('g-spread').oninput = () => { gSpread = parseFloat($('g-spread').value) || 1; };
+  if ($('g-reset')) $('g-reset').onclick = () => { gNodes.forEach(n => { n.fixed = false; }); gInitPositions(); };
+  if ($('g-settings-btn')) $('g-settings-btn').onclick = () => $('g-settings').classList.toggle('show');
+  const gsBind = (id, key, valId) => { const el = $(id); if (!el) return; el.oninput = () => { if (!S.graph) S.graph = {}; S.graph[key] = parseFloat(el.value); const v = $(valId); if (v) v.textContent = el.value; gApplySizes(); persist(); }; };
+  gsBind('gs-base', 'tagBase', 'gs-base-val');
+  gsBind('gs-range', 'tagRange', 'gs-range-val');
+  if ($('gs-font')) $('gs-font').oninput = () => { if (!S.graph) S.graph = {}; S.graph.fontScale = (parseInt($('gs-font').value) || 100) / 100; const v = $('gs-font-val'); if (v) v.textContent = $('gs-font').value + '%'; gApplyFont(); persist(); };
+  if ($('gs-sat')) $('gs-sat').oninput = () => { if (!S.graph) S.graph = {}; S.graph.sat = parseInt($('gs-sat').value) || 0; const v = $('gs-sat-val'); if (v) v.textContent = $('gs-sat').value + '%'; gApplyColors(); persist(); };
+  const pop = $('g-thumb-pop');
+  pop.addEventListener('mouseenter', () => clearTimeout(gHideTimer));
+  pop.addEventListener('mouseleave', gHideThumbSoon);
+  pop.addEventListener('click', () => { if (gCoarse) return; if (Date.now() - gThumbShownAt < 500) return; if (gThumbMemoId) gOpenPreview(gThumbMemoId); });
+  $('g-preview-edit').onclick = () => { const id = gPreviewMemoId; gClosePreview(); openEdit(id); };
+  $('g-preview-jump').onclick = () => { const id = gPreviewMemoId; gClosePreview(); gJump(id); };
+  $('g-preview-close').onclick = gClosePreview;
+  $('g-preview').addEventListener('click', e => { if (e.target === $('g-preview')) gClosePreview(); });
+  const svg = $('g-svg');
+  // 1本指=パン、2本指=ピンチでズーム（＋ホイール）
+  const gPtrs = new Map();
+  let gGesture = null;
+  const gSnap = () => {
+    const pts = [...gPtrs.values()];
+    if (pts.length === 1) return { mode: 'pan', sx: pts[0].x, sy: pts[0].y, vx: gView.x, vy: gView.y };
+    if (pts.length >= 2) {
+      const r = svg.getBoundingClientRect(), a = pts[0], b = pts[1];
+      const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+      const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      return { mode: 'pinch', dist, scale: gView.scale, mx, my, wx: (mx - gView.x) / gView.scale, wy: (my - gView.y) / gView.scale };
+    }
+    return null;
+  };
+  svg.addEventListener('pointerdown', e => {
+    if (e.target !== svg && e.target.id !== 'g-zoom') return;
+    $('g-thumb-pop').classList.remove('show');
+    try { svg.setPointerCapture(e.pointerId); } catch (_) {}
+    gPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    gGesture = gSnap();
+  });
+  svg.addEventListener('pointermove', e => {
+    if (!gPtrs.has(e.pointerId)) return;
+    gPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!gGesture) return;
+    e.preventDefault();
+    const pts = [...gPtrs.values()];
+    if (gGesture.mode === 'pan' && pts.length === 1) {
+      gView.x = gGesture.vx + (pts[0].x - gGesture.sx);
+      gView.y = gGesture.vy + (pts[0].y - gGesture.sy);
+      applyGView();
+    } else if (gGesture.mode === 'pinch' && pts.length >= 2) {
+      const r = svg.getBoundingClientRect(), a = pts[0], b = pts[1];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+      const ns = Math.min(6, Math.max(0.2, gGesture.scale * (dist / gGesture.dist)));
+      gView.scale = ns; gView.x = mx - gGesture.wx * ns; gView.y = my - gGesture.wy * ns; applyGView();
+    }
+  });
+  const gPtrEnd = e => { gPtrs.delete(e.pointerId); gGesture = gPtrs.size ? gSnap() : null; };
+  svg.addEventListener('pointerup', gPtrEnd);
+  svg.addEventListener('pointercancel', gPtrEnd);
+  svg.addEventListener('wheel', e => {
+    e.preventDefault(); const r = svg.getBoundingClientRect(), f = e.deltaY < 0 ? 1.1 : 1 / 1.1, ns = Math.min(6, Math.max(0.2, gView.scale * f));
+    const wx = (e.clientX - r.left - gView.x) / gView.scale, wy = (e.clientY - r.top - gView.y) / gView.scale;
+    gView.scale = ns; gView.x = e.clientX - r.left - wx * ns; gView.y = e.clientY - r.top - wy * ns; applyGView();
+  }, { passive: false });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('g-preview').classList.contains('show')) gClosePreview(); else if ($('g-ov').classList.contains('open')) gClose(); });
+})();
+
+initApp();
+</script>
+</body>
+</html>
