@@ -6805,7 +6805,7 @@ function jumpThumbCard(m) {
   const title = document.createElement('div'); title.className = 'g-thumb-title'; title.textContent = (m.board ? '🧩 ' : '') + (memoFirstLine(m) || '無題');
   card.appendChild(title);
   if (m.board) { card.appendChild(fbThumb(m)); }
-  else { const bc = document.createElement('div'); bc.className = 'bc g-thumb-bc'; bc.innerHTML = m.html || '（空）'; hydrateImages(bc); card.appendChild(bc); }
+  else { const bc = document.createElement('div'); bc.className = 'bc g-thumb-bc'; bc.innerHTML = m.html || '（空）'; hydrateImages(bc); bc.querySelectorAll('img').forEach(img => { img.onclick = async (e) => { e.stopPropagation(); const id = img.getAttribute('data-cimg'); lbImg.src = id ? (await getImageData(id)) || img.src : img.src; lb.classList.add('open'); }; }); card.appendChild(bc); }
   const meta = document.createElement('div'); meta.className = 'g-thumb-meta'; meta.textContent = (m.tags || []).map(t => '#' + t).join(' ') + ' ・ ' + fmtTime(m.updatedAt || m.createdAt);
   card.appendChild(meta);
   return card;
