@@ -4015,7 +4015,12 @@ document.getElementById('slide-pdf-input').onchange = async (e) => {
   try { pdfjs = await loadPdfJs(); }
   catch (_) { alert('PDF変換ライブラリの読み込みに失敗しました。\n（初回のみインターネット接続が必要です）'); return; }
   let pdf;
-  try { const buf = await file.arrayBuffer(); pdf = await pdfjs.getDocument({ data: buf }).promise; }
+  try { const buf = await file.arrayBuffer(); pdf = await pdfjs.getDocument({
+    data: buf,
+    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',          // 日本語等のCMap（必要時のみ取得）
+    cMapPacked: true,
+    standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/'   // 埋め込みなしフォント
+  }).promise; }
   catch (_) { alert('PDFを読み込めませんでした'); return; }
   const total = pdf.numPages;
   const spec = prompt(`全${total}ページ。スライドにするページを指定してください。\n例: 1,3,5-8 （空欄で全ページ）`, '1-' + total);
