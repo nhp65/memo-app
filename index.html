@@ -369,18 +369,18 @@ a.yt-seek:hover { background: rgba(76,124,157,0.22); }
 a.yt-seek::before { content: '▶ '; font-size: .8em; opacity: .8; }
 a.yt-seek .yt-t { font-variant-numeric: tabular-nums; opacity: .75; margin-right: 3px; }
 /* スライド（複数画像） */
-.slide-block { position: relative; max-width: 480px; margin: 8px 0; border-radius: 10px; overflow: hidden; background: #000; }
-.slide-track { display: block; }
+.slide-block { position: relative; max-width: 480px; margin: 8px 0; }
+.slide-track { position: relative; display: block; background: #000; border-radius: 10px; overflow: hidden; }
 .slide-block .slide-img { display: none !important; width: 100%; max-height: 360px; object-fit: contain; margin: 0 !important; border-radius: 0 !important; max-width: 100%; }
 .slide-block .slide-img.cur { display: block !important; }
 .slide-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border: none; border-radius: 50%; background: rgba(20,28,38,.5); color: #fff; font-size: 1.3rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2; padding: 0; }
 .slide-prev { left: 6px; } .slide-next { right: 6px; }
 .slide-nav:hover { background: rgba(20,28,38,.82); }
-.slide-bar { position: absolute; left: 6px; right: 6px; bottom: 6px; z-index: 2; display: flex; align-items: center; gap: 6px; background: rgba(20,28,38,.55); border-radius: 10px; padding: 2px 8px; }
-.slide-bar .slide-first { flex: 0 0 auto; width: 22px; height: 22px; border: none; background: transparent; color: #fff; font-size: .8rem; cursor: pointer; padding: 0; line-height: 1; }
-.slide-bar .slide-first:hover { opacity: .8; }
-.slide-bar .slide-range { flex: 1; min-width: 30px; height: 16px; accent-color: #fff; cursor: pointer; }
-.slide-count { flex: 0 0 auto; color: #fff; font-size: .74rem; font-variant-numeric: tabular-nums; }
+.slide-bar { display: flex; align-items: center; gap: 8px; margin-top: 5px; background: rgba(76,124,157,.1); border: 1px solid rgba(76,124,157,.22); border-radius: 9px; padding: 3px 10px; }
+.slide-bar .slide-first { flex: 0 0 auto; width: 24px; height: 24px; border: none; background: transparent; color: var(--c1); font-size: .85rem; cursor: pointer; padding: 0; line-height: 1; }
+.slide-bar .slide-first:hover { opacity: .7; }
+.slide-bar .slide-range { flex: 1; min-width: 30px; height: 16px; accent-color: var(--c1); cursor: pointer; }
+.slide-count { flex: 0 0 auto; color: var(--c1); font-size: .74rem; font-variant-numeric: tabular-nums; }
 /* ライトボックスのスライドUI */
 #lb-slide-ui { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 2; display: flex; align-items: center; gap: 10px; background: rgba(20,28,38,.66); border-radius: 14px; padding: 8px 16px; cursor: default; width: min(560px, 90vw); }
 #lb-slide-ui button { border: none; background: rgba(255,255,255,.14); color: #fff; width: 34px; height: 34px; border-radius: 50%; font-size: 1.2rem; line-height: 1; cursor: pointer; padding: 0; }
@@ -3941,10 +3941,12 @@ function buildSlideBlock(items){
   }).filter(Boolean);
   const n = imgs.length;
   return `<div class="slide-block" contenteditable="false">` +
-    `<button type="button" class="slide-edit" title="スライドを編集">✏</button>` +
-    `<div class="slide-track">${imgs.join('')}</div>` +
-    `<button type="button" class="slide-nav slide-prev" title="前へ">‹</button>` +
-    `<button type="button" class="slide-nav slide-next" title="次へ">›</button>` +
+    `<div class="slide-track">` +
+      `<button type="button" class="slide-edit" title="スライドを編集">✏</button>` +
+      `${imgs.join('')}` +
+      `<button type="button" class="slide-nav slide-prev" title="前へ">‹</button>` +
+      `<button type="button" class="slide-nav slide-next" title="次へ">›</button>` +
+    `</div>` +
     `<div class="slide-bar">` +
       `<button type="button" class="slide-first" title="最初へ">⏮</button>` +
       `<input type="range" class="slide-range" min="0" max="${Math.max(0, n - 1)}" value="0">` +
@@ -9412,4 +9414,4 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
     if ($('g-settings') && $('g-settings').classList.contains('show') && !e.target.closest('#g-settings') && !e.target.closest('#g-settings-btn')) $('g-settings').classList.remove('show');
   }, true);
   $('g-filter-all').onclick = () => { gVisibleTags = new Set(gAllRoomTags()); gRenderFilter(); gRebuild(); };
-  $('g-filter-none').onclick = () => { gVisibleTags = new Set(); gRenderFilter(); gRe
+  $('g-filter-none').onclick = ()
