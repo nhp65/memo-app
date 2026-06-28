@@ -363,6 +363,10 @@ body.theme-dark .bc table td.sheet-calc, body.theme-sepia .bc table td.sheet-cal
 .yt-edit:hover { background: rgba(20,28,38,.85); }
 .yt-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: #000; }
 .yt-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.yt-facade { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; cursor: pointer; color: #fff; }
+.yt-facade .yt-play { width: 54px; height: 54px; border-radius: 50%; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; padding-left: 3px; }
+.yt-facade:hover .yt-play { background: rgba(229,57,53,.9); }
+.yt-facade-note { font-size: .78rem; opacity: .85; }
 .yt-chapters { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 a.yt-seek { color: var(--c1); text-decoration: none; background: rgba(76,124,157,0.1); border: 1px solid rgba(76,124,157,0.28); border-radius: 6px; padding: 2px 9px; font-size: .82rem; cursor: pointer; white-space: nowrap; display: inline-block; }
 a.yt-seek:hover { background: rgba(76,124,157,0.22); }
@@ -1523,7 +1527,9 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <div class="mact" style="justify-content:flex-start;flex-wrap:wrap;gap:6px">
       <button class="bcl" id="slide-add-file">＋ 画像を追加</button>
       <button class="bcl" id="slide-add-url">＋ URLで追加</button>
+      <button class="bcl" id="slide-add-pdf">＋ PDFのページ</button>
       <input type="file" id="slide-file-input" accept="image/*" multiple style="display:none">
+      <input type="file" id="slide-pdf-input" accept="application/pdf" style="display:none">
     </div>
     <div class="mact">
       <button class="bcl" id="slide-cancel">キャンセル</button>
@@ -3830,7 +3836,8 @@ function ytBuildBlock(cfg){
   const first = cfg.chapters.length ? cfg.chapters[0].sec : 0;
   let inner = '<button type="button" class="yt-edit" title="この埋め込みを編集">✏</button>';
   if (cfg.embed){
-    inner += `<div class="yt-embed"><iframe src="https://www.youtube-nocookie.com/embed/${cfg.id}?start=${first}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`;
+    // クリックするまでYouTubeに接続しない（ファサード表示）
+    inner += `<div class="yt-embed yt-facade" data-yt="${cfg.id}" data-start="${first}" role="button" title="クリックで再生（YouTubeに接続します）"><span class="yt-play">▶</span><span class="yt-facade-note">クリックで再生</span></div>`;
   }
   if (cfg.chapters.length){
     const links = cfg.chapters.map(ch => {
@@ -3845,14 +3852,21 @@ function ytBuildBlock(cfg){
   return `<div class="yt-block" contenteditable="false" data-cfg="${data}">${inner}</div>`;
 }
 // DOMから設定を復元（data-cfgが無い古いブロック用フォールバック）
+function ytLoadPlayer(facade, startSec){
+  const id = facade.dataset.yt; if (!id) return;
+  const start = startSec != null ? startSec : (facade.dataset.start || 0);
+  facade.classList.remove('yt-facade');
+  facade.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?start=${start}&autoplay=1" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
+}
 function ytCfgFromDom(block){
   const ifr = block.querySelector('.yt-embed iframe');
-  let id = (ifr && (ifr.src.match(/embed\/([\w-]{11})/) || [])[1]) || '';
+  const fac = block.querySelector('.yt-facade');
+  let id = (ifr && (ifr.src.match(/embed\/([\w-]{11})/) || [])[1]) || (fac && fac.dataset.yt) || '';
   const chapters = [];
   block.querySelectorAll('a.yt-seek').forEach(a => {
     if (a.dataset.yt){ id = id || a.dataset.yt; if (a.textContent.trim() !== 'YouTubeで開く') chapters.push({ sec: +a.dataset.t || 0, label: (a.querySelector('.yt-t') ? a.textContent.replace(a.querySelector('.yt-t').textContent, '') : '').trim() }); }
   });
-  return { id, embed: !!ifr, chapters };
+  return { id, embed: !!(ifr || fac), chapters };
 }
 // モーダルの入力欄から設定を読む
 function ytReadModal(){
@@ -3903,14 +3917,17 @@ document.addEventListener('click', e => {
     setTimeout(() => document.getElementById('yt-url').focus(), 50);
     return;
   }
+  const fac = e.target.closest('.yt-facade');
+  if (fac){ e.preventDefault(); e.stopPropagation(); ytLoadPlayer(fac); return; }   // クリックで再生（ここで初めて接続）
   const a = e.target.closest('a.yt-seek'); if (!a) return;
   const block = a.closest('.yt-block');
-  const ifr = block && block.querySelector('.yt-embed iframe');
-  if (ifr){
+  const embed = block && block.querySelector('.yt-embed');
+  if (embed){
     e.preventDefault();
     const id = a.dataset.yt, t = a.dataset.t || '0';
-    ifr.src = `https://www.youtube-nocookie.com/embed/${id}?start=${t}&autoplay=1`;
-  }   // 埋め込みが無い場合は通常の<a>として新規タブで開く
+    if (embed.classList.contains('yt-facade')) ytLoadPlayer(embed, t);                 // 未再生→指定時間で読み込み
+    else { const ifr = embed.querySelector('iframe'); if (ifr) ifr.src = `https://www.youtube-nocookie.com/embed/${id}?start=${t}&autoplay=1`; }
+  }   // 埋め込みが無い（リンクのみ）場合は通常の<a>として新規タブで開く
 });
 
 // ── スライド（複数画像） ───────────────────────────────────────────
@@ -3979,6 +3996,50 @@ document.getElementById('slide-add-url').onclick = async () => {
   try { const r = await fetch(src, { mode: 'cors' }); if (r.ok){ const b = await r.blob(); if (/^image\//.test(b.type)) src = await resizeImg(b); } }
   catch (_) { flashToast && flashToast('画像を取得できなかったためURLのまま追加します'); }
   _slideItems.push(`<img src="${src.replace(/"/g, '&quot;')}">`); renderSlideList();
+};
+// PDFの指定ページのみを画像化して追加（指定ページだけをデータ保持）
+function slideParsePages(spec, total){
+  const out = [];
+  (spec || '').split(',').forEach(part => {
+    part = part.trim(); if (!part) return;
+    const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (m){ let a = +m[1], b = +m[2]; if (a > b) [a, b] = [b, a]; for (let p = a; p <= b; p++) out.push(p); }
+    else if (/^\d+$/.test(part)) out.push(+part);
+  });
+  return [...new Set(out)].filter(p => p >= 1 && p <= total).sort((a, b) => a - b);
+}
+document.getElementById('slide-add-pdf').onclick = () => document.getElementById('slide-pdf-input').click();
+document.getElementById('slide-pdf-input').onchange = async (e) => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  let pdfjs;
+  try { pdfjs = await loadPdfJs(); }
+  catch (_) { alert('PDF変換ライブラリの読み込みに失敗しました。\n（初回のみインターネット接続が必要です）'); return; }
+  let pdf;
+  try { const buf = await file.arrayBuffer(); pdf = await pdfjs.getDocument({ data: buf }).promise; }
+  catch (_) { alert('PDFを読み込めませんでした'); return; }
+  const total = pdf.numPages;
+  const spec = prompt(`全${total}ページ。スライドにするページを指定してください。\n例: 1,3,5-8 （空欄で全ページ）`, '1-' + total);
+  if (spec === null) return;
+  const pages = spec.trim() ? slideParsePages(spec, total) : Array.from({ length: total }, (_, i) => i + 1);
+  if (!pages.length){ alert('有効なページがありません'); return; }
+  flashToast && flashToast(`PDFを変換中… (${pages.length}ページ)`);
+  for (const p of pages){
+    try {
+      const page = await pdf.getPage(p);
+      const base = page.getViewport({ scale: 1 });
+      const scale = Math.min(2.5, 1600 / Math.max(base.width, base.height));   // 過大化を防ぐ
+      const vp = page.getViewport({ scale: scale > 0 ? scale : 1 });
+      const canvas = document.createElement('canvas'); canvas.width = Math.ceil(vp.width); canvas.height = Math.ceil(vp.height);
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+      const src = blob ? await resizeImg(blob) : canvas.toDataURL('image/jpeg', 0.9);   // 画質プリセットを適用
+      _slideItems.push(`<img src="${src}">`);
+    } catch (_) {}
+  }
+  try { await pdf.cleanup(); } catch (_) {}
+  renderSlideList();
+  flashToast && flashToast('PDFのページを追加しました');
 };
 document.getElementById('slide-ok').onclick = () => {
   if (!_slideItems.length){ alert('画像を1枚以上追加してください'); return; }
@@ -6154,7 +6215,14 @@ function mmInsertInNode(html){
   el.focus(); document.execCommand('insertHTML', false, html);
   n.html = el.innerHTML; n.text = el.textContent; mmDrawConnectors();
 }
-function mmInsertImage(){ const url = prompt('画像URL（https://...）'); if (!url) return; mmInsertInNode('<img src="' + url.replace(/"/g, '&quot;') + '" style="max-width:220px;max-height:160px;display:block;border-radius:6px;margin:3px 0">'); }
+async function mmInsertImage(){
+  const url = prompt('画像URL（https://...）'); if (!url) return;
+  let src = url.trim();
+  // 挿入時に取得して内部データ化（以後は通信不要）。取得できなければURLのまま。
+  try { const r = await fetch(src, { mode: 'cors' }); if (r.ok){ const b = await r.blob(); if (/^image\//.test(b.type)) src = await resizeImg(b); } }
+  catch (_) { flashToast && flashToast('画像を取得できなかったためURLのまま挿入します'); }
+  mmInsertInNode('<img src="' + src.replace(/"/g, '&quot;') + '" style="max-width:220px;max-height:160px;display:block;border-radius:6px;margin:3px 0">');
+}
 function mmInsertLink(){ const url = prompt('リンクURL（https://...）'); if (!url) return; const t = (prompt('表示テキスト（省略時はURL）', '') || url).replace(/</g, '&lt;').replace(/>/g, '&gt;'); mmInsertInNode('<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + t + '</a>'); }
 function mmColor(c){ const n = mmFind(_mm, _mmSel); if (!n) return; n.color = c; mmRender(); }
 function mmFill(c){ const n = mmFind(_mm, _mmSel); if (!n) return; n.fill = c; mmRender(); }
@@ -7491,8 +7559,15 @@ function resizeImg(file) {
           w = Math.round(w*r2); h = Math.round(h*r2);
         }
         const c = document.createElement('canvas'); c.width=w; c.height=h;
-        c.getContext('2d').drawImage(i,0,0,w,h);
-        res(c.toDataURL('image/jpeg', preset.q));
+        const ctx = c.getContext('2d'); ctx.drawImage(i,0,0,w,h);
+        // 透過の有無を判定（透過があればPNG固定で透明を保持）
+        let hasAlpha = false;
+        try { const d = ctx.getImageData(0,0,w,h).data; for (let k=3;k<d.length;k+=4){ if (d[k] < 255){ hasAlpha = true; break; } } } catch(_){ }
+        const png = c.toDataURL('image/png');
+        if (hasAlpha){ res(png); return; }
+        // 不透明なら JPG/PNG の軽い方を採用（変換時に1回だけ判定）
+        const jpg = c.toDataURL('image/jpeg', preset.q);
+        res(jpg.length <= png.length ? jpg : png);
       };
       i.src = e.target.result;
     };
