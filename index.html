@@ -387,6 +387,9 @@ a.yt-seek .yt-t { font-variant-numeric: tabular-nums; opacity: .75; margin-right
 #lb-slide-ui button:hover { background: rgba(255,255,255,.3); }
 #lb-slide-ui #lb-range { flex: 1; accent-color: #fff; cursor: pointer; }
 #lb-slide-ui #lb-count { color: #fff; font-size: .82rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#lb-slide-ui #lb-collapse { width: 30px; height: 30px; font-size: .8rem; }
+#lb-slide-show { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 3; border: none; background: rgba(20,28,38,.6); color: #fff; width: 50px; height: 28px; border-radius: 14px; font-size: .85rem; cursor: pointer; padding: 0; line-height: 1; }
+#lb-slide-show:hover { background: rgba(20,28,38,.85); }
 .slide-edit { position: absolute; top: 5px; right: 5px; z-index: 3; width: 26px; height: 26px; border: none; border-radius: 6px; background: rgba(20,28,38,.6); color: #fff; font-size: .8rem; line-height: 1; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
 .slide-edit:hover { background: rgba(20,28,38,.85); }
 /* 編集（✏）ボタンは編集可能な領域内でのみ表示 */
@@ -2126,7 +2129,9 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <input type="range" id="lb-range" min="0" max="0" value="0">
     <span id="lb-count">1 / 1</span>
     <button type="button" id="lb-next" title="次へ">›</button>
+    <button type="button" id="lb-collapse" title="バーを隠す">▼</button>
   </div>
+  <button type="button" id="lb-slide-show" title="スライドバーを表示" style="display:none">▲</button>
 </div>
 
 <!-- Quick look (拡大表示) -->
@@ -4030,14 +4035,28 @@ async function lbShowSlide(){
   const rng = document.getElementById('lb-range'); rng.max = Math.max(0, n - 1); rng.value = _lbSlide.idx;
   document.getElementById('lb-count').textContent = (_lbSlide.idx + 1) + ' / ' + n;
 }
-function lbSlideGo(d){ if (!_lbSlide) return; const n = _lbSlide.imgs.length; _lbSlide.idx = d === 'first' ? 0 : (((_lbSlide.idx + d) % n) + n) % n; lbShowSlide(); }
+function lbSlideGo(d){ if (!_lbSlide) return; const n = _lbSlide.imgs.length; _lbSlide.idx = d === 'first' ? 0 : (((_lbSlide.idx + d) % n) + n) % n; lbShowSlide(); lbBarShow(); }
+// スライドバーの自動非表示（一定時間後に隠し、▲で再表示）
+let _lbBarTimer = null;
+function lbBarShow(){
+  if (!_lbSlide) return;
+  document.getElementById('lb-slide-ui').style.display = 'flex';
+  document.getElementById('lb-slide-show').style.display = 'none';
+  clearTimeout(_lbBarTimer);
+  _lbBarTimer = setTimeout(lbBarHide, 2800);
+}
+function lbBarHide(){
+  clearTimeout(_lbBarTimer);
+  document.getElementById('lb-slide-ui').style.display = 'none';
+  document.getElementById('lb-slide-show').style.display = _lbSlide ? 'flex' : 'none';
+}
 function openSlideLightbox(imgEl){
   const block = imgEl.closest('.slide-block'); if (!block) return;
   const imgs = slideImgs(block); if (!imgs.length) return;
   _lbSlide = { imgs, idx: Math.max(0, imgs.indexOf(imgEl)) };
-  document.getElementById('lb-slide-ui').style.display = 'flex';
   lb.classList.add('open');
   lbShowSlide();
+  lbBarShow();
 }
 // 表示中（編集中でない）のスライド画像クリックはスライド対応の拡大表示にする（通常のimg.onclickより先に捕捉）
 document.addEventListener('click', e => {
@@ -4053,8 +4072,11 @@ document.addEventListener('click', e => {
     document.getElementById('lb-first').onclick = () => lbSlideGo('first');
     document.getElementById('lb-prev').onclick  = () => lbSlideGo(-1);
     document.getElementById('lb-next').onclick  = () => lbSlideGo(1);
-    document.getElementById('lb-range').addEventListener('input', function(){ if (_lbSlide){ _lbSlide.idx = +this.value; lbShowSlide(); } });
+    document.getElementById('lb-range').addEventListener('input', function(){ if (_lbSlide){ _lbSlide.idx = +this.value; lbShowSlide(); lbBarShow(); } });
+    document.getElementById('lb-collapse').onclick = (e) => { e.stopPropagation(); lbBarHide(); };
   }
+  const showBtn = document.getElementById('lb-slide-show');
+  if (showBtn) showBtn.onclick = (e) => { e.stopPropagation(); lbBarShow(); };
 }
 document.getElementById('link-url').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('link-ok').click(); });
 document.getElementById('link-ov').addEventListener('click', e => { if (e.target===document.getElementById('link-ov')) { closeOv('link-ov'); restoreRange(linkTargetEl); } });
@@ -7338,7 +7360,7 @@ document.getElementById('tmpl-close').onclick = () => { closeOv('tmpl-ov'); rest
 document.getElementById('tmpl-ov').addEventListener('click', e => { if (e.target === document.getElementById('tmpl-ov')) { closeOv('tmpl-ov'); restoreRange(tmplTargetEl); } });
 
 // ── Lightbox ──────────────────────────────────────────────────────
-function lbClose(){ lb.classList.remove('open'); _lbSlide = null; const ui = document.getElementById('lb-slide-ui'); if (ui) ui.style.display = 'none'; }
+function lbClose(){ lb.classList.remove('open'); _lbSlide = null; clearTimeout(_lbBarTimer); const ui = document.getElementById('lb-slide-ui'); if (ui) ui.style.display = 'none'; const sb = document.getElementById('lb-slide-show'); if (sb) sb.style.display = 'none'; }
 lb.onclick = lbClose;
 document.addEventListener('keydown', e => {
   if (!lb.classList.contains('open')) return;
