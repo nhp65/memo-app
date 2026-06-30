@@ -131,6 +131,37 @@ header { padding-top: max(10px, env(safe-area-inset-top)); padding-left: max(14p
 .flash-btn.on { background:var(--c1); color:#fff; border-color:var(--c1); }
 .flash-ind { margin-left:auto; font-size:.72rem; color:var(--th-muted); border:1px solid var(--th-sep); border-radius:10px; padding:1px 8px; }
 .flash-divider { text-align:center; font-size:.72rem; color:var(--th-muted); margin:7px 0; border-top:1px dashed var(--th-sep); padding-top:5px; }
+/* 暗記マーカー（塗りつぶし→タップで表示）。パステルなストライプ */
+.anki-mask {
+  border-radius: 6px; padding: 0 3px; cursor: pointer; user-select: none;
+  color: transparent;
+  background: repeating-linear-gradient(45deg, #ffc9de 0, #ffc9de 7px, #cfe8ff 7px, #cfe8ff 14px, #d8f5d0 14px, #d8f5d0 21px, #fff1b8 21px, #fff1b8 28px);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  transition: background .12s ease;
+}
+.anki-mask::selection { color: transparent; }
+.anki-mask.revealed {
+  color: inherit; background: transparent;
+  box-shadow: inset 0 0 0 1.5px #f3a6c4; border-radius: 6px;
+}
+/* 編集中は中身が見えないと編集できないので、薄いマーカー表示にする */
+[contenteditable="true"] .anki-mask {
+  color: inherit; user-select: text;
+  background: repeating-linear-gradient(45deg, rgba(255,201,222,.5) 0, rgba(255,201,222,.5) 7px, rgba(207,232,255,.5) 7px, rgba(207,232,255,.5) 14px);
+  box-shadow: inset 0 0 0 1px #f3a6c4;
+}
+/* スイッチ（状態切替: — × ○ △ ?） */
+.memo-switch { display:inline-flex; align-items:center; justify-content:center; min-width:1.6em; height:1.6em; padding:0 .35em; margin:0 2px; border:1px solid var(--th-sep, #cce5f0); border-radius:6px; cursor:pointer; font-weight:700; line-height:1; vertical-align:middle; user-select:none; background:var(--th-toolbar, #f0f7fa); }
+.memo-switch:hover { border-color:var(--c1); }
+.memo-switch[data-st="0"]{ color:#9aa7b0; }
+.memo-switch[data-st="1"]{ color:#c0392b; }
+.memo-switch[data-st="2"]{ color:#2e7d32; }
+.memo-switch[data-st="3"]{ color:#e08a1e; }
+.memo-switch[data-st="4"]{ color:#1565c0; }
+#switch-ov { z-index:840; }
+#switch-opts .switch-opt { font-size:1.5rem; font-weight:700; width:54px; height:54px; border:1.5px solid var(--th-sep,#cce5f0); border-radius:10px; background:var(--th-bubble); cursor:pointer; display:flex; align-items:center; justify-content:center; flex-direction:column; line-height:1; }
+#switch-opts .switch-opt small { font-size:.6rem; color:var(--th-muted); font-weight:400; margin-top:2px; }
+#switch-opts .switch-opt:hover { border-color:var(--c1); background:var(--c4); }
 .snip-form-btns { display:flex; gap:5px; justify-content:flex-end; }
 /* Template modal */
 .tmpl-save-row { display: flex; gap: 7px; align-items: center; margin-bottom: 12px; }
@@ -1542,6 +1573,14 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
       <button class="bcl" id="yt-cancel">キャンセル</button>
       <button class="bpr" id="yt-ok">挿入</button>
     </div>
+  </div>
+</div>
+
+<div class="ov" id="switch-ov">
+  <div class="modal" style="max-width:320px">
+    <h3>状態を選択</h3>
+    <div id="switch-opts" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:6px 0 4px"></div>
+    <div class="mact"><button class="bcl" id="switch-cancel">キャンセル</button></div>
   </div>
 </div>
 
@@ -3094,6 +3133,7 @@ function buildToolbar(barId) {
     <div class="fs"></div>
     <span class="split-btn"><button class="fb hl-apply" data-c="hl" title="蛍光ペン（適用/解除）" style="background:#FFF9C4;color:var(--c3)">蛍光</button><button class="fb split-arrow" data-c="hl-pick" title="蛍光の色">▾</button></span>
     <span class="split-btn"><button class="fb tc-apply" data-c="tc" title="文字色を適用" style="font-weight:bold;border-bottom:3px solid #C62828;line-height:1.1">A</button><button class="fb split-arrow" data-c="tc-pick" title="文字色を選択">▾</button></span>
+    <button class="fb" data-c="ankimask" title="暗記マーカー（塗りつぶし→タップで表示）">▦</button>
     <div class="fs"></div>
     <select class="fsel" title="文字サイズ">
       <option value="">サイズ</option>
@@ -3130,10 +3170,10 @@ function buildToolbar(barId) {
   // 画像・スニペットはツールバーへ（新規入力・編集の両方／フリーボードのテキストには付けない）
   if (barId !== 'fb-fmt-bar') {
     document.getElementById(barId).insertAdjacentHTML('beforeend',
-      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="imgurl" title="画像URLを挿入">🔗🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button><button class="fb" data-c="sheet" title="スプレッドシートを挿入">📊</button><button class="fb" data-c="mindmap" title="マインドマップを挿入">🧠</button><button class="fb" data-c="slide" title="スライド（複数画像）を挿入">🎞</button><button class="fb" data-c="copyfmt" title="選択範囲（無ければ全体）の書式をコピー">⧉コピー</button><button class="fb" data-c="pastefmt" title="コピーした書式を貼り付け">📋貼</button>');
+      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="imgurl" title="画像URLを挿入">🔗🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button><button class="fb" data-c="sheet" title="スプレッドシートを挿入">📊</button><button class="fb" data-c="mindmap" title="マインドマップを挿入">🧠</button><button class="fb" data-c="slide" title="スライド（複数画像）を挿入">🎞</button><button class="fb" data-c="switch" title="スイッチ（タップで — × ○ △ ? を切替）">◔</button><button class="fb" data-c="copyfmt" title="選択範囲（無ければ全体）の書式をコピー">⧉コピー</button><button class="fb" data-c="pastefmt" title="コピーした書式を貼り付け">📋貼</button>');
   } else {
     document.getElementById(barId).insertAdjacentHTML('beforeend',
-      '<div class="fs"></div><button class="fb" data-c="slide" title="スライド（複数画像）を挿入">🎞</button><button class="fb" data-c="copyfmt" title="選択範囲（無ければ全体）の書式をコピー">⧉コピー</button><button class="fb" data-c="pastefmt" title="コピーした書式を貼り付け">📋貼</button>');
+      '<div class="fs"></div><button class="fb" data-c="slide" title="スライド（複数画像）を挿入">🎞</button><button class="fb" data-c="switch" title="スイッチ（タップで — × ○ △ ? を切替）">◔</button><button class="fb" data-c="copyfmt" title="選択範囲（無ければ全体）の書式をコピー">⧉コピー</button><button class="fb" data-c="pastefmt" title="コピーした書式を貼り付け">📋貼</button>');
   }
 }
 buildToolbar('main-fmt-bar');
@@ -3342,6 +3382,13 @@ function applyFmt(cmd, targetEl, e) {
       document.getElementById('yt-times').value = '';
       document.getElementById('yt-embed-chk').checked = true;
       setTimeout(() => document.getElementById('yt-url').focus(), 50);
+      break;
+    case 'switch':
+      targetEl.focus();
+      insertHtmlAtCaret('<span class="memo-switch" data-st="0" contenteditable="false">—</span> ');
+      break;
+    case 'ankimask':
+      toggleAnkiMask(targetEl);
       break;
     case 'pdfref':
       savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
@@ -3974,6 +4021,97 @@ document.addEventListener('click', e => {
     if (embed.classList.contains('yt-facade')) ytLoadPlayer(embed, t);                 // 未再生→指定時間で読み込み
     else { const ifr = embed.querySelector('iframe'); if (ifr) ifr.src = `https://www.youtube-nocookie.com/embed/${id}?start=${t}&autoplay=1`; }
   }   // 埋め込みが無い（リンクのみ）場合は通常の<a>として新規タブで開く
+});
+
+// ── 暗記マーカー: 選択文字を塗りつぶしで隠し、タップで表示 ──
+function toggleAnkiMask(targetEl){
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  const anc = range.commonAncestorContainer;
+  const existing = (anc.nodeType === 1 ? anc : anc.parentElement);
+  const mask = existing && existing.closest ? existing.closest('.anki-mask') : null;
+  if (mask){   // 既存マスク内 → 解除
+    const p = mask.parentNode;
+    while (mask.firstChild) p.insertBefore(mask.firstChild, mask);
+    p.removeChild(mask);
+    p.normalize && p.normalize();
+    return;
+  }
+  if (range.collapsed){ alert('隠したい文字列を選択してください'); return; }
+  const span = document.createElement('span'); span.className = 'anki-mask';
+  try { range.surroundContents(span); }
+  catch(_){ const frag = range.extractContents(); span.appendChild(frag); range.insertNode(span); }
+  sel.removeAllRanges();
+}
+// 表示中の暗記マーカーをタップ → 表示/非表示を切替（編集中は対象外、保存もしない）
+document.addEventListener('click', e => {
+  const mk = e.target.closest('.anki-mask'); if (!mk) return;
+  if (mk.closest('[contenteditable="true"]')) return;
+  e.preventDefault(); e.stopPropagation();
+  mk.classList.toggle('revealed');
+});
+
+// ── スイッチ（状態切替: — × ○ △ ?）。スニペット {cnt:○}{rate:○/×} で集計可 ──
+const SWITCH_STATES = ['—', '×', '○', '△', '?'];
+const SWITCH_LABELS = ['未活性', '不正解', '正解', '一部', '不明'];
+let _switchTarget = null;
+function buildSwitchOpts(sw){
+  const opts = document.getElementById('switch-opts'); opts.innerHTML = '';
+  SWITCH_STATES.forEach((sym, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'switch-opt';
+    b.innerHTML = (sym === '—' ? '—' : escH(sym)) + '<small>' + SWITCH_LABELS[i] + '</small>';
+    if (i === +(sw.dataset.st || 0)) b.style.borderColor = 'var(--c1)';
+    b.onclick = () => applySwitchState(i);
+    opts.appendChild(b);
+  });
+}
+function openSwitchPicker(sw, m, side){
+  _switchTarget = { sw, m, side };
+  buildSwitchOpts(sw);
+  openOv('switch-ov');
+}
+function applySwitchState(st){
+  const t = _switchTarget; if (!t){ closeOv('switch-ov'); return; }
+  t.sw.dataset.st = st; t.sw.textContent = SWITCH_STATES[st];
+  if (t.fb){   // フリーボードの付箋
+    const node = t.sw.closest('.fb-el'); const txt = node && node.querySelector('.fb-text');
+    if (t.el && txt){ t.el.html = txt.innerHTML; if (typeof fbCommit === 'function') fbCommit(); persist(); }
+    closeOv('switch-ov'); _switchTarget = null;
+    return;
+  }
+  const bc = t.sw.closest('.bc');
+  if (bc){
+    if (t.side === 'back') t.m.back = cleanCodeForSave(bc); else t.m.html = cleanCodeForSave(bc);
+    t.m.updatedAt = new Date().toISOString();
+    persist();
+  }
+  closeOv('switch-ov'); _switchTarget = null;
+  renderMemos();   // {cnt}{rate} 等の再計算のため再描画
+  if (document.getElementById('ql-ov') && document.getElementById('ql-ov').classList.contains('open')) qlShow();
+}
+document.getElementById('switch-cancel').onclick = () => { _switchTarget = null; closeOv('switch-ov'); };
+document.getElementById('switch-ov').addEventListener('click', e => { if (e.target === document.getElementById('switch-ov')) { _switchTarget = null; closeOv('switch-ov'); } });
+// 表示中のスイッチをタップ → 状態選択（編集中は対象外）
+document.addEventListener('click', e => {
+  const sw = e.target.closest('.memo-switch'); if (!sw) return;
+  if (sw.closest('[contenteditable="true"]')) return;
+  e.preventDefault(); e.stopPropagation();
+  const fbNode = sw.closest('#fb-world .fb-el');
+  if (fbNode){   // フリーボードの付箋内
+    const el = (typeof fbEls !== 'undefined') ? fbEls.find(x => x.id === fbNode.dataset.id) : null;
+    if (!el) return;
+    _switchTarget = { sw, fb: true, el };
+    buildSwitchOpts(sw); openOv('switch-ov');
+    return;
+  }
+  let m = null, side = 'front';
+  const wrap = sw.closest('[id^="memo-"]');
+  if (wrap) m = S.memos.find(x => ('memo-' + x.id) === wrap.id);
+  if (!m && sw.closest('#ql-body')) m = renderedMemos[qlIndex];
+  if (!m) return;
+  if (sw.closest('.flash-back')) side = 'back';
+  openSwitchPicker(sw, m, side);
 });
 
 // ── スライド（複数画像） ───────────────────────────────────────────
@@ -6671,7 +6809,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   // capture で先に処理し、内側の画像ライトボックス等の割り込み（ちらつき）を防ぐ。
   if (isMobile()) {
     wrap.addEventListener('click', e => {
-      if (e.target.closest('.abtn, a, button, input, img, summary, .tg-head, .b-tag, .copy-btn, .read-more-btn')) return;
+      if (e.target.closest('.abtn, a, button, input, img, summary, .tg-head, .b-tag, .copy-btn, .read-more-btn, .memo-switch, .anki-mask')) return;
       e.stopPropagation();
       if (wrap.classList.contains('tapped')) {
         openQuickLook(m.id);                 // 2回目 → 拡大表示
@@ -9121,8 +9259,8 @@ function fbWireRichText(t, el){
     cb.addEventListener('change', () => { if (cb.checked) cb.setAttribute('checked', ''); else cb.removeAttribute('checked'); const li = cb.closest('li'); if (li) li.classList.toggle('ck-done', cb.checked); el.html = t.innerHTML; fbCommit(); });
   });
   t.querySelectorAll('.tg-head').forEach(head => { head.addEventListener('pointerdown', ev => ev.stopPropagation()); head.addEventListener('click', () => head.closest('.toggle-block').classList.toggle('open')); });
-  // スライドの操作ボタン/スライダーは付箋ドラッグに奪われないようにする
-  t.querySelectorAll('.slide-nav, .slide-edit, .slide-first, .slide-range').forEach(b => b.addEventListener('pointerdown', ev => ev.stopPropagation()));
+  // スライドの操作ボタン/スライダー・スイッチ・暗記マーカーは付箋ドラッグに奪われないようにする
+  t.querySelectorAll('.slide-nav, .slide-edit, .slide-first, .slide-range, .memo-switch, .anki-mask').forEach(b => b.addEventListener('pointerdown', ev => ev.stopPropagation()));
 }
 function fbCenterWorld(){ const rect = document.getElementById('fb-canvas').getBoundingClientRect(); return { cx: (rect.width / 2 - fbView.x) / fbView.scale, cy: (rect.height / 2 - fbView.y) / fbView.scale }; }
 function fbCreate(type){
