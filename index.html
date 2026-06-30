@@ -115,6 +115,22 @@ header { padding-top: max(10px, env(safe-area-inset-top)); padding-left: max(14p
 .snip-form input:focus, .snip-form textarea:focus { border-color:var(--c1); }
 .snip-form textarea { resize:vertical; min-height:56px; }
 .snip-hint { font-size:.7rem; color:#b0c4cc; line-height:1.6; }
+.snip-rich { width:100%; box-sizing:border-box; border:1.5px solid #cce5f0; border-radius:7px; padding:5px 8px; font-size:.83rem; outline:none; min-height:56px; max-height:180px; overflow-y:auto; color:var(--c3); line-height:1.5; }
+.snip-rich:focus { border-color:var(--c1); }
+.snip-rich:empty:before { content:attr(data-ph); color:#b0c4cc; }
+.snip-minibar { display:flex; flex-wrap:wrap; gap:3px; }
+.snip-fmt { font-size:.74rem; min-width:24px; height:24px; padding:0 6px; border:1px solid #cce5f0; background:#f5fbfd; color:var(--c3); border-radius:5px; cursor:pointer; line-height:1; }
+.snip-fmt:hover { background:var(--c4); border-color:var(--c1); }
+/* 単語帳（表/裏） */
+.flash-tab { font-size:.78rem; padding:2px 12px; border:1px solid var(--c2); background:#fff; color:var(--c1); border-radius:6px; cursor:pointer; }
+.flash-tab.on { background:var(--c1); color:#fff; border-color:var(--c1); font-weight:700; }
+.flash-card { border:1px solid var(--th-tbdr, #cce5f0); border-radius:10px; padding:6px 8px; background:var(--th-bubble); }
+.flash-bar { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
+.flash-btn { font-size:.76rem; padding:2px 10px; border:1px solid var(--c2); background:#fff; color:var(--c1); border-radius:14px; cursor:pointer; }
+.flash-btn:hover { background:var(--c4); }
+.flash-btn.on { background:var(--c1); color:#fff; border-color:var(--c1); }
+.flash-ind { margin-left:auto; font-size:.72rem; color:var(--th-muted); border:1px solid var(--th-sep); border-radius:10px; padding:1px 8px; }
+.flash-divider { text-align:center; font-size:.72rem; color:var(--th-muted); margin:7px 0; border-top:1px dashed var(--th-sep); padding-top:5px; }
 .snip-form-btns { display:flex; gap:5px; justify-content:flex-end; }
 /* Template modal */
 .tmpl-save-row { display: flex; gap: 7px; align-items: center; margin-bottom: 12px; }
@@ -718,7 +734,7 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 #compose-ov .input-wrapper { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
 #compose-ov #editor { flex: 1; min-height: 200px; max-height: none; }
 #compose-ov #collapse-editor-btn, #compose-ov #expand-input-btn,
-#compose-ov #fb-new-btn, #compose-ov #sort-by, #compose-ov #sort-dir { display: none; }
+#compose-ov #fb-new-btn, #compose-ov #flash-new-btn, #compose-ov #sort-by, #compose-ov #sort-dir { display: none; }
 /* 入力エリア常時表示=オフ: 入力欄を隠し ✏️ と 🧩 だけ残す */
 body.input-collapsed .input-area .input-wrapper { display: none; }
 body.input-collapsed .input-area #char-count,
@@ -1425,6 +1441,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
       <input type="file" id="file-input" accept="image/*" multiple style="display:none">
       <button class="sbtn" id="expand-input-btn" title="大きい画面で入力">✏️</button>
       <button class="sbtn" id="fb-new-btn" title="フリーボードを追加">🧩</button>
+      <button class="sbtn" id="flash-new-btn" title="単語帳メモを追加">🔄</button>
       <select id="sort-by" class="sort-sel" title="並び替えの種類">
         <option value="created">作成日</option>
         <option value="updated">変更日</option>
@@ -1470,6 +1487,15 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <div class="title-line-row">
       <input type="checkbox" id="edit-title-line-chk">
       <label for="edit-title-line-chk">1行目をタイトル表示</label>
+    </div>
+    <div class="title-line-row">
+      <input type="checkbox" id="edit-flash-chk">
+      <label for="edit-flash-chk">🔄 単語帳（表/裏をつける）</label>
+      <span id="edit-flash-tabs" style="display:none;margin-left:10px">
+        <button type="button" class="flash-tab on" data-side="front">表</button>
+        <button type="button" class="flash-tab" data-side="back">裏</button>
+        <span style="font-size:.74rem;color:#999;margin-left:6px">タブで表/裏を切り替えて編集</span>
+      </span>
     </div>
     <div class="mact">
       <button class="bcl" id="edit-delete" style="background:#fdeaea;color:#c0392b;border-color:#f1c0c0;margin-right:auto">🗑 削除</button>
@@ -1584,7 +1610,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
 <div class="ov" id="import-ov">
   <div class="modal">
     <h3>↑ インポート</h3>
-    <div style="font-size:.88rem;color:#666;line-height:1.6">以前エクスポートした JSON ファイルを選択してください。<br><span style="color:#888">・全データJSON → 現在のデータをすべて置き換え</span><br><span style="color:#4C9D6A">・部分書き出しJSON → 時系列の適切な位置にメモを追加</span></div>
+    <div style="font-size:.88rem;color:#666;line-height:1.6">以前エクスポートした JSON ファイルを選択してください。<br><span style="color:#888">・全データJSON → 「追加マージ（今のデータを残す）」か「すべて置き換え」を選べます</span><br><span style="color:#4C9D6A">・部分書き出しJSON → 時系列の適切な位置にメモを追加</span><br><span style="color:#888">※ 同じGUIDのメモは重複して読み込みません</span></div>
     <input type="file" id="import-file" accept=".json">
     <div class="mact"><button class="bcl" id="import-cancel">キャンセル</button></div>
   </div>
@@ -2274,7 +2300,8 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
   <div id="snip-list" class="snip-list"></div>
   <div id="snip-form" class="snip-form" style="display:none">
     <input id="snip-name-input" type="text" placeholder="名前（例: あいさつ）">
-    <textarea id="snip-text-input" placeholder="テキスト（例: お世話になっております）"></textarea>
+    <div id="snip-fmt-bar" class="snip-minibar"></div>
+    <div id="snip-text-input" class="snip-rich" contenteditable="true" data-ph="テキスト（書式可。B/I等や貼り付けで装飾できます）"></div>
     <div class="snip-hint">
       {date} {time} {datetime} {count}<br>
       書式: {date:yyyyMMdd} {time:HHmm} {count:3}→001<br>
@@ -2469,15 +2496,32 @@ async function externalizeAllMemos() {
       for (const [id, data] of col) await idbImgPut(id, data);  // 画像を先に確実に保存
       m.html = nh; changed = true;
     }
+    if (m.back && m.back.indexOf('data:image') !== -1) {   // 単語帳の裏面の画像も分離
+      const col2 = new Map();
+      const nb = _externalizeHtml(m.back, col2, false);
+      for (const [id, data] of col2) await idbImgPut(id, data);
+      m.back = nb; changed = true;
+    }
   }
   if (changed) { S.imagesExternalized = true; await idbPut(IDB_KEY, S); }
   else if (!S.imagesExternalized) S.imagesExternalized = true;
 }
 // エクスポート/同期用: 画像を埋め戻した自己完結JSON文字列を返す
+// メモの一意ID（GUID）。インポート時の重複防止に使用。
+function genGuid(){
+  try { if (crypto && crypto.randomUUID) return crypto.randomUUID(); } catch(_){}
+  return 'g-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+}
+function ensureGuids(){
+  if (!S || !Array.isArray(S.memos)) return;
+  let changed = false;
+  S.memos.forEach(m => { if (!m.guid){ m.guid = genGuid(); changed = true; } });
+  if (changed) persist();
+}
 async function exportJsonString(obj, pretty) {
   const clone = JSON.parse(JSON.stringify(obj));
   if (Array.isArray(clone.memos)) {
-    for (const m of clone.memos) { if (m.html) m.html = await internalizeHtml(m.html); }
+    for (const m of clone.memos) { if (m.html) m.html = await internalizeHtml(m.html); if (m.back) m.back = await internalizeHtml(m.back); }
   }
   return JSON.stringify(clone, null, pretty ? 2 : undefined);
 }
@@ -4732,7 +4776,7 @@ async function sendMemo() {
   const tags = parseTags(document.getElementById('tag-input').value);
   const titleLine = document.getElementById('title-line-chk').checked;
   S.memos.push({
-    id: Date.now().toString(), roomId, html, tags,
+    id: Date.now().toString(), guid: genGuid(), roomId, html, tags,
     bgColor: null, pinned: false, titleLine,
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
   });
@@ -6428,6 +6472,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
     { i: '⤢', t: '拡大表示', f: ()=>openQuickLook(m.id) },
     { i: '✏️', t: '編集', f: ()=>openEdit(m.id) },
     { i: '📋', t: '複製', f: ()=>duplicateMemo(m.id) },
+    { i: m.flash ? '📄' : '🔄', t: m.flash ? '通常メモに戻す' : '単語帳にする', f: ()=>toggleFlash(m.id) },
     { i: '🎨', t: '背景色', f: (e)=>showColorPicker(m.id, e), action:'color' },
     { i: '🗑', t: '削除', f: ()=>delMemo(m.id) },
   ].forEach(({i,t,f,action,cls}) => {
@@ -6460,7 +6505,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
     }
   }
 
-  const cnt = document.createElement('div'); cnt.className = 'bc'; cnt.innerHTML = m.html;
+  let cnt = document.createElement('div'); cnt.className = 'bc'; cnt.innerHTML = m.html;
   hydrateImages(cnt);   // マーカー画像を遅延読み込み
   hydrateSheetEmbeds(cnt);   // 埋め込みシートをサムネイル化
   hydrateMapEmbeds(cnt);     // 埋め込みマインドマップをサムネイル化
@@ -6541,17 +6586,20 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   cnt.querySelectorAll('img').forEach(img => { img.onclick = async () => { const id = img.getAttribute('data-cimg'); lbImg.src = id ? (await getImageData(id)) || img.src : img.src; lb.classList.add('open'); }; });
   cnt.querySelectorAll('a').forEach(a => { a.target='_blank'; a.rel='noopener'; });
   cnt.querySelectorAll('a.pdf-ref').forEach(a => { a.removeAttribute('target'); a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openPdfAt(a.dataset.pdf, a.dataset.page); }); });
+  const _frontEl = cnt;   // チェックボックス保存用に表面の要素を固定（flashでcntはラッパーへ差し替わるため）
   cnt.querySelectorAll('.cl input[type="checkbox"]').forEach(cb => {
     if (cb.hasAttribute('checked')) { cb.checked = true; cb.closest('li').classList.add('ck-done'); }
     cb.addEventListener('change', () => {
       if (cb.checked) cb.setAttribute('checked', ''); else cb.removeAttribute('checked');
       cb.closest('li').classList.toggle('ck-done', cb.checked);
-      m.html = cleanCodeForSave(cnt); persist();
+      m.html = cleanCodeForSave(_frontEl); persist();
     });
   });
   cnt.querySelectorAll('.tg-head').forEach(head => {
     head.onclick = () => head.closest('.toggle-block').classList.toggle('open');
   });
+  // 単語帳（表/裏）: 裏返す・両面表示。cnt を flash-card でラップする
+  cnt = flashWrap(cnt, m);
   // 続きを読む / 高さ固定（排他）
   const rmCfg = S.readMore;
   const rmMode = rmCfg?.mode || (rmCfg?.enabled ? 'readmore' : 'off');
@@ -6646,12 +6694,24 @@ function duplicateMemo(id) {
   if (!m) return;
   S.memos.push({
     ...m,
-    id: Date.now().toString(),
+    id: Date.now().toString(), guid: genGuid(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     pinned: false,
   });
   persist(); renderMemos(); renderRooms();
+}
+function toggleFlash(id){
+  const m = S.memos.find(x => x.id === id); if (!m) return;
+  if (m.board){ alert('フリーボードは単語帳にできません'); return; }
+  if (m.flash){
+    if (m.back && stripHtml(m.back).trim() && !confirm('通常メモに戻すと裏面は削除されます。よろしいですか？')) return;
+    delete m.flash; delete m.back;
+  } else {
+    m.flash = true; if (m.back == null) m.back = '';
+  }
+  m.updatedAt = new Date().toISOString();
+  persist(); renderMemos();
 }
 function delMemo(id) {
   if (!confirm('削除しますか？')) return;
@@ -6662,16 +6722,44 @@ function togglePin(id) {
   const m = S.memos.find(m => m.id === id);
   if (m) { m.pinned = !m.pinned; persist(); renderMemos(); }
 }
+let editSide = 'front';
+let editSides = { front: '', back: '' };
+let _newFlashId = null;   // 「新規単語帳」で作ったが未保存のメモID（空のままキャンセルなら破棄）
+function discardEmptyNewFlash(){
+  if (!_newFlashId) return;
+  const m = S.memos.find(x => x.id === _newFlashId);
+  if (m && !stripHtml(m.html || '').trim() && !stripHtml(m.back || '').trim()){
+    S.memos = S.memos.filter(x => x.id !== _newFlashId);
+    persist(); renderMemos(); renderRooms();
+  }
+  _newFlashId = null;
+}
+async function editSetSide(side){
+  if (side === editSide) return;
+  try { syncCheckboxAttrs(editEd); } catch(e){}
+  editSides[editSide] = sheetStripHtml(editEd.innerHTML);          // 現在の面を退避（dataURLのまま）
+  editSide = side;
+  editEd.innerHTML = await internalizeHtml(editSides[side] || '');  // 反対の面を表示
+  hydrateSheetEmbeds(editEd); hydrateMapEmbeds(editEd);
+  editEd.querySelectorAll('.cl input[type="checkbox"]').forEach(cb => { cb.contentEditable = 'false'; if (cb.hasAttribute('checked')) cb.checked = true; });
+  document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.classList.toggle('on', b.dataset.side === side));
+  editEd.focus();
+}
 async function openEdit(id) {
   const m = S.memos.find(m => m.id===id);
   if (!m) return;
   editId = id;
+  editSide = 'front';
+  editSides = { front: m.html || '', back: m.back || '' };
   editEd.innerHTML = await internalizeHtml(m.html);   // 編集中は画像実体を表示
   hydrateSheetEmbeds(editEd); hydrateMapEmbeds(editEd);
   editEd.querySelectorAll('.cl input[type="checkbox"]').forEach(cb => { cb.contentEditable = 'false'; if (cb.hasAttribute('checked')) cb.checked = true; });
   document.getElementById('edit-tag-input').value = (m.tags||[]).join(', ');
   renderEditExistingTags();
   document.getElementById('edit-title-line-chk').checked = m.titleLine !== false;
+  document.getElementById('edit-flash-chk').checked = !!m.flash;
+  document.getElementById('edit-flash-tabs').style.display = m.flash ? '' : 'none';
+  document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.classList.toggle('on', b.dataset.side === 'front'));
   openOv('edit-ov');
   updateJumpBtn();   // 選択中メモに応じてジャンプボタンの活性状態を反映
   setTimeout(() => { editEd.focus(); syncEditCharCount(); }, 50);
@@ -6681,7 +6769,11 @@ document.getElementById('edit-save').onclick = async () => {
   if (m) {
     const oldTags = (m.tags || []).join(',');
     syncCheckboxAttrs(editEd);
-    m.html = await externalizeAndStore(sheetStripHtml(editEd.innerHTML));   // シートサムネ除去＋画像分離
+    editSides[editSide] = sheetStripHtml(editEd.innerHTML);                 // 編集中の面を退避
+    const flash = document.getElementById('edit-flash-chk').checked;
+    m.html = await externalizeAndStore(editSides.front);                    // 表（画像分離）
+    if (flash) { m.flash = true; m.back = await externalizeAndStore(editSides.back || ''); }
+    else { delete m.flash; delete m.back; }
 
     m.tags = parseTags(document.getElementById('edit-tag-input').value);
     m.titleLine = document.getElementById('edit-title-line-chk').checked;
@@ -6690,9 +6782,15 @@ document.getElementById('edit-save').onclick = async () => {
     // グラフ表示中にタグが変わったらグラフも更新
     if ((m.tags || []).join(',') !== oldTags && document.getElementById('g-ov') && document.getElementById('g-ov').classList.contains('open')) gRebuild();
   }
+  _newFlashId = null;   // 保存したので破棄対象から外す
   closeOv('edit-ov');
 };
-document.getElementById('edit-cancel').onclick = () => closeOv('edit-ov');
+document.getElementById('edit-flash-chk').onchange = function(){
+  document.getElementById('edit-flash-tabs').style.display = this.checked ? '' : 'none';
+  if (!this.checked && editSide !== 'front') editSetSide('front');
+};
+document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.onclick = () => editSetSide(b.dataset.side));
+document.getElementById('edit-cancel').onclick = () => { closeOv('edit-ov'); discardEmptyNewFlash(); };
 document.getElementById('edit-delete').onclick = () => {
   if (!editId) return;
   if (!confirm('このメモを削除しますか？')) return;
@@ -6701,7 +6799,7 @@ document.getElementById('edit-delete').onclick = () => {
   renderTagBar(); renderMemos(); renderExistingTags(); renderRooms();
   if (document.getElementById('g-ov') && document.getElementById('g-ov').classList.contains('open')) gRebuild();
 };
-document.getElementById('edit-ov').addEventListener('click', e => { if (e.target===document.getElementById('edit-ov')) closeOv('edit-ov'); });
+document.getElementById('edit-ov').addEventListener('click', e => { if (e.target===document.getElementById('edit-ov')) { closeOv('edit-ov'); discardEmptyNewFlash(); } });
 
 // ── Jump link ────────────────────────────────────────────────────
 function updateJumpBtn() {
@@ -7091,21 +7189,52 @@ async function executePartialImport(d, mergeMap) {
   d.rooms.forEach(room => {
     if (!existRoomIds.has(room.id) && !mergeMap[room.id]) S.rooms.push(room);
   });
-  const existMemoIds = new Set(S.memos.map(m => m.id));
-  let added = 0;
-  d.memos.forEach(memo => {
-    if (!existMemoIds.has(memo.id)) {
-      const m = { ...memo };
-      if (mergeMap[m.roomId]) m.roomId = mergeMap[m.roomId];
-      S.memos.push(m);
-      added++;
-    }
+  // 埋め込みのスプレッドシート/マインドマップも取り込む（未所持のIDのみ。既存は保持）
+  if (d.sheets){ S.sheets = S.sheets || {}; for (const k in d.sheets) if (!(k in S.sheets)) S.sheets[k] = d.sheets[k]; }
+  if (d.mindmaps){ S.mindmaps = S.mindmaps || {}; for (const k in d.mindmaps) if (!(k in S.mindmaps)) S.mindmaps[k] = d.mindmaps[k]; }
+  const existGuids = new Set(S.memos.map(m => m.guid).filter(Boolean));
+  const existIds   = new Set(S.memos.map(m => m.id));
+  let added = 0, skipped = 0;
+  (d.memos || []).forEach(memo => {
+    const m = { ...memo };
+    if (m.guid && existGuids.has(m.guid)) { skipped++; return; }        // 同じGUIDは重複読み込みしない
+    if (!m.guid && existIds.has(m.id))   { skipped++; return; }         // 旧データ(GUID無し)は従来通りID重複でスキップ
+    if (!m.guid) m.guid = genGuid();
+    if (existIds.has(m.id)) m.id = Date.now().toString() + Math.random().toString(36).slice(2, 6);  // id衝突は振り直し
+    if (mergeMap[m.roomId]) m.roomId = mergeMap[m.roomId];
+    S.memos.push(m); existGuids.add(m.guid); existIds.add(m.id); added++;
   });
   await externalizeAllMemos();   // 取り込んだメモの画像を分離して保存
   persist();
   renderRooms(); renderTagBar(); renderMemos(); renderExistingTags();
   closeOv('import-ov'); closeOv('import-conflict-ov');
-  alert(`${added}件のメモを追加しました`);
+  alert(`${added}件のメモを追加${skipped ? `（重複${skipped}件をスキップ）` : ''}しました`);
+}
+// マージ取り込み（部分書き出し / 全データバックアップ共通）。ルーム名衝突があれば確認モーダルを出す。
+function startMergeImport(d){
+  const existRoomIds = new Set(S.rooms.map(r => r.id));
+  const existByName  = new Map(S.rooms.map(r => [r.name, r]));
+  const conflicts = (d.rooms || []).filter(r => !existRoomIds.has(r.id) && existByName.has(r.name));
+  if (conflicts.length > 0){
+    pendingImportData = d;
+    const list = document.getElementById('import-conflict-list');
+    list.innerHTML = '';
+    conflicts.forEach(importRoom => {
+      const existRoom = existByName.get(importRoom.name);
+      const row = document.createElement('div');
+      row.style.cssText = 'border:1px solid #d0e8f2;border-radius:9px;padding:10px 13px;background:#f5fbfd';
+      row.innerHTML =
+        `<div style="font-weight:600;margin-bottom:8px;color:var(--c1)">${importRoom.icon||''}${importRoom.name}</div>` +
+        `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:5px;font-size:.85rem;line-height:1.4"><input type="radio" name="conflict-${importRoom.id}" value="merge" checked style="width:auto;padding:0;border:none;flex-shrink:0;margin:0;accent-color:var(--c1)"><span>既存ルーム「${existRoom.icon||''}${existRoom.name}」に組み入れる</span></label>` +
+        `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;line-height:1.4"><input type="radio" name="conflict-${importRoom.id}" value="new" style="width:auto;padding:0;border:none;flex-shrink:0;margin:0;accent-color:var(--c1)"><span>新規ルームとして追加</span></label>`;
+      row.dataset.importId = importRoom.id;
+      row.dataset.existId  = existRoom.id;
+      list.appendChild(row);
+    });
+    openOv('import-conflict-ov');
+  } else {
+    executePartialImport(d, {});
+  }
 }
 
 document.getElementById('import-file').addEventListener('change', function() {
@@ -7116,40 +7245,23 @@ document.getElementById('import-file').addEventListener('change', function() {
       const d = JSON.parse(e.target.result);
       if (!d.rooms || !d.memos) throw 0;
       if (d.type === 'partial') {
-        // 部分インポート: 同名ルームの衝突チェック
-        const existRoomIds = new Set(S.rooms.map(r => r.id));
-        const existByName  = new Map(S.rooms.map(r => [r.name, r]));
-        const conflicts = d.rooms.filter(r => !existRoomIds.has(r.id) && existByName.has(r.name));
-        if (conflicts.length > 0) {
-          pendingImportData = d;
-          const list = document.getElementById('import-conflict-list');
-          list.innerHTML = '';
-          conflicts.forEach(importRoom => {
-            const existRoom = existByName.get(importRoom.name);
-            const row = document.createElement('div');
-            row.style.cssText = 'border:1px solid #d0e8f2;border-radius:9px;padding:10px 13px;background:#f5fbfd';
-            row.innerHTML =
-              `<div style="font-weight:600;margin-bottom:8px;color:var(--c1)">${importRoom.icon||''}${importRoom.name}</div>` +
-              `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:5px;font-size:.85rem;line-height:1.4"><input type="radio" name="conflict-${importRoom.id}" value="merge" checked style="width:auto;padding:0;border:none;flex-shrink:0;margin:0;accent-color:var(--c1)"><span>既存ルーム「${existRoom.icon||''}${existRoom.name}」に組み入れる</span></label>` +
-              `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;line-height:1.4"><input type="radio" name="conflict-${importRoom.id}" value="new" style="width:auto;padding:0;border:none;flex-shrink:0;margin:0;accent-color:var(--c1)"><span>新規ルームとして追加</span></label>`;
-            row.dataset.importId = importRoom.id;
-            row.dataset.existId  = existRoom.id;
-            list.appendChild(row);
-          });
-          openOv('import-conflict-ov');
-        } else {
-          executePartialImport(d, {});
-        }
+        startMergeImport(d);   // 部分書き出し: マージ取り込み
       } else {
-        // 全データインポート: 置き換え
-        if (!confirm('現在のデータはすべて置き換えられます。続けますか？')) { this.value = ''; return; }
-        S = d; roomId = S.rooms[0]?.id; activeTagFilters.clear(); selectedMemoIds.clear();
-        S.imagesExternalized = false;
-        await externalizeAllMemos();   // 取り込んだ全データの画像を分離して保存
-        persist();
-        setRoomTitle();
-        renderRooms(); renderTagBar(); renderMemos(); renderExistingTags(); closeOv('import-ov');
-        alert('インポートしました');
+        // 全データバックアップ: 「追加マージ（今のデータを残す）」か「すべて置き換え」を選択
+        const merge = confirm('全データのバックアップJSONです。\n\n［OK］今のデータに追加マージ（現在のメモは消えません。同じGUIDのメモは重複読み込みしません）\n［キャンセル］すべて置き換え');
+        if (merge) {
+          startMergeImport(d);
+        } else {
+          if (!confirm('現在のデータをすべて置き換えます。続けますか？')) { this.value = ''; return; }
+          S = d; roomId = S.rooms[0]?.id; activeTagFilters.clear(); selectedMemoIds.clear();
+          S.imagesExternalized = false;
+          ensureGuids();                 // GUID未付与の旧バックアップにも付与
+          await externalizeAllMemos();   // 取り込んだ全データの画像を分離して保存
+          persist();
+          setRoomTitle();
+          renderRooms(); renderTagBar(); renderMemos(); renderExistingTags(); closeOv('import-ov');
+          alert('インポートしました');
+        }
       }
     } catch { alert('ファイル形式が正しくありません'); }
   };
@@ -7190,7 +7302,7 @@ function openMoveModal(memoId, mode) {
           ids.forEach(id => { const m = S.memos.find(m => m.id === id); if (m) m.roomId = r.id; });
         } else {
           const base = Date.now();
-          ids.forEach((id, i) => { const m = S.memos.find(m => m.id === id); if (m) S.memos.push({ ...m, id: (base + i).toString(), roomId: r.id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), pinned: false }); });
+          ids.forEach((id, i) => { const m = S.memos.find(m => m.id === id); if (m) S.memos.push({ ...m, id: (base + i).toString(), guid: genGuid(), roomId: r.id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), pinned: false }); });
         }
         persist(); renderMemos(); closeOv('move-ov');
         exitBulkEditMode();
@@ -7199,7 +7311,7 @@ function openMoveModal(memoId, mode) {
         if (moveMemoMode === 'move') {
           m.roomId = r.id;
         } else {
-          S.memos.push({ ...m, id: Date.now().toString(), roomId: r.id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), pinned: false });
+          S.memos.push({ ...m, id: Date.now().toString(), guid: genGuid(), roomId: r.id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), pinned: false });
         }
         persist(); renderMemos(); closeOv('move-ov');
       }
@@ -7230,13 +7342,14 @@ function formatDT(now, fmt) {
     .replace(/mm/g, pad(now.getMinutes()))
     .replace(/ss/g, pad(now.getSeconds()));
 }
-function resolveSnip(snip) {
-  const now = new Date();
-  snip.count = (snip.count || 0) + 1;
-  persist();
+// 書式付きスニペットか（装飾タグを含むか。div/br/p だけの単純改行は対象外）
+function snipIsRich(snip){ return !!(snip.html && /<(b|i|u|s|strong|em|span|font|a|mark|sub|sup|h[1-6]|ul|ol|li|code|img)\b/i.test(snip.html)); }
+function resolveSnip(snip){ const now = new Date(); snip.count = (snip.count || 0) + 1; persist(); return applySnipTokens(snip.text || '', snip, now); }
+function resolveSnipHtml(snip){ const now = new Date(); snip.count = (snip.count || 0) + 1; persist(); return applySnipTokens(snip.html || '', snip, now); }
+function applySnipTokens(str, snip, now) {
   const defaults = { date: 'yyyy/M/d', time: 'HH:mm', datetime: 'yyyy/M/d HH:mm' };
   const roomMemos = () => S.memos.filter(m => m.roomId === roomId);
-  return snip.text.replace(/\{([a-zA-Z]+)(?::([^}]*))?\}/g, (match, nameRaw, arg) => {
+  return str.replace(/\{([a-zA-Z]+)(?::([^}]*))?\}/g, (match, nameRaw, arg) => {
     const name = nameRaw.toLowerCase();
     if (name === 'date' || name === 'time' || name === 'datetime') return formatDT(now, arg || defaults[name]);
     if (name === 'count') return arg ? String(snip.count).padStart(parseInt(arg) || 0, '0') : String(snip.count);
@@ -7270,14 +7383,15 @@ function renderSnipList() {
     const row = document.createElement('div'); row.className = 'snip-row';
     const name = document.createElement('span'); name.className = 'snip-row-name';
     name.textContent = snip.name;
-    name.title = snip.text;
+    name.title = snip.text || '';
+    if (snipIsRich(snip)) { name.style.borderLeft = '3px solid var(--c1)'; name.style.paddingLeft = '5px'; name.title = '（書式付き）' + (snip.text || ''); }
     name.onclick = () => {
-      const text = resolveSnip(snip);
       snipPop.classList.remove('open');
       if (snipTargetEl) {
         snipTargetEl.focus();
         restoreRange(snipTargetEl);
-        document.execCommand('insertText', false, text);
+        if (snipIsRich(snip)) insertHtmlAtCaret(resolveSnipHtml(snip));
+        else document.execCommand('insertText', false, resolveSnip(snip));
       }
       renderSnipList();
     };
@@ -7308,24 +7422,23 @@ function renderSnipList() {
       ni.style.cssText = 'border:1.5px solid #cce5f0;border-radius:6px;padding:4px 7px;font-size:.83rem;outline:none;';
       ni.onfocus = () => ni.style.borderColor = 'var(--c1)';
       ni.onblur = () => ni.style.borderColor = '#cce5f0';
-      const ti = document.createElement('textarea'); ti.value=snip.text; ti.rows=2;
-      ti.style.cssText = 'border:1.5px solid #cce5f0;border-radius:6px;padding:4px 7px;font-size:.83rem;outline:none;resize:vertical;font-family:inherit;';
-      ti.onfocus = () => ti.style.borderColor = 'var(--c1)';
-      ti.onblur = () => ti.style.borderColor = '#cce5f0';
+      const ti = document.createElement('div'); ti.className='snip-rich'; ti.contentEditable='true'; ti.setAttribute('data-ph','テキスト（書式可）');
+      ti.innerHTML = snip.html ? snip.html : escH(snip.text || '').replace(/\n/g,'<br>');
+      const bar = snipMiniBar(ti);
       const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:5px;justify-content:flex-end;';
       const saveB = document.createElement('button'); saveB.className='bpr'; saveB.textContent='保存';
       saveB.style.cssText = 'font-size:.75rem;padding:3px 10px;';
       saveB.onclick = () => {
-        const n = ni.value.trim(); const t = ti.value;
-        if (!n || !t.trim()) { alert('名前とテキストを入力してください'); return; }
-        snip.name = n; snip.text = t;
+        const n = ni.value.trim(); const html = ti.innerHTML; const txt = (ti.innerText || '').replace(/\n+$/,'');
+        if (!n || !txt.trim()) { alert('名前とテキストを入力してください'); return; }
+        snip.name = n; snip.text = txt; snip.html = html;
         persist(); renderSnipList();
       };
       const cancelB = document.createElement('button'); cancelB.className='bcl'; cancelB.textContent='キャンセル';
       cancelB.style.cssText = 'font-size:.75rem;padding:3px 10px;';
       cancelB.onclick = () => form.remove();
       btns.appendChild(cancelB); btns.appendChild(saveB);
-      form.appendChild(ni); form.appendChild(ti); form.appendChild(btns);
+      form.appendChild(ni); form.appendChild(bar); form.appendChild(ti); form.appendChild(btns);
       row.after(form);
       ni.focus();
     };
@@ -7375,16 +7488,38 @@ document.getElementById('snip-form-cancel').onclick = () => {
   document.getElementById('snip-form').style.display = 'none';
   document.getElementById('snip-add-toggle').textContent = '＋ 追加';
 };
+// スニペット用の簡易書式ツールバー（対象の contenteditable に作用）
+function snipMiniBar(field){
+  const bar = document.createElement('div'); bar.className = 'snip-minibar';
+  const mk = (label, cmd, val, style) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'snip-fmt'; b.textContent = label; if (style) b.style.cssText += style;
+    b.title = label;
+    b.addEventListener('mousedown', e => { e.preventDefault(); field.focus(); try { document.execCommand(cmd, false, val); } catch (_) {} });
+    return b;
+  };
+  bar.appendChild(mk('B', 'bold', null, 'font-weight:bold'));
+  bar.appendChild(mk('I', 'italic', null, 'font-style:italic'));
+  bar.appendChild(mk('U', 'underline', null, 'text-decoration:underline'));
+  bar.appendChild(mk('蛍', 'hiliteColor', '#FFF9C4', 'background:#FFF9C4'));
+  bar.appendChild(mk('赤', 'foreColor', '#C62828', 'color:#C62828'));
+  bar.appendChild(mk('青', 'foreColor', '#1565C0', 'color:#1565C0'));
+  bar.appendChild(mk('消', 'removeFormat', null));
+  return bar;
+}
+// 追加フォームの書式バーを設置
+{ const fb = document.getElementById('snip-fmt-bar'); if (fb && !fb.childElementCount){ const f = document.getElementById('snip-text-input'); fb.replaceWith(snipMiniBar(f)); } }
 document.getElementById('snip-save-btn').onclick = () => {
   const name = document.getElementById('snip-name-input').value.trim();
-  const text = document.getElementById('snip-text-input').value;
+  const field = document.getElementById('snip-text-input');
+  const html = field.innerHTML;
+  const text = (field.innerText || '').replace(/\n+$/, '');
   if (!name) { alert('名前を入力してください'); return; }
   if (!text.trim()) { alert('テキストを入力してください'); return; }
   if (!S.snippets) S.snippets = [];
-  S.snippets.push({ id: Date.now().toString(), name, text, count: 0 });
+  S.snippets.push({ id: Date.now().toString(), name, text, html, count: 0 });
   persist();
   document.getElementById('snip-name-input').value = '';
-  document.getElementById('snip-text-input').value = '';
+  field.innerHTML = '';
   document.getElementById('snip-form').style.display = 'none';
   document.getElementById('snip-add-toggle').textContent = '＋ 追加';
   renderSnipList();
@@ -8214,6 +8349,32 @@ document.getElementById('bulk-delete-btn').onclick = () => {
   exitBulkEditMode();
 };
 
+// 単語帳（表/裏）: 表面要素を flash-card でラップ（裏返す・両面表示）。非単語帳はそのまま返す。
+function flashWrap(frontEl, m){
+  if (!m || !m.flash) return frontEl;
+  frontEl.classList.add('flash-front');
+  const back = qlEnrich({ ...m, html: m.back || '', flash: false });   // flash:false で再帰防止
+  back.classList.add('flash-back'); back.style.display = 'none';
+  const divider = document.createElement('div'); divider.className = 'flash-divider'; divider.style.display = 'none'; divider.textContent = '— 裏 —';
+  const bar = document.createElement('div'); bar.className = 'flash-bar';
+  const flipBtn = document.createElement('button'); flipBtn.type = 'button'; flipBtn.className = 'flash-btn'; flipBtn.textContent = '⟲ 裏返す';
+  const bothBtn = document.createElement('button'); bothBtn.type = 'button'; bothBtn.className = 'flash-btn'; bothBtn.textContent = '⇕ 両面';
+  const ind = document.createElement('span'); ind.className = 'flash-ind'; ind.textContent = '表';
+  let st = 'front';   // front | back | both
+  const apply = () => {
+    frontEl.style.display = (st === 'back') ? 'none' : '';
+    back.style.display = (st === 'front') ? 'none' : '';
+    divider.style.display = (st === 'both') ? '' : 'none';
+    ind.textContent = st === 'both' ? '表＋裏' : (st === 'back' ? '裏' : '表');
+    bothBtn.classList.toggle('on', st === 'both');
+  };
+  flipBtn.onclick = (e) => { e.stopPropagation(); st = (st === 'front') ? 'back' : 'front'; apply(); };
+  bothBtn.onclick = (e) => { e.stopPropagation(); st = (st === 'both') ? 'front' : 'both'; apply(); };
+  bar.appendChild(flipBtn); bar.appendChild(bothBtn); bar.appendChild(ind);
+  const fwrap = document.createElement('div'); fwrap.className = 'flash-card';
+  fwrap.appendChild(bar); fwrap.appendChild(frontEl); fwrap.appendChild(divider); fwrap.appendChild(back);
+  return fwrap;
+}
 // ── Quick look (拡大表示) & Compare (並べて表示) ───────────────────
 // メモHTMLを enrich して .bc 要素を返す（拡大・比較で共通利用）
 function qlEnrich(m) {
@@ -8248,7 +8409,7 @@ function qlEnrich(m) {
   cnt.querySelectorAll('.tg-head').forEach(head => { head.onclick = () => head.closest('.toggle-block').classList.toggle('open'); });
   applyLiveCounts(cnt, m);
   highlightIn(cnt);
-  return cnt;
+  return flashWrap(cnt, m);
 }
 
 function qlShow() {
@@ -8511,6 +8672,7 @@ async function initApp() {
   if (S.showBacklinks === undefined) S.showBacklinks = false;
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
+  ensureGuids();   // 全メモにGUIDを付与（無い分のみ）
 
   // 旧データ（画像インライン）を一度だけ別ストアへ分離。冪等なので再実行も安全。
   // 失敗してもインライン画像のまま動作継続（データは無傷）。
@@ -8612,7 +8774,7 @@ function embedText(html){   // 本文に埋め込まれた表計算/マインド
   return s;
 }
 function boardText(m){ if (!m.board || !m.board.els) return ''; return (m.board.title || '') + ' ' + m.board.els.map(e => e.html ? stripHtml(e.html) : (e.type === 'sheet' ? sheetText(e.sheet) : e.type === 'mindmap' ? mapText(e.map) : '')).join(' '); }
-function memoSearchText(m){ return stripHtml(m.html || '') + ' ' + embedText(m.html || '') + ' ' + boardText(m); }
+function memoSearchText(m){ return stripHtml(m.html || '') + ' ' + embedText(m.html || '') + (m.back ? ' ' + stripHtml(m.back) + ' ' + embedText(m.back) : '') + ' ' + boardText(m); }
 let _searchQ = '', _searchRe = null;
 function searchHits(text){ if (!_searchQ) return false; return _searchRe ? _searchRe.test(text) : String(text).toLowerCase().includes(_searchQ); }
 
@@ -9207,8 +9369,15 @@ function renderBoardBubble(m, q, showRoom, container){
   if (!$('fb-ov')) return;
   $('fb-new-btn').onclick = () => {
     const id = Date.now().toString();
-    S.memos.push({ id, roomId, html: '', tags: [], bgColor: null, pinned: false, titleLine: true, board: { title: '無題のボード', els: [], view: { x: 60, y: 60, scale: 1 } }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    S.memos.push({ id, guid: genGuid(), roomId, html: '', tags: [], bgColor: null, pinned: false, titleLine: true, board: { title: '無題のボード', els: [], view: { x: 60, y: 60, scale: 1 } }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
     persist(); renderMemos(); renderRooms(); openBoard(id, true);
+  };
+  const flashNewBtn = $('flash-new-btn');
+  if (flashNewBtn) flashNewBtn.onclick = () => {
+    const id = Date.now().toString();
+    S.memos.push({ id, guid: genGuid(), roomId, html: '', back: '', flash: true, tags: [], bgColor: null, pinned: false, titleLine: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    _newFlashId = id;
+    persist(); renderMemos(); renderRooms(); openEdit(id);   // 表/裏タブのある編集画面で入力
   };
   $('fb-close').onclick = () => fbClose(true);
   if ($('fb-back')) $('fb-back').onclick = () => fbClose(false);
