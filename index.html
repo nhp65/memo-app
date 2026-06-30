@@ -4086,9 +4086,25 @@ function applySwitchState(st){
     t.m.updatedAt = new Date().toISOString();
     persist();
   }
+  // 全体再描画はせず、影響するカードの {cnt}{rate} だけをその場で更新（チラつき防止）
+  const listCard = document.getElementById('memo-' + t.m.id);
+  if (listCard) refreshLiveCounts(listCard, t.m);
+  if (document.getElementById('ql-ov') && document.getElementById('ql-ov').classList.contains('open') && renderedMemos[qlIndex] && renderedMemos[qlIndex].id === t.m.id)
+    refreshLiveCounts(document.getElementById('ql-body'), t.m);
   closeOv('switch-ov'); _switchTarget = null;
-  renderMemos();   // {cnt}{rate} 等の再計算のため再描画
-  if (document.getElementById('ql-ov') && document.getElementById('ql-ov').classList.contains('open')) qlShow();
+}
+// 既存の .live-count スパンの数値だけを m から再計算（DOM再生成なし）
+function refreshLiveCounts(scopeEl, m){
+  if (!scopeEl) return;
+  const mk = src => { const s = stripHtml(src || '').replace(/\{(?:cnt|rate):[^}]*\}/g, '').toLowerCase();
+    return kw => { kw = (kw || '').trim().toLowerCase(); if (!kw) return 0; let n = 0, i = 0; while ((i = s.indexOf(kw, i)) !== -1){ n++; i += kw.length; } return n; }; };
+  const front = mk(m.html), back = mk(m.back);
+  scopeEl.querySelectorAll('span.live-count[data-tok]').forEach(span => {
+    const mm = String(span.dataset.tok).match(/\{(cnt|rate):([^}]*)\}/); if (!mm) return;
+    const cnt = span.closest('.flash-back') ? back : front;
+    if (mm[1] === 'cnt') span.textContent = String(cnt(mm[2]));
+    else { const p = mm[2].split('/'); const a = cnt(p[0]); const draw = (p[1] || '').trim(); const den = /^\d+(?:\.\d+)?$/.test(draw) ? parseFloat(draw) : (a + cnt(draw)); const r = den > 0 ? (a / den * 100) : 0; span.textContent = (Math.round(r * 10) / 10) + '%'; }
+  });
 }
 document.getElementById('switch-cancel').onclick = () => { _switchTarget = null; closeOv('switch-ov'); };
 document.getElementById('switch-ov').addEventListener('click', e => { if (e.target === document.getElementById('switch-ov')) { _switchTarget = null; closeOv('switch-ov'); } });
@@ -6622,7 +6638,6 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
     { i: '⤢', t: '拡大表示', f: ()=>openQuickLook(m.id) },
     { i: '✏️', t: '編集', f: ()=>openEdit(m.id) },
     { i: '📋', t: '複製', f: ()=>duplicateMemo(m.id) },
-    { i: m.flash ? '📄' : '🔄', t: m.flash ? '通常メモに戻す' : '単語帳にする', f: ()=>toggleFlash(m.id) },
     { i: '🎨', t: '背景色', f: (e)=>showColorPicker(m.id, e), action:'color' },
     { i: '🗑', t: '削除', f: ()=>delMemo(m.id) },
   ].forEach(({i,t,f,action,cls}) => {
@@ -6850,18 +6865,6 @@ function duplicateMemo(id) {
     pinned: false,
   });
   persist(); renderMemos(); renderRooms();
-}
-function toggleFlash(id){
-  const m = S.memos.find(x => x.id === id); if (!m) return;
-  if (m.board){ alert('フリーボードは単語帳にできません'); return; }
-  if (m.flash){
-    if (m.back && stripHtml(m.back).trim() && !confirm('通常メモに戻すと裏面は削除されます。よろしいですか？')) return;
-    delete m.flash; delete m.back;
-  } else {
-    m.flash = true; if (m.back == null) m.back = '';
-  }
-  m.updatedAt = new Date().toISOString();
-  persist(); renderMemos();
 }
 function delMemo(id) {
   if (!confirm('削除しますか？')) return;
