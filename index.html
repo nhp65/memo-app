@@ -2095,10 +2095,12 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button id="sheet-close">✓ 保存して閉じる</button>
   </div>
   <div id="sheet-toolbar">
-    <button id="sheet-row-add">＋行</button>
-    <button id="sheet-row-del">－行</button>
-    <button id="sheet-col-add">＋列</button>
-    <button id="sheet-col-del">－列</button>
+    <button id="sheet-row-ins-above" title="選択の上に行を挿入">⬆＋行</button>
+    <button id="sheet-row-ins-below" title="選択の下に行を挿入">⬇＋行</button>
+    <button id="sheet-row-del" title="選択行を削除">－行</button>
+    <button id="sheet-col-ins-left" title="選択の左に列を挿入">⬅＋列</button>
+    <button id="sheet-col-ins-right" title="選択の右に列を挿入">＋列➡</button>
+    <button id="sheet-col-del" title="選択列を削除">－列</button>
     <span class="fb-tb-sep"></span>
     <button id="sheet-row-copy">⧉ 行コピー</button>
     <button id="sheet-col-copy">⧉ 列コピー</button>
@@ -5843,9 +5845,19 @@ function parseClipText(t){
   if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
   return lines.map(line => line.split('\t'));
 }
-function sheetRowAdd(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const at = s.r2 + 1; _sheet.data.splice(at, 0, Array.from({ length: sheetNCols(_sheet) }, () => '')); _sheet.merges.forEach(m => { if (at <= m.r) m.r++; else if (at <= m.r + m.rs - 1) m.rs++; }); renderSheetGrid(); }
+function sheetInsertRows(at, n){
+  for (let i = 0; i < n; i++) _sheet.data.splice(at, 0, Array.from({ length: sheetNCols(_sheet) }, () => ''));
+  _sheet.merges.forEach(m => { if (at <= m.r) m.r += n; else if (at <= m.r + m.rs - 1) m.rs += n; });
+}
+function sheetRowInsAbove(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const n = s.r2 - s.r1 + 1; sheetInsertRows(s.r1, n); _sheetSel = { r1: s.r1, c1: s.c1, r2: s.r1 + n - 1, c2: s.c2 }; renderSheetGrid(); }
+function sheetRowInsBelow(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const n = s.r2 - s.r1 + 1; sheetInsertRows(s.r2 + 1, n); _sheetSel = { r1: s.r2 + 1, c1: s.c1, r2: s.r2 + n, c2: s.c2 }; renderSheetGrid(); }
+function sheetInsertCols(at, n){
+  for (let i = 0; i < n; i++){ _sheet.data.forEach(row => row.splice(at, 0, '')); _sheet.colW.splice(at, 0, undefined); }
+  _sheet.merges.forEach(m => { if (at <= m.c) m.c += n; else if (at <= m.c + m.cs - 1) m.cs += n; });
+}
+function sheetColInsLeft(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const n = s.c2 - s.c1 + 1; sheetInsertCols(s.c1, n); _sheetSel = { r1: s.r1, c1: s.c1, r2: s.r2, c2: s.c1 + n - 1 }; renderSheetGrid(); }
+function sheetColInsRight(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const n = s.c2 - s.c1 + 1; sheetInsertCols(s.c2 + 1, n); _sheetSel = { r1: s.r1, c1: s.c2 + 1, r2: s.r2, c2: s.c2 + n }; renderSheetGrid(); }
 function sheetRowDel(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const n = s.r2 - s.r1 + 1; if (sheetNRows(_sheet) - n < 1){ alert('最後の行は削除できません'); return; } _sheet.data.splice(s.r1, n); _sheet.merges = _sheet.merges.filter(m => m.r + m.rs - 1 < s.r1 || m.r > s.r2).map(m => { if (m.r > s.r2) m.r -= n; return m; }); const r = Math.min(s.r1, sheetNRows(_sheet) - 1); _sheetSel = { r1: r, c1: s.c1, r2: r, c2: s.c1 }; renderSheetGrid(); }
-function sheetColAdd(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const at = s.c2 + 1; _sheet.data.forEach(row => row.splice(at, 0, '')); _sheet.colW.splice(at, 0, undefined); _sheet.merges.forEach(m => { if (at <= m.c) m.c++; else if (at <= m.c + m.cs - 1) m.cs++; }); renderSheetGrid(); }
 function sheetColDel(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const n = s.c2 - s.c1 + 1; if (sheetNCols(_sheet) - n < 1){ alert('最後の列は削除できません'); return; } _sheet.data.forEach(row => row.splice(s.c1, n)); _sheet.colW.splice(s.c1, n); _sheet.merges = _sheet.merges.filter(m => m.c + m.cs - 1 < s.c1 || m.c > s.c2).map(m => { if (m.c > s.c2) m.c -= n; return m; }); const c = Math.min(s.c1, sheetNCols(_sheet) - 1); _sheetSel = { r1: s.r1, c1: c, r2: s.r1, c2: c }; renderSheetGrid(); }
 function sheetRowCopy(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const block = []; for (let r = s.r1; r <= s.r2; r++) block.push(_sheet.data[r].slice()); const at = s.r2 + 1; _sheet.data.splice(at, 0, ...block); _sheet.merges.forEach(m => { if (m.r >= at) m.r += block.length; }); renderSheetGrid(); }
 function sheetColCopy(){ commitSheetEdit(); const s = sheetRect(_sheetSel); const w = s.c2 - s.c1 + 1; const at = s.c2 + 1; _sheet.data.forEach(row => { const block = row.slice(s.c1, s.c2 + 1); row.splice(at, 0, ...block); }); const wb = _sheet.colW.slice(s.c1, s.c2 + 1); _sheet.colW.splice(at, 0, ...wb); _sheet.merges.forEach(m => { if (m.c >= at) m.c += w; }); renderSheetGrid(); }
@@ -5987,8 +5999,8 @@ function renderSheetHelp(){
   const $ = id => document.getElementById(id); if (!$('sheet-ov')) return;
   $('sheet-close').onclick = () => closeSheetEditor(true);
   $('sheet-back').onclick = () => closeSheetEditor(false);
-  $('sheet-row-add').onclick = sheetRowAdd; $('sheet-row-del').onclick = sheetRowDel;
-  $('sheet-col-add').onclick = sheetColAdd; $('sheet-col-del').onclick = sheetColDel;
+  $('sheet-row-ins-above').onclick = sheetRowInsAbove; $('sheet-row-ins-below').onclick = sheetRowInsBelow; $('sheet-row-del').onclick = sheetRowDel;
+  $('sheet-col-ins-left').onclick = sheetColInsLeft; $('sheet-col-ins-right').onclick = sheetColInsRight; $('sheet-col-del').onclick = sheetColDel;
   $('sheet-row-copy').onclick = sheetRowCopy; $('sheet-col-copy').onclick = sheetColCopy;
   $('sheet-merge').onclick = sheetMergeSel; $('sheet-unmerge').onclick = sheetUnmergeSel;
   $('sheet-fill').onclick = sheetFillSeries; $('sheet-concat').onclick = sheetConcatSel;
