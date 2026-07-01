@@ -6387,8 +6387,24 @@ function hydrateTbEmbeds(container){
   });
 }
 // 全画面エディタ
-let _tb = null, _tbOnDone = null, _tbPx = 14, _tbSel = null;
+let _tb = null, _tbOnDone = null, _tbPx = 14, _tbSel = null, _tbMomRAF = 0;
 function tbSnapMin(x, sm, px10){ return sm + Math.round(x / px10) * 10; }
+// タッチスクロールの慣性（v = 指の速度 px/ms）
+function tbMomentum(wrap, v){
+  cancelAnimationFrame(_tbMomRAF);
+  if (Math.abs(v) < 0.02) return;
+  let vel = Math.max(-4, Math.min(4, v));   // 過剰な初速を制限
+  let last = performance.now();
+  const step = now => {
+    const dt = Math.min(40, now - last); last = now;
+    wrap.scrollLeft -= vel * dt;
+    vel *= Math.pow(0.95, dt / 16);          // 減衰
+    if (Math.abs(vel) < 0.02) return;
+    if (wrap.scrollLeft <= 0 || wrap.scrollLeft >= wrap.scrollWidth - wrap.clientWidth) return;   // 端で停止
+    _tbMomRAF = requestAnimationFrame(step);
+  };
+  _tbMomRAF = requestAnimationFrame(step);
+}
 function openTbEditor(tb, onDone){
   _tb = JSON.parse(JSON.stringify(tb));
   _tb.plan = _tb.plan || []; _tb.actual = _tb.actual || [];
@@ -6444,6 +6460,7 @@ function tbUpdateBarEl(el, key, b, sm, px10){
 // タッチ操作: バー上ドラッグ=スクロール / 空長押し=作成 / 選択中バー長押し=近い端を伸縮 /
 //            選択中バードラッグ=移動 / 空タップ=解除 / 選択中バー再タップ=改名
 function tbTouchStart(e, key, sm, px10, lane){
+  cancelAnimationFrame(_tbMomRAF);   // 進行中の慣性を止める
   const wrap = document.getElementById('tb-gantt-wrap');
   const laneRect = lane.getBoundingClientRect();
   const barEl = e.target.closest('.tb-bar');
@@ -6453,6 +6470,7 @@ function tbTouchStart(e, key, sm, px10, lane){
   const startX = e.clientX, startY = e.clientY, scroll0 = wrap.scrollLeft;
   const s0 = barObj ? barObj.s : 0, e0 = barObj ? barObj.e : 0;
   let mode = 'pending', moved = false, temp = null, createStart = 0;
+  let velX = 0, lastX = startX, lastT = performance.now();   // スクロール慣性用
   const longTimer = setTimeout(() => {
     if (moved || mode !== 'pending') return;
     if (!barObj){
@@ -6471,7 +6489,7 @@ function tbTouchStart(e, key, sm, px10, lane){
       if (Math.abs(dxPix) > 6 || Math.abs(ev.clientY - startY) > 6){ moved = true; clearTimeout(longTimer); mode = (barObj && isSel) ? 'move' : 'scroll'; }
       else return;
     }
-    if (mode === 'scroll'){ wrap.scrollLeft = scroll0 - dxPix; if (ev.cancelable) ev.preventDefault(); return; }
+    if (mode === 'scroll'){ const now = performance.now(), dt = now - lastT; if (dt > 0){ velX = (ev.clientX - lastX) / dt; lastX = ev.clientX; lastT = now; } wrap.scrollLeft = scroll0 - dxPix; if (ev.cancelable) ev.preventDefault(); return; }
     const dxMin = Math.round(dxPix / px10) * 10;
     if (mode === 'create'){ const cur = Math.max(sm, Math.min(tbSnapMin(ev.clientX - laneRect.left, sm, px10), em)); const a = Math.min(createStart, cur), bb = Math.max(createStart, cur); temp.style.left = ((a - sm) / 10 * px10) + 'px'; temp.style.width = ((bb - a) / 10 * px10) + 'px'; if (ev.cancelable) ev.preventDefault(); return; }
     if (mode === 'move'){ let ns = s0 + dxMin, ne = e0 + dxMin; if (ns < sm){ ne += sm - ns; ns = sm; } if (ne > em){ ns -= ne - em; ne = em; } barObj.s = ns; barObj.e = ne; tbUpdateBarEl(barEl, key, barObj, sm, px10); if (ev.cancelable) ev.preventDefault(); return; }
@@ -6496,7 +6514,8 @@ function tbTouchStart(e, key, sm, px10, lane){
       const nb = { id: tbId(), s: a, e: bb, label: '', cat: '' }; tbEditBar(key, nb);
       _tb[key].push(nb); _tbSel = { lane: key, id: nb.id }; tbRender(); return;
     }
-    if (mode !== 'scroll') tbRender();   // move / resize
+    if (mode === 'scroll'){ if (performance.now() - lastT < 60) tbMomentum(wrap, velX); return; }   // 指を離した瞬間の速度で慣性
+    tbRender();   // move / resize
   };
   document.addEventListener('pointermove', move, { passive: false });
   document.addEventListener('pointerup', up);
