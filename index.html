@@ -1192,6 +1192,25 @@ body.force-mobile #mdi-panes { flex-direction: column; }
 .tb-thumb-sum td.tb-thumb-h { text-align: right; font-variant-numeric: tabular-nums; width: 3.2em; }
 .tb-thumb-sum .tb-thumb-grand td { font-weight: 700; background: rgba(76,124,157,.08); }
 .tb-embed { margin: 6px 0; }
+/* ゴミ箱 */
+.trash-view { max-width: 820px; margin: 0 auto; padding: 8px 4px; }
+.trash-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.trash-title { font-weight: 700; color: var(--c1); font-size: 1rem; }
+.trash-ctl { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: .82rem; color: var(--th-muted); flex-wrap: wrap; }
+.trash-ctl select { padding: 3px 6px; border-radius: 6px; border: 1px solid var(--th-tbdr, #cce5f0); color: var(--c3); }
+.trash-empty-btn { background: #fdeaea; color: #c0392b; border: 1px solid #f1c0c0; border-radius: 7px; padding: 4px 10px; cursor: pointer; font-size: .8rem; }
+.trash-empty-btn:hover { background: #f8dcdc; }
+.trash-note { font-size: .76rem; color: var(--th-muted); margin-bottom: 10px; }
+.trash-item { display: flex; align-items: center; gap: 10px; background: var(--th-bubble); border: 1px solid var(--th-sep); border-radius: 9px; padding: 8px 12px; margin-bottom: 6px; }
+.trash-item-info { flex: 1; min-width: 0; }
+.trash-item-title { font-size: .9rem; color: var(--th-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trash-item-meta { font-size: .72rem; color: var(--th-muted); margin-top: 2px; }
+.trash-item-acts { flex: 0 0 auto; display: flex; gap: 6px; }
+.trash-restore { background: var(--c1); color: #fff; border: none; border-radius: 7px; padding: 5px 11px; cursor: pointer; font-size: .8rem; }
+.trash-restore:hover { background: var(--c5); }
+.trash-del { background: #fff; color: #c0392b; border: 1px solid #f1c0c0; border-radius: 7px; padding: 5px 11px; cursor: pointer; font-size: .8rem; }
+.trash-del:hover { background: #fdeaea; }
+.room-item.room-trash { margin-top: 6px; border-top: 1px solid var(--th-sep); opacity: .9; }
 #sheet-ov { display: none; position: fixed; inset: 0; z-index: 780; background: var(--c4); flex-direction: column; }
 #sheet-ov.open { display: flex; }
 #sheet-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--c1); color: #fff; flex-shrink: 0; }
@@ -3658,7 +3677,13 @@ function updateCharCount(editorEl, countEl) {
   countEl.classList.toggle('warn', n > 2000);
 }
 editor.addEventListener('input', () => updateCharCount(editor, charCountEl));
-editEd.addEventListener('input', () => updateCharCount(editEd, editCharCountEl));
+let _editDirty = false;
+editEd.addEventListener('input', () => { _editDirty = true; updateCharCount(editEd, editCharCountEl); });
+['edit-tag-input', 'edit-title-line-chk'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', () => { _editDirty = true; }); });
+function closeEditAsk(){
+  if (_editDirty && !confirm('編集内容が保存されていません。破棄して閉じますか？')) return;
+  closeOv('edit-ov'); discardEmptyNewFlash();
+}
 
 // 編集モーダルを開いたとき初期値をセット（openEdit内で呼ぶため関数として公開）
 function syncEditCharCount() { updateCharCount(editEd, editCharCountEl); }
@@ -5020,6 +5045,7 @@ async function sendMemo() {
 
 function setRoomTitle(room) {
   if (room === null) { document.getElementById('room-title').textContent = '🌐 全ルーム'; return; }
+  if (roomId === TRASH_ROOM) { document.getElementById('room-title').textContent = '🗑 ゴミ箱'; return; }
   const r = room || S.rooms.find(r => r.id === roomId);
   document.getElementById('room-title').textContent = (r?.icon ? r.icon + ' ' : '') + (r?.name || '');
 }
@@ -5116,8 +5142,10 @@ function renderRooms() {
     del.onclick = e => {
       e.stopPropagation();
       if (S.rooms.length===1) { alert('最後のルームは削除できません'); return; }
-      if (!confirm(`「${room.name}」を削除しますか？\nメモも全て削除されます。`)) return;
+      if (!confirm(`「${room.name}」を削除しますか？\nメモはゴミ箱に移動します。`)) return;
       S.rooms = S.rooms.filter(r => r.id!==room.id);
+      S.trash = S.trash || [];
+      S.memos.filter(m => m.roomId === room.id).forEach(m => { m.deletedAt = new Date().toISOString(); S.trash.unshift(m); });
       S.memos = S.memos.filter(m => m.roomId!==room.id);
       if (roomId===room.id) roomId = S.rooms[0].id;
       persist(); renderRooms(); renderTagBar(); renderMemos();
@@ -5153,6 +5181,15 @@ function renderRooms() {
 
     roomList.appendChild(li);
   });
+  // ルーム一覧の一番下にゴミ箱
+  const tli = document.createElement('li');
+  tli.className = 'room-item room-trash' + (roomId === TRASH_ROOM ? ' active' : '');
+  const tic = document.createElement('span'); tic.className = 'room-icon'; tic.textContent = '🗑';
+  const tname = document.createElement('span'); tname.className = 'room-name-text'; tname.textContent = 'ゴミ箱';
+  const tcnt = document.createElement('span'); tcnt.className = 'room-memo-count'; tcnt.textContent = (S.trash || []).length;
+  tli.appendChild(tic); tli.appendChild(tname); tli.appendChild(tcnt);
+  tli.onclick = () => switchRoom(TRASH_ROOM);
+  roomList.appendChild(tli);
 }
 
 function switchRoom(id) {
@@ -5384,6 +5421,8 @@ function memoSortCmp(a, b){
 }
 
 function renderMemos() {
+  if (inputArea) inputArea.style.display = (roomId === TRASH_ROOM) ? 'none' : '';
+  if (roomId === TRASH_ROOM){ renderTrash(); return; }
   const rawQ = document.getElementById('search').value.trim();
   const q = rawQ.toLowerCase();
   const reSearch = (S.searchRegex && rawQ) ? (() => { try { return new RegExp(rawQ, 'i'); } catch (e) { return null; } })() : null;
@@ -7230,10 +7269,76 @@ function duplicateMemo(id) {
   });
   persist(); renderMemos(); renderRooms();
 }
+// ── ゴミ箱 ───────────────────────────────────────────────────────
+const TRASH_ROOM = '__trash__';
+function trashMemo(id){   // メモをゴミ箱へ移動（S.memos から S.trash へ）
+  const i = S.memos.findIndex(m => m.id === id); if (i < 0) return;
+  const m = S.memos[i]; m.deletedAt = new Date().toISOString();
+  S.trash = S.trash || []; S.trash.unshift(m);
+  S.memos.splice(i, 1);
+}
+function purgeTrash(){   // 保持日数を超えたものを完全削除
+  if (!Array.isArray(S.trash)){ S.trash = []; return; }
+  const days = S.trashRetentionDays || 0;
+  if (!days) return;   // 0 は無期限
+  const cutoff = Date.now() - days * 86400000;
+  const before = S.trash.length;
+  S.trash = S.trash.filter(m => new Date(m.deletedAt || 0).getTime() >= cutoff);
+  if (S.trash.length !== before) persist();
+}
+function restoreFromTrash(id){
+  const i = S.trash.findIndex(m => m.id === id); if (i < 0) return;
+  const m = S.trash[i]; delete m.deletedAt;
+  if (!S.rooms.some(r => r.id === m.roomId)) m.roomId = S.rooms[0].id;   // 元ルームが無ければ先頭へ
+  S.memos.push(m); S.trash.splice(i, 1);
+  persist(); renderRooms(); renderTagBar(); renderMemos(); renderExistingTags();
+}
+function deleteForever(id){
+  if (!confirm('このメモを完全に削除します。元に戻せません。よろしいですか？')) return;
+  S.trash = S.trash.filter(m => m.id !== id);
+  persist(); renderRooms(); renderMemos();
+}
 function delMemo(id) {
-  if (!confirm('削除しますか？')) return;
-  S.memos = S.memos.filter(m => m.id!==id);
+  if (!confirm('ゴミ箱に移動しますか？')) return;
+  trashMemo(id);
   persist(); renderTagBar(); renderMemos(); renderExistingTags(); renderRooms();
+}
+function renderTrash(){
+  msgs.innerHTML = ''; renderedMemos = [];
+  const days = S.trashRetentionDays || 0;
+  const wrap = document.createElement('div'); wrap.className = 'trash-view';
+  const head = document.createElement('div'); head.className = 'trash-head';
+  const ttl = document.createElement('span'); ttl.className = 'trash-title'; ttl.textContent = '🗑 ゴミ箱（' + (S.trash || []).length + '件）'; head.appendChild(ttl);
+  const ctl = document.createElement('div'); ctl.className = 'trash-ctl';
+  const lbl = document.createElement('label'); lbl.textContent = '保持日数: ';
+  const sel = document.createElement('select');
+  [[7, '7日'], [14, '14日'], [30, '30日'], [90, '90日'], [365, '365日'], [0, '無期限']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; if (v === days) o.selected = true; sel.appendChild(o); });
+  sel.onchange = () => { S.trashRetentionDays = +sel.value; persist(); purgeTrash(); renderRooms(); renderMemos(); };
+  lbl.appendChild(sel); ctl.appendChild(lbl);
+  const emptyBtn = document.createElement('button'); emptyBtn.className = 'trash-empty-btn'; emptyBtn.textContent = 'ゴミ箱を空にする';
+  emptyBtn.onclick = () => { if (!(S.trash || []).length) return; if (!confirm('ゴミ箱を空にします。すべて完全に削除され、元に戻せません。よろしいですか？')) return; S.trash = []; persist(); renderRooms(); renderMemos(); };
+  ctl.appendChild(emptyBtn); head.appendChild(ctl); wrap.appendChild(head);
+  const note = document.createElement('div'); note.className = 'trash-note';
+  note.textContent = days ? `保持日数（${days}日）を過ぎたメモは自動で完全削除されます。` : '無期限で保持します（自動削除しません）。';
+  wrap.appendChild(note);
+  if (!(S.trash || []).length){ const e = document.createElement('div'); e.className = 'nores'; e.textContent = 'ゴミ箱は空です'; wrap.appendChild(e); msgs.appendChild(wrap); return; }
+  (S.trash || []).forEach(m => {
+    const row = document.createElement('div'); row.className = 'trash-item';
+    const info = document.createElement('div'); info.className = 'trash-item-info';
+    const title = document.createElement('div'); title.className = 'trash-item-title'; title.textContent = (m.board ? '🧩 ' : m.flash ? '🔄 ' : '') + (memoFirstLine(m) || '（空のメモ）');
+    const meta = document.createElement('div'); meta.className = 'trash-item-meta';
+    let remain = '';
+    if (days){ const left = Math.ceil((new Date(m.deletedAt || 0).getTime() + days * 86400000 - Date.now()) / 86400000); remain = left > 0 ? `あと${left}日で完全削除` : 'まもなく完全削除'; }
+    const room = S.rooms.find(r => r.id === m.roomId);
+    meta.textContent = (room ? '元: ' + (room.icon || '') + room.name + ' / ' : '') + '削除: ' + fmtTime(m.deletedAt) + (remain ? ' / ' + remain : '');
+    info.appendChild(title); info.appendChild(meta);
+    const acts = document.createElement('div'); acts.className = 'trash-item-acts';
+    const rb = document.createElement('button'); rb.className = 'trash-restore'; rb.textContent = '↩ 復元'; rb.onclick = () => restoreFromTrash(m.id);
+    const db = document.createElement('button'); db.className = 'trash-del'; db.textContent = '完全削除'; db.onclick = () => deleteForever(m.id);
+    acts.appendChild(rb); acts.appendChild(db);
+    row.appendChild(info); row.appendChild(acts); wrap.appendChild(row);
+  });
+  msgs.appendChild(wrap);
 }
 function togglePin(id) {
   const m = S.memos.find(m => m.id === id);
@@ -7276,6 +7381,7 @@ async function openEdit(id) {
   document.getElementById('edit-title-line-chk').checked = m.titleLine !== false;
   document.getElementById('edit-flash-row').style.display = m.flash ? '' : 'none';
   document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.classList.toggle('on', b.dataset.side === 'front'));
+  _editDirty = false;
   openOv('edit-ov');
   updateJumpBtn();   // 選択中メモに応じてジャンプボタンの活性状態を反映
   setTimeout(() => { editEd.focus(); syncEditCharCount(); }, 50);
@@ -7297,19 +7403,20 @@ document.getElementById('edit-save').onclick = async () => {
     if ((m.tags || []).join(',') !== oldTags && document.getElementById('g-ov') && document.getElementById('g-ov').classList.contains('open')) gRebuild();
   }
   _newFlashId = null;   // 保存したので破棄対象から外す
+  _editDirty = false;
   closeOv('edit-ov');
 };
 document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.onclick = () => editSetSide(b.dataset.side));
-document.getElementById('edit-cancel').onclick = () => { closeOv('edit-ov'); discardEmptyNewFlash(); };
+document.getElementById('edit-cancel').onclick = closeEditAsk;
 document.getElementById('edit-delete').onclick = () => {
   if (!editId) return;
-  if (!confirm('このメモを削除しますか？')) return;
-  S.memos = S.memos.filter(m => m.id !== editId);
+  if (!confirm('このメモをゴミ箱に移動しますか？')) return;
+  trashMemo(editId);
   persist(); closeOv('edit-ov');
   renderTagBar(); renderMemos(); renderExistingTags(); renderRooms();
   if (document.getElementById('g-ov') && document.getElementById('g-ov').classList.contains('open')) gRebuild();
 };
-document.getElementById('edit-ov').addEventListener('click', e => { if (e.target===document.getElementById('edit-ov')) { closeOv('edit-ov'); discardEmptyNewFlash(); } });
+document.getElementById('edit-ov').addEventListener('click', e => { if (e.target===document.getElementById('edit-ov')) closeEditAsk(); });
 
 // ── Jump link ────────────────────────────────────────────────────
 function updateJumpBtn() {
@@ -8854,8 +8961,8 @@ document.getElementById('bulk-copy-btn').onclick = () => {
 };
 document.getElementById('bulk-delete-btn').onclick = () => {
   if (selectedMemoIds.size === 0) return;
-  if (!confirm(`${selectedMemoIds.size}件のメモを削除しますか？`)) return;
-  S.memos = S.memos.filter(m => !selectedMemoIds.has(m.id));
+  if (!confirm(`${selectedMemoIds.size}件のメモをゴミ箱に移動しますか？`)) return;
+  [...selectedMemoIds].forEach(id => trashMemo(id));
   persist(); renderTagBar(); renderMemos(); renderRooms();
   exitBulkEditMode();
 };
@@ -9182,10 +9289,13 @@ async function initApp() {
   if (!S.sheets)           S.sheets           = {};
   if (!S.mindmaps)         S.mindmaps         = {};
   if (!S.timeblocks)       S.timeblocks       = {};
+  if (!S.trash)            S.trash            = [];
+  if (S.trashRetentionDays == null) S.trashRetentionDays = 30;
   if (S.showBacklinks === undefined) S.showBacklinks = false;
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
   ensureGuids();   // 全メモにGUIDを付与（無い分のみ）
+  purgeTrash();    // 保持日数を超えたゴミ箱メモを完全削除
 
   // 旧データ（画像インライン）を一度だけ別ストアへ分離。冪等なので再実行も安全。
   // 失敗してもインライン画像のまま動作継続（データは無傷）。
