@@ -6323,7 +6323,32 @@ function tbId(){ return 'b' + Date.now().toString(36) + Math.floor(Math.random()
 function makeTimeblock(){ return { name: 'タイムブロック', startH: 6, endH: 24, plan: [], actual: [] }; }
 function tbMinToLabel(m){ const h = Math.floor(m / 60), mm = m % 60; return h + ':' + String(mm).padStart(2, '0'); }
 function tbLanes(tb){ return [['plan', '予定', tb.plan || []], ['actual', '実働', tb.actual || []]]; }
-function tbText(tb){ if (!tb) return ''; return [...(tb.plan || []), ...(tb.actual || [])].map(b => b.label || '').join(' '); }
+function tbText(tb){ if (!tb) return ''; return [...(tb.plan || []), ...(tb.actual || [])].map(b => ((b.cat || '') + ' ' + (b.label || '')).trim()).join(' '); }
+function tbBarLabel(key, b){   // 実働は「大項目 / 小項目」、予定は作業名のみ
+  const sub = (b.label || '').trim() || '(無題)';
+  if (key === 'actual'){ const c = (b.cat || '').trim(); return (c ? c + ' / ' : '') + sub; }
+  return sub;
+}
+function tbEditBar(key, b){   // 実働は大項目→小項目の順に入力、予定は作業名のみ
+  if (key === 'actual'){
+    const cat = prompt('大項目（作業の分類）', b.cat || ''); if (cat === null) return false;
+    const sub = prompt('小項目（作業の内容）', b.label || ''); if (sub === null) return false;
+    b.cat = cat.trim(); b.label = sub.trim();
+  } else {
+    const label = prompt('作業名', b.label || ''); if (label === null) return false; b.label = label.trim();
+  }
+  return true;
+}
+function tbActualTotals(actual, byCat){   // byCat=true→大項目集計 / false→小項目(大項目付き)集計
+  const map = {};
+  (actual || []).forEach(b => {
+    const cat = (b.cat || '').trim() || '(未分類)';
+    const sub = (b.label || '').trim() || '(無題)';
+    const key = byCat ? cat : (cat + ' / ' + sub);
+    map[key] = (map[key] || 0) + (b.e - b.s);
+  });
+  return map;
+}
 function tbThumb(tb){
   const box = document.createElement('div'); box.className = 'tb-thumb';
   const bar = document.createElement('div'); bar.className = 'tb-thumb-bar'; bar.textContent = '🗓 ' + (tb.name || 'タイムブロック'); box.appendChild(bar);
@@ -6333,18 +6358,20 @@ function tbThumb(tb){
     (tb[k] || []).forEach(b => { const d = document.createElement('div'); d.className = 'tb-thumb-seg ' + k; const a = Math.max(sm, b.s), e = Math.min(em, b.e); if (e <= a) return; d.style.left = ((a - sm) / span * 100) + '%'; d.style.width = ((e - a) / span * 100) + '%'; d.title = b.label || ''; lane.appendChild(d); });
     box.appendChild(lane);
   });
-  // 実働の合計（時間）表
-  const totals = {}; (tb.actual || []).forEach(b => { const k = b.label || '(無題)'; totals[k] = (totals[k] || 0) + (b.e - b.s); });
-  const keys = Object.keys(totals);
-  if (keys.length){
-    const fmtH = m => (Math.round(m / 60 * 10) / 10).toFixed(1);
+  // 実働の合計（時間）表: 大項目・小項目それぞれ
+  const fmtH = m => (Math.round(m / 60 * 10) / 10).toFixed(1);
+  const mkSum = (caption, totals, grand) => {
+    const keys = Object.keys(totals); if (!keys.length) return null;
     const tbl = document.createElement('table'); tbl.className = 'tb-thumb-sum';
-    const cap = document.createElement('caption'); cap.textContent = '実働の合計（時間）'; tbl.appendChild(cap);
+    const cap = document.createElement('caption'); cap.textContent = caption; tbl.appendChild(cap);
     keys.sort().forEach(k => { const tr = tbl.insertRow(); tr.insertCell().textContent = k; const c = tr.insertCell(); c.textContent = fmtH(totals[k]); c.className = 'tb-thumb-h'; });
-    const grand = Object.values(totals).reduce((a, b) => a + b, 0);
-    const gtr = tbl.insertRow(); gtr.className = 'tb-thumb-grand'; gtr.insertCell().textContent = '合計'; const gc = gtr.insertCell(); gc.textContent = fmtH(grand); gc.className = 'tb-thumb-h';
-    box.appendChild(tbl);
-  }
+    if (grand != null){ const gtr = tbl.insertRow(); gtr.className = 'tb-thumb-grand'; gtr.insertCell().textContent = '合計'; const gc = gtr.insertCell(); gc.textContent = fmtH(grand); gc.className = 'tb-thumb-h'; }
+    return tbl;
+  };
+  const byCat = tbActualTotals(tb.actual, true), bySub = tbActualTotals(tb.actual, false);
+  const grand = Object.values(byCat).reduce((a, b) => a + b, 0);
+  const t1 = mkSum('実働 合計（大項目）', byCat, grand); if (t1) box.appendChild(t1);
+  const t2 = mkSum('実働 合計（小項目）', bySub, null); if (t2) box.appendChild(t2);
   return box;
 }
 function hydrateTbEmbeds(container){
@@ -6404,7 +6431,7 @@ function tbMakeBar(key, b, sm, px10){
   const d = document.createElement('div'); d.className = 'tb-bar ' + key; d.dataset.id = b.id; d.dataset.lane = key;
   d.style.left = ((b.s - sm) / 10 * px10) + 'px'; d.style.width = Math.max(px10, ((b.e - b.s) / 10 * px10)) + 'px';
   if (_tbSel && _tbSel.lane === key && _tbSel.id === b.id) d.classList.add('sel');
-  const lab = document.createElement('span'); lab.className = 'tb-bar-label'; lab.textContent = (b.label || '(無題)') + ' ' + tbMinToLabel(b.s) + '–' + tbMinToLabel(b.e); d.appendChild(lab);
+  const lab = document.createElement('span'); lab.className = 'tb-bar-label'; lab.textContent = tbBarLabel(key, b) + ' ' + tbMinToLabel(b.s) + '–' + tbMinToLabel(b.e); d.appendChild(lab);
   d.appendChild(Object.assign(document.createElement('div'), { className: 'tb-h tb-h-l' }));
   d.appendChild(Object.assign(document.createElement('div'), { className: 'tb-h tb-h-r' }));
   tbWireBar(d, key, b, sm, px10);
@@ -6424,8 +6451,8 @@ function tbWireLaneCreate(lane, key, sm, px10){
       let cur = tbSnapMin(ev.clientX - rect.left, sm, px10);
       let a = Math.max(sm, Math.min(Math.min(startMin, cur), em)), bb = Math.max(sm, Math.min(Math.max(startMin, cur), em));
       if (bb - a < 10){ _tbSel = null; tbRender(); return; }
-      const label = prompt('作業名（' + (key === 'plan' ? '予定' : '実働') + '  ' + tbMinToLabel(a) + '–' + tbMinToLabel(bb) + '）', '') || '';
-      const nb = { id: tbId(), s: a, e: bb, label: label.trim() };
+      const nb = { id: tbId(), s: a, e: bb, label: '', cat: '' };
+      tbEditBar(key, nb);
       _tb[key].push(nb); _tbSel = { lane: key, id: nb.id }; tbRender();
     };
     document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
@@ -6443,14 +6470,14 @@ function tbWireBar(d, key, b, sm, px10){
       else if (mode === 'l'){ b.s = Math.max(sm, Math.min(s0 + dx, b.e - 10)); }
       else { b.e = Math.min(em, Math.max(e0 + dx, b.s + 10)); }
       d.style.left = ((b.s - sm) / 10 * px10) + 'px'; d.style.width = Math.max(px10, ((b.e - b.s) / 10 * px10)) + 'px';
-      d.querySelector('.tb-bar-label').textContent = (b.label || '(無題)') + ' ' + tbMinToLabel(b.s) + '–' + tbMinToLabel(b.e);
+      d.querySelector('.tb-bar-label').textContent = tbBarLabel(key, b) + ' ' + tbMinToLabel(b.s) + '–' + tbMinToLabel(b.e);
     };
     const up = () => {
       document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up);
       _tbSel = { lane: key, id: b.id };
       if (moved){ _tbLastTap = 0; tbRender(); return; }
       const now = Date.now();
-      if (now - _tbLastTap < 350){ _tbLastTap = 0; const label = prompt('作業名', b.label || ''); if (label !== null) b.label = label.trim(); tbRender(); return; }
+      if (now - _tbLastTap < 350){ _tbLastTap = 0; tbEditBar(key, b); tbRender(); return; }
       _tbLastTap = now;
       document.querySelectorAll('#tb-gantt .tb-bar.sel').forEach(x => x.classList.remove('sel')); d.classList.add('sel'); tbBuildSummary();
     };
@@ -6463,20 +6490,26 @@ function tbBuildSummary(){
   const bounds = new Set([sm, em]);
   [..._tb.plan, ..._tb.actual].forEach(b => { if (b.e > sm && b.s < em){ bounds.add(Math.max(sm, b.s)); bounds.add(Math.min(em, b.e)); } });
   const pts = [...bounds].filter(x => x >= sm && x <= em).sort((a, b) => a - b);
-  const labelAt = (arr, t) => { const b = arr.find(x => x.s <= t && t < x.e); return b ? (b.label || '(無題)') : ''; };
+  const barAt = (arr, t) => arr.find(x => x.s <= t && t < x.e);
   let rows = '';
-  for (let i = 0; i < pts.length - 1; i++){ const t0 = pts[i], t1 = pts[i + 1]; if (t1 <= t0) continue; const pl = labelAt(_tb.plan, t0), ac = labelAt(_tb.actual, t0); if (!pl && !ac) continue; rows += `<tr><td>${tbMinToLabel(t0)}–${tbMinToLabel(t1)}</td><td>${escH(pl)}</td><td>${escH(ac)}</td></tr>`; }
-  const totals = arr => { const map = {}; arr.forEach(b => { const k = b.label || '(無題)'; map[k] = (map[k] || 0) + (b.e - b.s); }); return map; };
+  for (let i = 0; i < pts.length - 1; i++){
+    const t0 = pts[i], t1 = pts[i + 1]; if (t1 <= t0) continue;
+    const pb = barAt(_tb.plan, t0), ab = barAt(_tb.actual, t0); if (!pb && !ab) continue;
+    const pl = pb ? tbBarLabel('plan', pb) : '', ac = ab ? tbBarLabel('actual', ab) : '';
+    rows += `<tr><td>${tbMinToLabel(t0)}–${tbMinToLabel(t1)}</td><td>${escH(pl)}</td><td>${escH(ac)}</td></tr>`;
+  }
   const fmtH = min => (Math.round(min / 60 * 10) / 10).toFixed(1);
-  const tot = totals(_tb.actual), planTot = totals(_tb.plan);
-  const totRows = Object.keys(tot).sort().map(k => `<tr><td>${escH(k)}</td><td>${fmtH(tot[k])}</td></tr>`).join('');
-  const planRows = Object.keys(planTot).sort().map(k => `<tr><td>${escH(k)}</td><td>${fmtH(planTot[k])}</td></tr>`).join('');
-  const grand = Object.values(tot).reduce((a, b) => a + b, 0);
+  const planTot = {}; (_tb.plan || []).forEach(b => { const k = (b.label || '').trim() || '(無題)'; planTot[k] = (planTot[k] || 0) + (b.e - b.s); });
+  const byCat = tbActualTotals(_tb.actual, true), bySub = tbActualTotals(_tb.actual, false);
+  const grand = Object.values(byCat).reduce((a, b) => a + b, 0);
+  const rowsOf = obj => Object.keys(obj).sort().map(k => `<tr><td>${escH(k)}</td><td>${fmtH(obj[k])}</td></tr>`).join('');
+  const catRows = rowsOf(byCat), subRows = rowsOf(bySub), planRows = rowsOf(planTot);
   document.getElementById('tb-summary').innerHTML =
     `<div class="tb-sum-sec"><h4>時間帯ごとの予定／実働</h4><table class="tb-sum"><tr><th>時間帯</th><th>予定</th><th>実働</th></tr>${rows || '<tr><td colspan="3" style="color:#999">バーがありません</td></tr>'}</table></div>` +
     `<div class="tb-sum-row">` +
-      `<div class="tb-sum-sec"><h4>実働の合計（時間）</h4><table class="tb-sum"><tr><th>作業</th><th>時間</th></tr>${totRows || '<tr><td colspan="2" style="color:#999">—</td></tr>'}<tr class="tb-grand"><td>合計</td><td>${fmtH(grand)}</td></tr></table></div>` +
-      `<div class="tb-sum-sec"><h4>予定の合計（時間）</h4><table class="tb-sum"><tr><th>作業</th><th>時間</th></tr>${planRows || '<tr><td colspan="2" style="color:#999">—</td></tr>'}</table></div>` +
+      `<div class="tb-sum-sec"><h4>実働の合計・大項目</h4><table class="tb-sum"><tr><th>大項目</th><th>時間</th></tr>${catRows || '<tr><td colspan="2" style="color:#999">—</td></tr>'}<tr class="tb-grand"><td>合計</td><td>${fmtH(grand)}</td></tr></table></div>` +
+      `<div class="tb-sum-sec"><h4>実働の合計・小項目</h4><table class="tb-sum"><tr><th>大項目 / 小項目</th><th>時間</th></tr>${subRows || '<tr><td colspan="2" style="color:#999">—</td></tr>'}</table></div>` +
+      `<div class="tb-sum-sec"><h4>予定の合計</h4><table class="tb-sum"><tr><th>作業</th><th>時間</th></tr>${planRows || '<tr><td colspan="2" style="color:#999">—</td></tr>'}</table></div>` +
     `</div>`;
 }
 // エディタ操作の配線
