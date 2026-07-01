@@ -527,6 +527,41 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
   text-align: center; color: rgba(255,255,255,0.7); padding: 60px 20px;
   font-size: 0.95rem;
 }
+/* 📖 本棚 */
+#bookshelf-overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(30,20,10,0.5); backdrop-filter: blur(2px); }
+#bookshelf-overlay.open { display: flex; flex-direction: column; }
+#bookshelf-header { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: #4a3526; color: #fff; font-weight: 700; font-size: .92rem; flex-shrink: 0; flex-wrap: wrap; }
+#bookshelf-sort { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.bsh-grp { display: inline-flex; align-items: center; gap: 3px; }
+.bsh-grp .bsh-lbl { font-size: .72rem; color: #e5cfa8; margin-right: 3px; }
+#bookshelf-sort .bsh-sort { background: rgba(255,255,255,.14); color: #fff; border: none; border-radius: 7px; padding: 4px 9px; cursor: pointer; font-size: .76rem; }
+#bookshelf-sort .bsh-sort.on { background: #d8b071; color: #3a2a1c; font-weight: 700; }
+.ov-new-grp { display: inline-flex; gap: 3px; }
+.ov-new-grp button { background: rgba(255,255,255,.16); color: #fff; border: none; border-radius: 7px; padding: 4px 8px; cursor: pointer; font-size: .78rem; }
+.ov-new-grp button:hover { background: rgba(255,255,255,.32); }
+#bookshelf-filter-btn { background: rgba(255,255,255,.14); color: #fff; border: none; border-radius: 7px; padding: 4px 10px; cursor: pointer; font-size: .78rem; }
+#bookshelf-filter-btn.on { background: #d8b071; color: #3a2a1c; font-weight: 700; }
+#bookshelf-close { background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; padding: 2px 8px; border-radius: 5px; }
+#bookshelf-close:hover { background: rgba(255,255,255,.2); }
+#bookshelf-filter { position: absolute; right: 12px; top: 46px; z-index: 6; background: var(--th-bubble); border: 1px solid var(--th-tbdr); border-radius: 10px; box-shadow: 0 6px 22px rgba(0,0,0,.3); padding: 10px; width: 230px; max-height: 70%; display: none; flex-direction: column; gap: 6px; }
+#bookshelf-filter.show { display: flex; }
+.bsh-filter-hd { font-size: .8rem; font-weight: 700; color: var(--c1); display: flex; align-items: center; gap: 5px; }
+.bsh-filter-hd button { font-size: .7rem; padding: 2px 8px; border: 1px solid var(--th-tbdr); background: none; border-radius: 5px; cursor: pointer; color: var(--c3); }
+.bsh-filter-hd button:first-of-type { margin-left: auto; }
+#bsh-filter-list { overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+.bsh-filter-item { display: flex; align-items: center; gap: 7px; font-size: .82rem; color: var(--th-text); padding: 3px 4px; cursor: pointer; border-radius: 5px; }
+.bsh-filter-item:hover { background: rgba(76,124,157,.08); }
+.bsh-filter-item input { accent-color: var(--c1); }
+#bookshelf-body { flex: 1; overflow-y: auto; padding: 8px 14px 30px; background: #6b4a2f; background-image: linear-gradient(90deg, rgba(0,0,0,.12), transparent 6%, transparent 94%, rgba(0,0,0,.12)); }
+.shelf { margin: 0 0 6px; }
+.shelf-label { color: #f2e2c8; font-size: .82rem; font-weight: 700; padding: 10px 2px 4px; text-shadow: 0 1px 1px rgba(0,0,0,.4); }
+.shelf-books { display: flex; align-items: flex-end; gap: 3px; overflow-x: auto; overflow-y: hidden; padding: 0 6px 8px; min-height: 150px; border-bottom: 10px solid #3f2c1c; box-shadow: 0 10px 10px -8px rgba(0,0,0,.5); background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,.06)); }
+.shelf-books::-webkit-scrollbar { height: 7px; }
+.shelf-books::-webkit-scrollbar-thumb { background: rgba(0,0,0,.3); border-radius: 4px; }
+.shelf-spine { flex: 0 0 auto; width: 34px; min-height: 120px; border-radius: 3px 3px 1px 1px; color: #fff; cursor: pointer; box-shadow: inset -3px 0 5px rgba(0,0,0,.28), inset 3px 0 4px rgba(255,255,255,.16), 1px 2px 4px rgba(0,0,0,.35); display: flex; align-items: flex-start; justify-content: center; padding: 8px 2px; transition: transform .12s ease; border-top: 3px solid rgba(255,255,255,.25); }
+.shelf-spine:hover { transform: translateY(-8px); }
+.shelf-spine-title { writing-mode: vertical-rl; text-orientation: mixed; font-size: .74rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 100%; text-shadow: 0 1px 2px rgba(0,0,0,.45); letter-spacing: .02em; }
+#bookshelf-empty { text-align: center; color: #f2e2c8; padding: 60px 20px; font-size: .95rem; }
 
 /* 続きを読む */
 .rm-wrap { position: relative; }
@@ -1482,7 +1517,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button class="hbtn" id="export-btn">↓ 書出</button>
     <button class="hbtn" id="bulk-edit-btn">編集</button>
     <button class="hbtn" id="tag-manage-btn" title="設定">設定</button>
-    <button class="hbtn" id="corkboard-btn">📌 ピン止め</button>
+    <button class="hbtn" id="bookshelf-btn">📖 本棚</button>
     <button class="hbtn" id="graph-btn" title="タグ・グラフ">🕸 グラフ</button>
     <button class="hbtn" id="stats-btn" title="統計">📊 統計</button>
     <button class="hbtn" id="cal-btn" title="カレンダー">📅 カレンダー</button>
@@ -2081,6 +2116,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button id="g-reset" title="配置をリセット（固定解除）">↻ 整列</button>
     <button id="g-settings-btn" title="ノードの大きさ設定">⚙ 設定</button>
     <button id="g-filter-btn">🏷 フィルター</button>
+    <span class="ov-new-grp"><button id="g-new-memo" title="メモを作成">📝＋</button><button id="g-new-board" title="フリーボードを作成">🧩＋</button><button id="g-new-flash" title="単語帳を作成">🔄＋</button></span>
     <button id="g-close">✕ 閉じる</button>
   </div>
   <div id="g-filter">
@@ -2365,14 +2401,33 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
 </div>
 
 <!-- Cork board overlay -->
-<div id="corkboard-overlay">
-  <div id="corkboard-header">
-    <span>📌 ピン留めメモ — コルクボード</span>
-    <button id="corkboard-close">✕</button>
+<div id="bookshelf-overlay">
+  <div id="bookshelf-header">
+    <span>📖 本棚</span>
+    <div id="bookshelf-sort">
+      <span class="bsh-grp"><span class="bsh-lbl">棚</span>
+        <button class="bsh-sort" data-tagsort="gojuon">あいうえお</button>
+        <button class="bsh-sort" data-tagsort="count">数順</button>
+        <button class="bsh-sort" data-tagsort="random">ランダム</button>
+      </span>
+      <span class="bsh-grp"><span class="bsh-lbl">本</span>
+        <button class="bsh-sort" data-booksort="new">新しい</button>
+        <button class="bsh-sort" data-booksort="old">古い</button>
+        <button class="bsh-sort" data-booksort="title">タイトル</button>
+        <button class="bsh-sort" data-booksort="random">ランダム</button>
+      </span>
+    </div>
+    <span class="ov-new-grp"><button id="bsh-new-memo" title="メモを作成">📝＋</button><button id="bsh-new-board" title="フリーボードを作成">🧩＋</button><button id="bsh-new-flash" title="単語帳を作成">🔄＋</button></span>
+    <button id="bookshelf-filter-btn" title="表示するタグ">🏷 タグ</button>
+    <button id="bookshelf-close">✕</button>
   </div>
-  <div id="corkboard-panel">
-    <div id="corkboard-grid"></div>
-    <div id="corkboard-empty" style="display:none">ピン留めされたメモがありません</div>
+  <div id="bookshelf-filter">
+    <div class="bsh-filter-hd">表示するタグ<button id="bsh-filter-all">全</button><button id="bsh-filter-none">無</button></div>
+    <div id="bsh-filter-list"></div>
+  </div>
+  <div id="bookshelf-body">
+    <div id="bookshelf-shelves"></div>
+    <div id="bookshelf-empty" style="display:none">このルームにメモがありません</div>
   </div>
 </div>
 
@@ -3683,6 +3738,7 @@ editEd.addEventListener('input', () => { _editDirty = true; updateCharCount(edit
 function closeEditAsk(){
   if (_editDirty && !confirm('編集内容が保存されていません。破棄して閉じますか？')) return;
   closeOv('edit-ov'); discardEmptyNewFlash();
+  if (typeof refreshBookshelfIfOpen === 'function') refreshBookshelfIfOpen();
 }
 
 // 編集モーダルを開いたとき初期値をセット（openEdit内で呼ぶため関数として公開）
@@ -4662,6 +4718,18 @@ function openCompose(){
   document.getElementById('compose-ov').classList.add('open');
   setTimeout(() => { try { editor.focus({ preventScroll: true }); } catch(e){ editor.focus(); } }, 50);
 }
+function newTargetRoomId(){ return (roomId && roomId !== TRASH_ROOM) ? roomId : (S.rooms[0] && S.rooms[0].id); }
+function newBoardMemo(){
+  const id = Date.now().toString();
+  S.memos.push({ id, guid: genGuid(), roomId: newTargetRoomId(), html: '', tags: [], bgColor: null, pinned: false, titleLine: true, board: { title: '無題のボード', els: [], view: { x: 60, y: 60, scale: 1 } }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+  persist(); renderMemos(); renderRooms(); openBoard(id, true);
+}
+function newFlashcardMemo(){
+  const id = Date.now().toString();
+  S.memos.push({ id, guid: genGuid(), roomId: newTargetRoomId(), html: '', back: '', flash: true, tags: [], bgColor: null, pinned: false, titleLine: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+  _newFlashId = id;
+  persist(); renderMemos(); renderRooms(); openEdit(id);   // 表/裏タブのある編集画面で入力
+}
 function closeCompose(){
   inputArea.appendChild(inputWrapper);
   inputArea.appendChild(inputBottom);
@@ -4917,7 +4985,7 @@ function cmdpCommands(){
     { ico: '🗂', label: '表示切替（チャット ⇔ メモ一覧）', run: () => { S.layoutMode = (S.layoutMode === 'note') ? 'chat' : 'note'; persist(); applyLayout(); renderMemos(); } },
     { ico: '🕸', label: 'グラフを開く', run: () => cmdpClick('graph-btn') },
     { ico: '📊', label: '統計を開く', run: () => cmdpClick('stats-btn') },
-    { ico: '📌', label: 'ピン留め一覧', run: () => cmdpClick('corkboard-btn') },
+    { ico: '📖', label: '本棚', run: () => cmdpClick('bookshelf-btn') },
     { ico: '📑', label: '下書きを開く', run: () => openDraftList() },
     { ico: '🎨', label: 'テーマ切替', run: () => cmdpClick('theme-btn') },
     { ico: '✏️', label: '一括編集モード', run: () => cmdpClick('bulk-edit-btn') },
@@ -7405,6 +7473,7 @@ document.getElementById('edit-save').onclick = async () => {
   _newFlashId = null;   // 保存したので破棄対象から外す
   _editDirty = false;
   closeOv('edit-ov');
+  refreshBookshelfIfOpen();
 };
 document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.onclick = () => editSetSide(b.dataset.side));
 document.getElementById('edit-cancel').onclick = closeEditAsk;
@@ -7514,9 +7583,11 @@ let jumpThumbTimer = null;
 function jumpThumbCard(m) {
   const card = document.createElement('div');
   const acts = document.createElement('div'); acts.className = 'g-thumb-acts';
+  const eb = document.createElement('button'); eb.className = 'g-thumb-act'; eb.title = '編集'; eb.textContent = '✏';
+  eb.onclick = (e) => { e.stopPropagation(); jumpHideThumb(); if (m.board) openBoard(m.id); else openEdit(m.id); };   // 本棚等は開いたまま上に編集画面を重ねる
   const zb = document.createElement('button'); zb.className = 'g-thumb-act'; zb.title = '拡大/縮小'; zb.textContent = '⤢';
   zb.onclick = (e) => { e.stopPropagation(); jumpSetBig(!document.getElementById('jump-thumb-pop').classList.contains('big')); };
-  acts.appendChild(zb); card.appendChild(acts);
+  acts.appendChild(eb); acts.appendChild(zb); card.appendChild(acts);
   const title = document.createElement('div'); title.className = 'g-thumb-title'; title.textContent = (m.board ? '🧩 ' : '') + (memoFirstLine(m) || '無題');
   card.appendChild(title);
   if (m.board) { card.appendChild(fbThumb(m)); }
@@ -9102,83 +9173,107 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Cork board ────────────────────────────────────────────────────
-const corkboardOverlay = document.getElementById('corkboard-overlay');
-const corkboardGrid    = document.getElementById('corkboard-grid');
-const corkboardEmpty   = document.getElementById('corkboard-empty');
-const CARD_ROTS = [-2.2, 1.5, -0.8, 2.8, -1.4, 0.6, -2.5, 1.1];
-
-function openCorkboard() {
-  const pinned = S.memos.filter(m => m.pinned);
-  corkboardGrid.innerHTML = '';
-  if (!pinned.length) {
-    corkboardEmpty.style.display = '';
+// ── 📖 本棚: タグごとに背表紙で並べる ─────────────────────────────
+const bookshelfOverlay = document.getElementById('bookshelf-overlay');
+let bookshelfTagSort = 'gojuon';    // 棚(タグ): gojuon | count | random
+let bookshelfBookSort = 'new';      // 本(メモ): new | old | title | random
+let bookshelfHidden = new Set();    // 非表示にするタグ
+const BOOK_COLORS = ['#8d6e63','#6d8b74','#5b7fa6','#a6685b','#7d6ba6','#b08d3f','#4f8a8b','#a65b7f','#557a95','#7a8c5b','#9c6b4f','#5f6caf'];
+function bookHash(str){ let h = 0; for (const c of String(str)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
+function bookColor(str){ return BOOK_COLORS[bookHash(str) % BOOK_COLORS.length]; }
+function bookHeight(str){ return 122 + (bookHash(str + 'h') % 48); }   // 122〜169px
+function bookshelfGo(m){
+  closeBookshelf();
+  if (m.roomId !== roomId) switchRoom(m.roomId);
+  setTimeout(() => {
+    renderMemos();
+    setTimeout(() => { const el = document.getElementById('memo-' + m.id); if (el){ el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('jump-highlight'); setTimeout(() => el.classList.remove('jump-highlight'), 1800); } }, 80);
+  }, m.roomId !== roomId ? 150 : 0);
+}
+function bookSpine(m){
+  const title = memoFirstLine(m) || '（無題）';
+  const sp = document.createElement('div'); sp.className = 'shelf-spine';
+  sp.style.background = bookColor(m.id || title); sp.style.height = bookHeight(m.id || title) + 'px';
+  const t = document.createElement('div'); t.className = 'shelf-spine-title'; t.textContent = (m.board ? '🧩 ' : m.flash ? '🔄 ' : '') + title;
+  sp.appendChild(t);
+  if (jumpCanHover){
+    sp.addEventListener('mouseenter', () => jumpShowThumb(m, sp, false));
+    sp.addEventListener('mouseleave', jumpHideThumbSoon);
+    sp.addEventListener('click', () => bookshelfGo(m));
   } else {
-    corkboardEmpty.style.display = 'none';
-    pinned.forEach((m, i) => {
-      const card = document.createElement('div');
-      card.className = 'cork-card';
-      card.style.setProperty('--card-rot', CARD_ROTS[i % CARD_ROTS.length] + 'deg');
-
-      const inner = document.createElement('div'); inner.className = 'cork-card-inner';
-
-      const room = S.rooms.find(r => r.id === m.roomId);
-      if (room) {
-        const rLabel = document.createElement('div');
-        rLabel.className = 'cork-card-room';
-        rLabel.textContent = (room.icon || '') + ' ' + room.name;
-        inner.appendChild(rLabel);
-      }
-
-      const bc = document.createElement('div');
-      bc.className = 'bc';
-      bc.innerHTML = m.html;
-      hydrateImages(bc);
-      bc.querySelectorAll('script').forEach(s => s.remove());
-      bc.querySelectorAll('img').forEach(img => { img.style.maxWidth = '100%'; });
-      inner.appendChild(bc);
-
-      const fade = document.createElement('div'); fade.className = 'cork-card-fade';
-      fade.style.display = 'none';
-      inner.appendChild(fade);
-      inner.addEventListener('scroll', e => {
-        e.stopPropagation();
-        const atBottom = inner.scrollHeight - inner.scrollTop <= inner.clientHeight + 2;
-        fade.style.display = atBottom ? 'none' : '';
-      });
-      card.appendChild(inner);
-
-      const ti = document.createElement('div'); ti.className = 'cork-card-time';
-      ti.textContent = fmtTime(m.updatedAt || m.createdAt);
-      card.appendChild(ti);
-
-      card.onclick = () => {
-        closeCorkboard();
-        if (m.roomId !== roomId) switchRoom(m.roomId);
-        setTimeout(() => {
-          renderMemos();
-          setTimeout(() => {
-            const el = document.getElementById('memo-' + m.id);
-            if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('jump-highlight'); setTimeout(() => el.classList.remove('jump-highlight'), 1800); }
-          }, 80);
-        }, m.roomId !== roomId ? 150 : 0);
-      };
-      corkboardGrid.appendChild(card);
-    });
+    let lastTap = 0;
+    sp.addEventListener('click', () => { const now = Date.now(); if (now - lastTap < 350){ lastTap = 0; bookshelfGo(m); } else { lastTap = now; jumpShowThumb(m, sp, true); } });   // タップでサムネ、ダブルタップで開く
   }
-  corkboardOverlay.classList.add('open');
-  // DOM描画後にオーバーフローを確認し、はみ出ているカードのみフェードを表示
-  requestAnimationFrame(() => {
-    corkboardGrid.querySelectorAll('.cork-card-inner').forEach(inner => {
-      const fade = inner.querySelector('.cork-card-fade');
-      if (fade) fade.style.display = inner.scrollHeight > inner.clientHeight ? '' : 'none';
-    });
+  return sp;
+}
+function bookshelfRender(){
+  const shelves = document.getElementById('bookshelf-shelves'); shelves.innerHTML = '';
+  const empty = document.getElementById('bookshelf-empty');
+  const memos = S.memos.filter(m => m.roomId === roomId);
+  if (!memos.length){ empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  const map = new Map();
+  memos.forEach(m => { const tags = (m.tags && m.tags.length) ? m.tags : ['（タグなし）']; tags.forEach(t => { if (!map.has(t)) map.set(t, []); map.get(t).push(m); }); });
+  let tags = [...map.keys()].filter(t => !bookshelfHidden.has(t));
+  if (!tags.length){ empty.style.display = ''; empty.textContent = '表示するタグが選ばれていません'; return; }
+  empty.textContent = 'このルームにメモがありません';
+  if (bookshelfTagSort === 'gojuon') tags.sort((a, b) => a.localeCompare(b, 'ja'));
+  else if (bookshelfTagSort === 'count') tags.sort((a, b) => map.get(b).length - map.get(a).length || a.localeCompare(b, 'ja'));
+  else for (let i = tags.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [tags[i], tags[j]] = [tags[j], tags[i]]; }
+  const mtime = m => new Date(m.updatedAt || m.createdAt).getTime();
+  tags.forEach(tag => {
+    const shelf = document.createElement('div'); shelf.className = 'shelf';
+    const lbl = document.createElement('div'); lbl.className = 'shelf-label'; lbl.textContent = (tag === '（タグなし）' ? tag : '# ' + tag) + '  (' + map.get(tag).length + ')'; shelf.appendChild(lbl);
+    const books = document.createElement('div'); books.className = 'shelf-books';
+    let bs = map.get(tag).slice();
+    if (bookshelfBookSort === 'random') for (let i = bs.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [bs[i], bs[j]] = [bs[j], bs[i]]; }
+    else if (bookshelfBookSort === 'old') bs.sort((a, b) => mtime(a) - mtime(b));
+    else if (bookshelfBookSort === 'title') bs.sort((a, b) => (memoFirstLine(a) || '').localeCompare(memoFirstLine(b) || '', 'ja', { numeric: true, sensitivity: 'base' }));
+    else bs.sort((a, b) => mtime(b) - mtime(a));   // new
+    bs.forEach(m => books.appendChild(bookSpine(m)));
+    shelf.appendChild(books); shelves.appendChild(shelf);
   });
 }
-function closeCorkboard() { corkboardOverlay.classList.remove('open'); }
-
-document.getElementById('corkboard-btn').onclick = openCorkboard;
-document.getElementById('corkboard-close').onclick = closeCorkboard;
-corkboardOverlay.addEventListener('click', e => { if (e.target === corkboardOverlay) closeCorkboard(); });
+function bookshelfAllTags(){
+  const set = new Set();
+  S.memos.filter(m => m.roomId === roomId).forEach(m => { const tags = (m.tags && m.tags.length) ? m.tags : ['（タグなし）']; tags.forEach(t => set.add(t)); });
+  return [...set].sort((a, b) => a.localeCompare(b, 'ja'));
+}
+function bookshelfBuildFilter(){
+  const list = document.getElementById('bsh-filter-list'); list.innerHTML = '';
+  bookshelfAllTags().forEach(t => {
+    const row = document.createElement('label'); row.className = 'bsh-filter-item';
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !bookshelfHidden.has(t);
+    cb.onchange = () => { if (cb.checked) bookshelfHidden.delete(t); else bookshelfHidden.add(t); updateBookshelfFilterBtn(); bookshelfRender(); };
+    const sp = document.createElement('span'); sp.textContent = t;
+    row.appendChild(cb); row.appendChild(sp); list.appendChild(row);
+  });
+}
+function updateBookshelfFilterBtn(){ const b = document.getElementById('bookshelf-filter-btn'); if (b) b.classList.toggle('on', bookshelfHidden.size > 0); }
+function refreshBookshelfIfOpen(){ if (bookshelfOverlay && bookshelfOverlay.classList.contains('open')) bookshelfRender(); }
+function openBookshelf(){ bookshelfBuildFilter(); updateBookshelfFilterBtn(); bookshelfRender(); bookshelfOverlay.classList.add('open'); }
+function closeBookshelf(){ bookshelfOverlay.classList.remove('open'); document.getElementById('bookshelf-filter').classList.remove('show'); jumpHideThumb(); }
+document.getElementById('bookshelf-btn').onclick = openBookshelf;
+document.getElementById('bookshelf-close').onclick = closeBookshelf;
+bookshelfOverlay.addEventListener('click', e => { if (e.target === bookshelfOverlay) closeBookshelf(); });
+bookshelfOverlay.addEventListener('pointerdown', e => {
+  const f = document.getElementById('bookshelf-filter');
+  if (f.classList.contains('show') && !e.target.closest('#bookshelf-filter') && !e.target.closest('#bookshelf-filter-btn')) f.classList.remove('show');
+});
+document.getElementById('bookshelf-body').addEventListener('scroll', () => { jumpHideThumb(); document.getElementById('bookshelf-filter').classList.remove('show'); });
+document.getElementById('bookshelf-filter-btn').onclick = () => { const f = document.getElementById('bookshelf-filter'); const show = !f.classList.contains('show'); if (show) bookshelfBuildFilter(); f.classList.toggle('show', show); };
+document.getElementById('bsh-filter-all').onclick = () => { bookshelfHidden.clear(); bookshelfBuildFilter(); updateBookshelfFilterBtn(); bookshelfRender(); };
+document.getElementById('bsh-filter-none').onclick = () => { bookshelfAllTags().forEach(t => bookshelfHidden.add(t)); bookshelfBuildFilter(); updateBookshelfFilterBtn(); bookshelfRender(); };
+document.getElementById('bsh-new-memo').onclick = () => { closeBookshelf(); openCompose(); };
+document.getElementById('bsh-new-board').onclick = () => { closeBookshelf(); newBoardMemo(); };
+document.getElementById('bsh-new-flash').onclick = () => { closeBookshelf(); newFlashcardMemo(); };
+function bookshelfSyncSortUI(){
+  document.querySelectorAll('#bookshelf-sort .bsh-sort[data-tagsort]').forEach(x => x.classList.toggle('on', x.dataset.tagsort === bookshelfTagSort));
+  document.querySelectorAll('#bookshelf-sort .bsh-sort[data-booksort]').forEach(x => x.classList.toggle('on', x.dataset.booksort === bookshelfBookSort));
+}
+document.querySelectorAll('#bookshelf-sort .bsh-sort[data-tagsort]').forEach(b => b.onclick = () => { bookshelfTagSort = b.dataset.tagsort; bookshelfSyncSortUI(); bookshelfRender(); });
+document.querySelectorAll('#bookshelf-sort .bsh-sort[data-booksort]').forEach(b => b.onclick = () => { bookshelfBookSort = b.dataset.booksort; bookshelfSyncSortUI(); bookshelfRender(); });
+bookshelfSyncSortUI();
 
 
 function rmMode() { const rm = S.readMore || {}; return rm.mode || (rm.enabled ? 'readmore' : 'off'); }
@@ -9444,6 +9539,7 @@ function fbClose(save){
   document.getElementById('fb-el-actions').classList.remove('show');
   fbSel = null; fbMemoId = null; fbIsNew = false;
   renderTagBar(); renderMemos(); renderRooms();
+  if (typeof refreshBookshelfIfOpen === 'function') refreshBookshelfIfOpen();
 }
 function fbApplyView(){
   document.getElementById('fb-world').style.transform = 'translate(' + fbView.x + 'px,' + fbView.y + 'px) scale(' + fbView.scale + ')';
@@ -10003,18 +10099,9 @@ function renderBoardBubble(m, q, showRoom, container){
 (function fbWire(){
   const $ = id => document.getElementById(id);
   if (!$('fb-ov')) return;
-  $('fb-new-btn').onclick = () => {
-    const id = Date.now().toString();
-    S.memos.push({ id, guid: genGuid(), roomId, html: '', tags: [], bgColor: null, pinned: false, titleLine: true, board: { title: '無題のボード', els: [], view: { x: 60, y: 60, scale: 1 } }, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
-    persist(); renderMemos(); renderRooms(); openBoard(id, true);
-  };
+  $('fb-new-btn').onclick = newBoardMemo;
   const flashNewBtn = $('flash-new-btn');
-  if (flashNewBtn) flashNewBtn.onclick = () => {
-    const id = Date.now().toString();
-    S.memos.push({ id, guid: genGuid(), roomId, html: '', back: '', flash: true, tags: [], bgColor: null, pinned: false, titleLine: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
-    _newFlashId = id;
-    persist(); renderMemos(); renderRooms(); openEdit(id);   // 表/裏タブのある編集画面で入力
-  };
+  if (flashNewBtn) flashNewBtn.onclick = newFlashcardMemo;
   $('fb-close').onclick = () => fbClose(true);
   if ($('fb-back')) $('fb-back').onclick = () => fbClose(false);
   if ($('fbe-del')) $('fbe-del').onclick = fbDeleteSel;
@@ -10314,6 +10401,9 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
   const $ = id => document.getElementById(id); if (!$('g-ov')) return;
   $('graph-btn').onclick = gOpen;
   $('g-close').onclick = gClose;
+  $('g-new-memo').onclick = () => { gClose(); openCompose(); };
+  $('g-new-board').onclick = () => { gClose(); newBoardMemo(); };
+  $('g-new-flash').onclick = () => { gClose(); newFlashcardMemo(); };
   $('g-filter-btn').onclick = () => $('g-filter').classList.toggle('show');
   // パネル外タップで閉じる（スマホでフィルターボタンが隠れて閉じられない問題対策）
   $('g-ov').addEventListener('pointerdown', e => {
@@ -10335,7 +10425,7 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
   pop.addEventListener('mouseenter', () => clearTimeout(gHideTimer));
   pop.addEventListener('mouseleave', gHideThumbSoon);
   pop.addEventListener('click', () => { if (gCoarse) return; if (Date.now() - gThumbShownAt < 500) return; if (gThumbMemoId) gOpenPreview(gThumbMemoId); });
-  $('g-preview-edit').onclick = () => { const id = gPreviewMemoId; gClosePreview(); openEdit(id); };
+  $('g-preview-edit').onclick = () => { const id = gPreviewMemoId; const m = S.memos.find(x => x.id === id); gClosePreview(); if (m && m.board) openBoard(id); else openEdit(id); };   // ボードはボード編集で開く（グラフは開いたまま）
   $('g-preview-jump').onclick = () => { const id = gPreviewMemoId; gClosePreview(); gJump(id); };
   $('g-preview-close').onclick = gClosePreview;
   $('g-preview').addEventListener('click', e => { if (e.target === $('g-preview')) gClosePreview(); });
