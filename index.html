@@ -1164,13 +1164,13 @@ body.force-mobile #mdi-panes { flex-direction: column; }
 .tb-lane { position: relative; height: 50px; flex: 0 0 auto; touch-action: none; background: repeating-linear-gradient(90deg, transparent, transparent 0, rgba(0,0,0,.015) 0); }
 .tb-grid { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid var(--th-sep); opacity: .5; pointer-events: none; }
 .tb-tick { pointer-events: none; }
-.tb-bar { position: absolute; top: 6px; height: 38px; border-radius: 6px; cursor: grab; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.18); display: flex; align-items: center; user-select: none; }
+.tb-bar { position: absolute; top: 6px; height: 38px; border-radius: 6px; cursor: grab; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.18); display: flex; align-items: center; user-select: none; touch-action: none; }
 .tb-bar.plan { background: #cfe0f5; border: 1px solid #6fa0d8; }
 .tb-bar.actual { background: #f5dccf; border: 1px solid #d89a6f; }
 .tb-bar.sel { outline: 2px solid var(--c1); outline-offset: 1px; }
 .tb-bar.temp { opacity: .55; pointer-events: none; }
 .tb-bar-label { font-size: .72rem; color: #2a3b4a; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
-.tb-h { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; }
+.tb-h { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; touch-action: none; }
 .tb-h-l { left: 0; } .tb-h-r { right: 0; }
 #tb-summary { flex: 1; overflow: auto; padding: 10px 14px; }
 #tb-summary h4 { margin: 4px 0 6px; font-size: .84rem; color: var(--c1); }
@@ -6437,9 +6437,74 @@ function tbMakeBar(key, b, sm, px10){
   tbWireBar(d, key, b, sm, px10);
   return d;
 }
+function tbUpdateBarEl(el, key, b, sm, px10){
+  el.style.left = ((b.s - sm) / 10 * px10) + 'px'; el.style.width = Math.max(px10, ((b.e - b.s) / 10 * px10)) + 'px';
+  const lab = el.querySelector('.tb-bar-label'); if (lab) lab.textContent = tbBarLabel(key, b) + ' ' + tbMinToLabel(b.s) + '–' + tbMinToLabel(b.e);
+}
+// タッチ操作: バー上ドラッグ=スクロール / 空長押し=作成 / 選択中バー長押し=近い端を伸縮 /
+//            選択中バードラッグ=移動 / 空タップ=解除 / 選択中バー再タップ=改名
+function tbTouchStart(e, key, sm, px10, lane){
+  const wrap = document.getElementById('tb-gantt-wrap');
+  const laneRect = lane.getBoundingClientRect();
+  const barEl = e.target.closest('.tb-bar');
+  const barObj = barEl ? _tb[key].find(b => b.id === barEl.dataset.id) : null;
+  const isSel = !!(barObj && _tbSel && _tbSel.lane === key && _tbSel.id === barObj.id);
+  const em = _tb.endH * 60;
+  const startX = e.clientX, startY = e.clientY, scroll0 = wrap.scrollLeft;
+  const s0 = barObj ? barObj.s : 0, e0 = barObj ? barObj.e : 0;
+  let mode = 'pending', moved = false, temp = null, createStart = 0;
+  const longTimer = setTimeout(() => {
+    if (moved || mode !== 'pending') return;
+    if (!barObj){
+      mode = 'create'; createStart = Math.max(sm, Math.min(tbSnapMin(startX - laneRect.left, sm, px10), em));
+      temp = document.createElement('div'); temp.className = 'tb-bar ' + key + ' temp';
+      temp.style.left = ((createStart - sm) / 10 * px10) + 'px'; temp.style.width = '0px'; lane.appendChild(temp);
+    } else if (isSel){
+      const rel = startX - barEl.getBoundingClientRect().left;
+      mode = rel < barEl.offsetWidth / 2 ? 'resizeL' : 'resizeR';
+    }
+    if (navigator.vibrate) navigator.vibrate(12);
+  }, 380);
+  const move = ev => {
+    const dxPix = ev.clientX - startX;
+    if (mode === 'pending'){
+      if (Math.abs(dxPix) > 6 || Math.abs(ev.clientY - startY) > 6){ moved = true; clearTimeout(longTimer); mode = (barObj && isSel) ? 'move' : 'scroll'; }
+      else return;
+    }
+    if (mode === 'scroll'){ wrap.scrollLeft = scroll0 - dxPix; if (ev.cancelable) ev.preventDefault(); return; }
+    const dxMin = Math.round(dxPix / px10) * 10;
+    if (mode === 'create'){ const cur = Math.max(sm, Math.min(tbSnapMin(ev.clientX - laneRect.left, sm, px10), em)); const a = Math.min(createStart, cur), bb = Math.max(createStart, cur); temp.style.left = ((a - sm) / 10 * px10) + 'px'; temp.style.width = ((bb - a) / 10 * px10) + 'px'; if (ev.cancelable) ev.preventDefault(); return; }
+    if (mode === 'move'){ let ns = s0 + dxMin, ne = e0 + dxMin; if (ns < sm){ ne += sm - ns; ns = sm; } if (ne > em){ ns -= ne - em; ne = em; } barObj.s = ns; barObj.e = ne; tbUpdateBarEl(barEl, key, barObj, sm, px10); if (ev.cancelable) ev.preventDefault(); return; }
+    if (mode === 'resizeL'){ barObj.s = Math.max(sm, Math.min(s0 + dxMin, barObj.e - 10)); tbUpdateBarEl(barEl, key, barObj, sm, px10); if (ev.cancelable) ev.preventDefault(); return; }
+    if (mode === 'resizeR'){ barObj.e = Math.min(em, Math.max(e0 + dxMin, barObj.s + 10)); tbUpdateBarEl(barEl, key, barObj, sm, px10); if (ev.cancelable) ev.preventDefault(); return; }
+  };
+  const up = ev => {
+    clearTimeout(longTimer);
+    document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up);
+    if (mode === 'pending'){
+      if (!barObj){ if (_tbSel){ _tbSel = null; tbRender(); } }               // 空タップ→解除
+      else if (isSel){ tbEditBar(key, barObj); tbRender(); }                    // 選択中を再タップ→改名
+      else { _tbSel = { lane: key, id: barObj.id }; tbRender(); }               // バータップ→選択
+      return;
+    }
+    if (mode === 'create'){
+      if (temp) temp.remove();
+      const cur = Math.max(sm, Math.min(tbSnapMin(ev.clientX - laneRect.left, sm, px10), em));
+      let a = Math.min(createStart, cur), bb = Math.max(createStart, cur);
+      if (bb - a < 10){ a = createStart; bb = Math.min(em, createStart + 30); }   // 長押しのみ→30分
+      if (bb - a < 10){ tbRender(); return; }
+      const nb = { id: tbId(), s: a, e: bb, label: '', cat: '' }; tbEditBar(key, nb);
+      _tb[key].push(nb); _tbSel = { lane: key, id: nb.id }; tbRender(); return;
+    }
+    if (mode !== 'scroll') tbRender();   // move / resize
+  };
+  document.addEventListener('pointermove', move, { passive: false });
+  document.addEventListener('pointerup', up);
+}
 function tbWireLaneCreate(lane, key, sm, px10){
   lane.addEventListener('pointerdown', e => {
     if (e.target !== lane) return;
+    if (e.pointerType === 'touch'){ tbTouchStart(e, key, sm, px10, lane); return; }
     e.preventDefault();
     const rect = lane.getBoundingClientRect();
     const startMin = tbSnapMin(e.clientX - rect.left, sm, px10);
@@ -6461,6 +6526,7 @@ function tbWireLaneCreate(lane, key, sm, px10){
 let _tbLastTap = 0;
 function tbWireBar(d, key, b, sm, px10){
   d.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch'){ e.stopPropagation(); tbTouchStart(e, key, sm, px10, d.closest('.tb-lane')); return; }
     e.stopPropagation(); e.preventDefault();
     const mode = e.target.classList.contains('tb-h-l') ? 'l' : e.target.classList.contains('tb-h-r') ? 'r' : 'move';
     const startX = e.clientX, s0 = b.s, e0 = b.e, em = _tb.endH * 60; let moved = false;
