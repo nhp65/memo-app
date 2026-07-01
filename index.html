@@ -10277,4 +10277,10 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
     const wx = (e.clientX - r.left - gView.x) / gView.scale, wy = (e.clientY - r.top - gView.y) / gView.scale;
     gView.scale = ns; gView.x = e.clientX - r.left - wx * ns; gView.y = e.clientY - r.top - wy * ns; applyGView();
   }, { passive: false });
-  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('g-preview').classList.contains('show')) gCloseP
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('g-preview').classList.contains('show')) gClosePreview(); else if ($('g-ov').classList.contains('open')) gClose(); });
+})();
+
+initApp();
+</script>
+</body>
+</html>
