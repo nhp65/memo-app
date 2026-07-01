@@ -4734,6 +4734,7 @@ function closeCompose(){
   inputArea.appendChild(inputWrapper);
   inputArea.appendChild(inputBottom);
   document.getElementById('compose-ov').classList.remove('open');
+  if (typeof refreshBookshelfIfOpen === 'function') refreshBookshelfIfOpen();
 }
 document.getElementById('expand-input-btn').onclick = openCompose;
 
@@ -9264,9 +9265,9 @@ document.getElementById('bookshelf-body').addEventListener('scroll', () => { jum
 document.getElementById('bookshelf-filter-btn').onclick = () => { const f = document.getElementById('bookshelf-filter'); const show = !f.classList.contains('show'); if (show) bookshelfBuildFilter(); f.classList.toggle('show', show); };
 document.getElementById('bsh-filter-all').onclick = () => { bookshelfHidden.clear(); bookshelfBuildFilter(); updateBookshelfFilterBtn(); bookshelfRender(); };
 document.getElementById('bsh-filter-none').onclick = () => { bookshelfAllTags().forEach(t => bookshelfHidden.add(t)); bookshelfBuildFilter(); updateBookshelfFilterBtn(); bookshelfRender(); };
-document.getElementById('bsh-new-memo').onclick = () => { closeBookshelf(); openCompose(); };
-document.getElementById('bsh-new-board').onclick = () => { closeBookshelf(); newBoardMemo(); };
-document.getElementById('bsh-new-flash').onclick = () => { closeBookshelf(); newFlashcardMemo(); };
+document.getElementById('bsh-new-memo').onclick = () => openCompose();      // 本棚は開いたまま上に重ねる
+document.getElementById('bsh-new-board').onclick = () => newBoardMemo();
+document.getElementById('bsh-new-flash').onclick = () => newFlashcardMemo();
 function bookshelfSyncSortUI(){
   document.querySelectorAll('#bookshelf-sort .bsh-sort[data-tagsort]').forEach(x => x.classList.toggle('on', x.dataset.tagsort === bookshelfTagSort));
   document.querySelectorAll('#bookshelf-sort .bsh-sort[data-booksort]').forEach(x => x.classList.toggle('on', x.dataset.booksort === bookshelfBookSort));
@@ -10401,9 +10402,9 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
   const $ = id => document.getElementById(id); if (!$('g-ov')) return;
   $('graph-btn').onclick = gOpen;
   $('g-close').onclick = gClose;
-  $('g-new-memo').onclick = () => { gClose(); openCompose(); };
-  $('g-new-board').onclick = () => { gClose(); newBoardMemo(); };
-  $('g-new-flash').onclick = () => { gClose(); newFlashcardMemo(); };
+  $('g-new-memo').onclick = () => openCompose();      // グラフは開いたまま上に重ねる
+  $('g-new-board').onclick = () => newBoardMemo();
+  $('g-new-flash').onclick = () => newFlashcardMemo();
   $('g-filter-btn').onclick = () => $('g-filter').classList.toggle('show');
   // パネル外タップで閉じる（スマホでフィルターボタンが隠れて閉じられない問題対策）
   $('g-ov').addEventListener('pointerdown', e => {
