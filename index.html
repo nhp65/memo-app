@@ -1143,6 +1143,55 @@ body.force-mobile #mdi-panes { flex-direction: column; }
 #cal-list { display: flex; flex-direction: column; gap: 3px; }
 #cal-list:empty { display: none; }
 /* スプレッドシート */
+/* タイムブロック */
+#tb-ov { display: none; position: fixed; inset: 0; z-index: 780; background: var(--c4); flex-direction: column; }
+#tb-ov.open { display: flex; }
+#tb-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--c1); color: #fff; flex-shrink: 0; flex-wrap: wrap; }
+#tb-head input#tb-title { flex: 0 1 200px; padding: 6px 10px; border: none; border-radius: 7px; font-size: .9rem; color: var(--c3); }
+#tb-head select { padding: 4px 6px; border-radius: 6px; border: none; font-size: .82rem; color: var(--c3); }
+#tb-head .tb-hlbl { font-size: .8rem; display: flex; align-items: center; gap: 4px; }
+#tb-head button { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 7px; padding: 6px 11px; cursor: pointer; font-size: .82rem; }
+#tb-head button:hover { background: rgba(255,255,255,.32); }
+#tb-head #tb-zoom-lvl { font-size: .76rem; min-width: 40px; text-align: center; }
+#tb-hint { font-size: .74rem; color: var(--th-muted); padding: 5px 12px; background: var(--th-toolbar); flex-shrink: 0; }
+#tb-gantt-wrap { overflow: auto; background: var(--th-edit); flex-shrink: 0; max-height: 46vh; }
+#tb-gantt { position: relative; padding: 0 0 8px; min-width: 100%; }
+.tb-ruler { position: relative; height: 20px; border-bottom: 1px solid var(--th-sep); }
+.tb-tick { position: absolute; top: 0; font-size: .68rem; color: var(--th-muted); transform: translateX(-1px); border-left: 1px solid var(--th-sep); padding-left: 2px; height: 20px; }
+.tb-lanewrap { display: flex; align-items: stretch; border-bottom: 1px solid var(--th-sep); }
+.tb-lanelabel { flex: 0 0 52px; position: sticky; left: 0; z-index: 3; display: flex; align-items: center; justify-content: center; font-size: .78rem; font-weight: 700; background: var(--th-bubble); border-right: 1px solid var(--th-sep); }
+.tb-lanelabel.plan { color: #3a78c2; } .tb-lanelabel.actual { color: #c2683a; }
+.tb-lane { position: relative; height: 50px; flex: 0 0 auto; touch-action: none; background: repeating-linear-gradient(90deg, transparent, transparent 0, rgba(0,0,0,.015) 0); }
+.tb-grid { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid var(--th-sep); opacity: .5; pointer-events: none; }
+.tb-tick { pointer-events: none; }
+.tb-bar { position: absolute; top: 6px; height: 38px; border-radius: 6px; cursor: grab; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.18); display: flex; align-items: center; user-select: none; }
+.tb-bar.plan { background: #cfe0f5; border: 1px solid #6fa0d8; }
+.tb-bar.actual { background: #f5dccf; border: 1px solid #d89a6f; }
+.tb-bar.sel { outline: 2px solid var(--c1); outline-offset: 1px; }
+.tb-bar.temp { opacity: .55; pointer-events: none; }
+.tb-bar-label { font-size: .72rem; color: #2a3b4a; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+.tb-h { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; }
+.tb-h-l { left: 0; } .tb-h-r { right: 0; }
+#tb-summary { flex: 1; overflow: auto; padding: 10px 14px; }
+#tb-summary h4 { margin: 4px 0 6px; font-size: .84rem; color: var(--c1); }
+.tb-sum { border-collapse: collapse; width: 100%; margin-bottom: 12px; font-size: .8rem; }
+.tb-sum th, .tb-sum td { border: 1px solid var(--th-tbdr, #cce5f0); padding: 4px 8px; text-align: left; }
+.tb-sum th { background: var(--th-toolbar); }
+.tb-sum .tb-grand td { font-weight: 700; background: rgba(76,124,157,.08); }
+.tb-sum-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.tb-sum-row .tb-sum-sec { flex: 1; min-width: 200px; }
+/* タイムブロックのサムネイル（メモ/付箋に埋め込み） */
+.tb-thumb { border: 1px solid var(--th-tbdr, #cce5f0); border-radius: 8px; overflow: hidden; max-width: 460px; }
+.tb-thumb-bar { background: var(--th-toolbar); font-size: .76rem; font-weight: 700; color: var(--c1); padding: 3px 8px; }
+.tb-thumb-lane { position: relative; height: 16px; background: var(--th-bubble); border-top: 1px solid var(--th-sep); }
+.tb-thumb-seg { position: absolute; top: 2px; height: 12px; border-radius: 3px; }
+.tb-thumb-seg.plan { background: #6fa0d8; } .tb-thumb-seg.actual { background: #d89a6f; }
+.tb-thumb-sum { border-collapse: collapse; width: 100%; font-size: .72rem; border-top: 1px solid var(--th-sep); }
+.tb-thumb-sum caption { text-align: left; font-size: .68rem; color: var(--th-muted); padding: 3px 6px 1px; }
+.tb-thumb-sum td { border-top: 1px solid var(--th-sep); padding: 2px 6px; color: var(--th-text); }
+.tb-thumb-sum td.tb-thumb-h { text-align: right; font-variant-numeric: tabular-nums; width: 3.2em; }
+.tb-thumb-sum .tb-thumb-grand td { font-weight: 700; background: rgba(76,124,157,.08); }
+.tb-embed { margin: 6px 0; }
 #sheet-ov { display: none; position: fixed; inset: 0; z-index: 780; background: var(--c4); flex-direction: column; }
 #sheet-ov.open { display: flex; }
 #sheet-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--c1); color: #fff; flex-shrink: 0; }
@@ -1519,10 +1568,9 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
       <input type="checkbox" id="edit-title-line-chk">
       <label for="edit-title-line-chk">1行目をタイトル表示</label>
     </div>
-    <div class="title-line-row">
-      <input type="checkbox" id="edit-flash-chk">
-      <label for="edit-flash-chk">🔄 単語帳（表/裏をつける）</label>
-      <span id="edit-flash-tabs" style="display:none;margin-left:10px">
+    <div class="title-line-row" id="edit-flash-row" style="display:none">
+      <span style="font-size:.85rem;color:var(--c1);font-weight:700">🔄 単語帳</span>
+      <span id="edit-flash-tabs" style="margin-left:10px">
         <button type="button" class="flash-tab on" data-side="front">表</button>
         <button type="button" class="flash-tab" data-side="back">裏</button>
         <span style="font-size:.74rem;color:#999;margin-left:6px">タブで表/裏を切り替えて編集</span>
@@ -2091,6 +2139,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button data-add="image">🖼 画像</button>
     <button data-add="sheet">📊 表計算</button>
     <button data-add="mindmap">🧠 マインドマップ</button>
+    <button data-add="timeblock">🗓 タイムブロック</button>
     <span class="fb-tb-sep"></span>
     <span id="fb-colors"></span>
   </div>
@@ -2121,6 +2170,23 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <div id="cal-grid"></div>
     <div id="cal-list"></div>
   </div>
+</div>
+
+<!-- タイムブロック 全画面エディタ -->
+<div id="tb-ov">
+  <div id="tb-head">
+    <input id="tb-title" type="text" placeholder="タイトル">
+    <label class="tb-hlbl">開始 <select id="tb-start"></select></label>
+    <label class="tb-hlbl">終了 <select id="tb-end"></select></label>
+    <button id="tb-zoom-out" title="縮小">－</button><span id="tb-zoom-lvl">100%</span><button id="tb-zoom-in" title="拡大">＋</button>
+    <span style="flex:1"></span>
+    <button id="tb-del" title="選択中のバーを削除">🗑 バー削除</button>
+    <button id="tb-back">← 保存せず戻る</button>
+    <button id="tb-close">✓ 保存して閉じる</button>
+  </div>
+  <div id="tb-hint">空きをドラッグでバー作成（10分スナップ）／バーをドラッグで移動・左右端で伸縮／ダブルクリックで名前を編集</div>
+  <div id="tb-gantt-wrap"><div id="tb-gantt"></div></div>
+  <div id="tb-summary"></div>
 </div>
 
 <!-- スプレッドシート 全画面エディタ -->
@@ -3170,7 +3236,7 @@ function buildToolbar(barId) {
   // 画像・スニペットはツールバーへ（新規入力・編集の両方／フリーボードのテキストには付けない）
   if (barId !== 'fb-fmt-bar') {
     document.getElementById(barId).insertAdjacentHTML('beforeend',
-      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="imgurl" title="画像URLを挿入">🔗🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button><button class="fb" data-c="sheet" title="スプレッドシートを挿入">📊</button><button class="fb" data-c="mindmap" title="マインドマップを挿入">🧠</button><button class="fb" data-c="slide" title="スライド（複数画像）を挿入">🎞</button><button class="fb" data-c="switch" title="スイッチ（タップで — × ○ △ ? を切替）">◔</button><button class="fb" data-c="copyfmt" title="選択範囲（無ければ全体）の書式をコピー">⧉コピー</button><button class="fb" data-c="pastefmt" title="コピーした書式を貼り付け">📋貼</button>');
+      '<div class="fs"></div><button class="fb" data-c="image" title="画像を挿入">🖼</button><button class="fb" data-c="imgurl" title="画像URLを挿入">🔗🖼</button><button class="fb" data-c="snippet" title="スニペット挿入">✂️</button><button class="fb" data-c="sheet" title="スプレッドシートを挿入">📊</button><button class="fb" data-c="mindmap" title="マインドマップを挿入">🧠</button><button class="fb" data-c="timeblock" title="タイムブロック（予定/実働ガント）を挿入">🗓</button><button class="fb" data-c="slide" title="スライド（複数画像）を挿入">🎞</button><button class="fb" data-c="switch" title="スイッチ（タップで — × ○ △ ? を切替）">◔</button><button class="fb" data-c="copyfmt" title="選択範囲（無ければ全体）の書式をコピー">⧉コピー</button><button class="fb" data-c="pastefmt" title="コピーした書式を貼り付け">📋貼</button>');
   } else {
     document.getElementById(barId).insertAdjacentHTML('beforeend',
       '<div class="fs"></div><button class="fb" data-c="slide" title="スライド（複数画像）を挿入">🎞</button><button class="fb" data-c="switch" title="スイッチ（タップで — × ○ △ ? を切替）">◔</button><button class="fb" data-c="copyfmt" title="選択範囲（無ければ全体）の書式をコピー">⧉コピー</button><button class="fb" data-c="pastefmt" title="コピーした書式を貼り付け">📋貼</button>');
@@ -3313,6 +3379,13 @@ function applyFmt(cmd, targetEl, e) {
       S.mindmaps = S.mindmaps || {}; S.mindmaps[id] = makeMindmap(); persist();
       document.execCommand('insertHTML', false, '<div class="map-embed" data-map="' + id + '" contenteditable="false"></div><p><br></p>');
       hydrateMapEmbeds(targetEl);
+      break;
+    }
+    case 'timeblock': {
+      const id = 'tb' + Date.now().toString(36);
+      S.timeblocks = S.timeblocks || {}; S.timeblocks[id] = makeTimeblock(); persist();
+      document.execCommand('insertHTML', false, '<div class="tb-embed" data-tb="' + id + '" contenteditable="false"></div><p><br></p>');
+      hydrateTbEmbeds(targetEl);
       break;
     }
     case 'hl':
@@ -4602,7 +4675,7 @@ async function loadDraft(id){
   if (i < 0) return;
   const d = S.drafts[i];
   editor.innerHTML = await internalizeHtml(d.html);   // 画像実体を表示
-  hydrateSheetEmbeds(editor); hydrateMapEmbeds(editor);
+  hydrateSheetEmbeds(editor); hydrateMapEmbeds(editor); hydrateTbEmbeds(editor);
   document.getElementById('tag-input').value = (d.tags || []).join(', ');
   document.getElementById('title-line-chk').checked = d.titleLine !== false;
   S.drafts.splice(i, 1);            // 呼び出したら一覧から消す
@@ -5481,7 +5554,7 @@ async function pasteFormat(el){
   if (!_richClip){ flashToast('先に「⧉コピー」で書式をコピーしてください'); return; }
   el.focus();
   insertHtmlAtCaret(await internalizeHtml(_richClip));
-  hydrateSheetEmbeds(el); hydrateMapEmbeds(el);
+  hydrateSheetEmbeds(el); hydrateMapEmbeds(el); hydrateTbEmbeds(el);
   if (el.id === 'fb-editing'){   // 付箋: 貼り付け内容を反映＋配線
     const fel = fbEls.find(x => x.id === fbEditingId);
     if (fel){ fbWireRichText(el, fel); fel.html = el.innerHTML; const fn = el.closest('.fb-el'); if (fel.type === 'boxtext' && fn) fbFitBoxText(fn); }
@@ -5800,7 +5873,7 @@ function hydrateSheetEmbeds(container){
 // 保存前に埋め込みシートの中身（サムネイル）を空のマーカーへ戻す
 function sheetStripHtml(raw){
   const d = document.createElement('div'); d.innerHTML = raw;
-  d.querySelectorAll('.sheet-embed, .map-embed').forEach(e => { e.innerHTML = ''; });
+  d.querySelectorAll('.sheet-embed, .map-embed, .tb-embed').forEach(e => { e.innerHTML = ''; });
   return d.innerHTML;
 }
 
@@ -6245,6 +6318,177 @@ function renderSheetHelp(){
   tsWrap.addEventListener('touchcancel', tsEnd, { passive: false });
 })();
 
+// ── タイムブロック（ガント: 予定/実働を10分単位で。メモ/フリーボードに埋め込み）────
+function tbId(){ return 'b' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
+function makeTimeblock(){ return { name: 'タイムブロック', startH: 6, endH: 24, plan: [], actual: [] }; }
+function tbMinToLabel(m){ const h = Math.floor(m / 60), mm = m % 60; return h + ':' + String(mm).padStart(2, '0'); }
+function tbLanes(tb){ return [['plan', '予定', tb.plan || []], ['actual', '実働', tb.actual || []]]; }
+function tbText(tb){ if (!tb) return ''; return [...(tb.plan || []), ...(tb.actual || [])].map(b => b.label || '').join(' '); }
+function tbThumb(tb){
+  const box = document.createElement('div'); box.className = 'tb-thumb';
+  const bar = document.createElement('div'); bar.className = 'tb-thumb-bar'; bar.textContent = '🗓 ' + (tb.name || 'タイムブロック'); box.appendChild(bar);
+  const sm = (tb.startH || 0) * 60, em = (tb.endH || 24) * 60, span = Math.max(1, em - sm);
+  ['plan', 'actual'].forEach(k => {
+    const lane = document.createElement('div'); lane.className = 'tb-thumb-lane';
+    (tb[k] || []).forEach(b => { const d = document.createElement('div'); d.className = 'tb-thumb-seg ' + k; const a = Math.max(sm, b.s), e = Math.min(em, b.e); if (e <= a) return; d.style.left = ((a - sm) / span * 100) + '%'; d.style.width = ((e - a) / span * 100) + '%'; d.title = b.label || ''; lane.appendChild(d); });
+    box.appendChild(lane);
+  });
+  // 実働の合計（時間）表
+  const totals = {}; (tb.actual || []).forEach(b => { const k = b.label || '(無題)'; totals[k] = (totals[k] || 0) + (b.e - b.s); });
+  const keys = Object.keys(totals);
+  if (keys.length){
+    const fmtH = m => (Math.round(m / 60 * 10) / 10).toFixed(1);
+    const tbl = document.createElement('table'); tbl.className = 'tb-thumb-sum';
+    const cap = document.createElement('caption'); cap.textContent = '実働の合計（時間）'; tbl.appendChild(cap);
+    keys.sort().forEach(k => { const tr = tbl.insertRow(); tr.insertCell().textContent = k; const c = tr.insertCell(); c.textContent = fmtH(totals[k]); c.className = 'tb-thumb-h'; });
+    const grand = Object.values(totals).reduce((a, b) => a + b, 0);
+    const gtr = tbl.insertRow(); gtr.className = 'tb-thumb-grand'; gtr.insertCell().textContent = '合計'; const gc = gtr.insertCell(); gc.textContent = fmtH(grand); gc.className = 'tb-thumb-h';
+    box.appendChild(tbl);
+  }
+  return box;
+}
+function hydrateTbEmbeds(container){
+  if (!container) return;
+  container.querySelectorAll('.tb-embed[data-tb]').forEach(el => {
+    const id = el.dataset.tb; const tb = (S.timeblocks || {})[id];
+    el.setAttribute('contenteditable', 'false'); el.innerHTML = '';
+    if (!tb){ el.textContent = '🗓 （削除されたタイムブロック）'; return; }
+    const thumb = tbThumb(tb); thumb.style.cursor = 'pointer';
+    if (searchHits(tbText(tb))) thumb.classList.add('embed-hit');
+    thumb.onclick = (e) => { e.stopPropagation(); openTbEditor(tb, (res) => { S.timeblocks[id] = res; persist(); hydrateTbEmbeds(container); renderMemos(); }); };
+    el.appendChild(thumb);
+  });
+}
+// 全画面エディタ
+let _tb = null, _tbOnDone = null, _tbPx = 14, _tbSel = null;
+function tbSnapMin(x, sm, px10){ return sm + Math.round(x / px10) * 10; }
+function openTbEditor(tb, onDone){
+  _tb = JSON.parse(JSON.stringify(tb));
+  _tb.plan = _tb.plan || []; _tb.actual = _tb.actual || [];
+  if (_tb.startH == null) _tb.startH = 6; if (_tb.endH == null) _tb.endH = 24;
+  _tbOnDone = onDone || null; _tbSel = null; _tbPx = 14;
+  document.getElementById('tb-title').value = _tb.name || 'タイムブロック';
+  const ss = document.getElementById('tb-start'), es = document.getElementById('tb-end');
+  ss.innerHTML = ''; es.innerHTML = '';
+  for (let h = 0; h <= 24; h++){ const o = document.createElement('option'); o.value = h; o.textContent = h + ':00'; ss.appendChild(o); es.appendChild(o.cloneNode(true)); }
+  ss.value = _tb.startH; es.value = _tb.endH;
+  document.getElementById('tb-ov').classList.add('open');
+  tbRender();
+}
+function closeTbEditor(save){
+  if (save){ _tb.name = document.getElementById('tb-title').value.trim() || 'タイムブロック'; if (_tbOnDone) _tbOnDone(_tb); }
+  document.getElementById('tb-ov').classList.remove('open');
+  _tb = null; _tbOnDone = null; _tbSel = null;
+}
+function tbRender(){
+  if (!_tb) return;
+  const sm = _tb.startH * 60, em = _tb.endH * 60; const totalMin = Math.max(60, em - sm); const px10 = _tbPx;
+  const width = (totalMin / 10) * px10;
+  const g = document.getElementById('tb-gantt'); g.innerHTML = ''; g.style.width = (width + 52) + 'px';
+  const ruler = document.createElement('div'); ruler.className = 'tb-ruler'; ruler.style.marginLeft = '52px'; ruler.style.width = width + 'px';
+  for (let h = _tb.startH; h <= _tb.endH; h++){ const t = document.createElement('div'); t.className = 'tb-tick'; t.style.left = ((h * 60 - sm) / 10 * px10) + 'px'; t.textContent = h; ruler.appendChild(t); }
+  g.appendChild(ruler);
+  tbLanes(_tb).forEach(([key, label, bars]) => {
+    const wrap = document.createElement('div'); wrap.className = 'tb-lanewrap';
+    const lbl = document.createElement('div'); lbl.className = 'tb-lanelabel ' + key; lbl.textContent = label; wrap.appendChild(lbl);
+    const lane = document.createElement('div'); lane.className = 'tb-lane'; lane.dataset.lane = key; lane.style.width = width + 'px';
+    for (let h = _tb.startH; h <= _tb.endH; h++){ const gl = document.createElement('div'); gl.className = 'tb-grid'; gl.style.left = ((h * 60 - sm) / 10 * px10) + 'px'; lane.appendChild(gl); }
+    bars.forEach(b => lane.appendChild(tbMakeBar(key, b, sm, px10)));
+    tbWireLaneCreate(lane, key, sm, px10);
+    wrap.appendChild(lane); g.appendChild(wrap);
+  });
+  document.getElementById('tb-zoom-lvl').textContent = Math.round(px10 / 14 * 100) + '%';
+  tbBuildSummary();
+}
+function tbMakeBar(key, b, sm, px10){
+  const d = document.createElement('div'); d.className = 'tb-bar ' + key; d.dataset.id = b.id; d.dataset.lane = key;
+  d.style.left = ((b.s - sm) / 10 * px10) + 'px'; d.style.width = Math.max(px10, ((b.e - b.s) / 10 * px10)) + 'px';
+  if (_tbSel && _tbSel.lane === key && _tbSel.id === b.id) d.classList.add('sel');
+  const lab = document.createElement('span'); lab.className = 'tb-bar-label'; lab.textContent = (b.label || '(無題)') + ' ' + tbMinToLabel(b.s) + '–' + tbMinToLabel(b.e); d.appendChild(lab);
+  d.appendChild(Object.assign(document.createElement('div'), { className: 'tb-h tb-h-l' }));
+  d.appendChild(Object.assign(document.createElement('div'), { className: 'tb-h tb-h-r' }));
+  tbWireBar(d, key, b, sm, px10);
+  return d;
+}
+function tbWireLaneCreate(lane, key, sm, px10){
+  lane.addEventListener('pointerdown', e => {
+    if (e.target !== lane) return;
+    e.preventDefault();
+    const rect = lane.getBoundingClientRect();
+    const startMin = tbSnapMin(e.clientX - rect.left, sm, px10);
+    const em = _tb.endH * 60;
+    const temp = document.createElement('div'); temp.className = 'tb-bar ' + key + ' temp'; temp.style.left = ((startMin - sm) / 10 * px10) + 'px'; temp.style.width = '0px'; lane.appendChild(temp);
+    const move = ev => { const cur = tbSnapMin(ev.clientX - rect.left, sm, px10); const a = Math.min(startMin, cur), bb = Math.max(startMin, cur); temp.style.left = ((a - sm) / 10 * px10) + 'px'; temp.style.width = ((bb - a) / 10 * px10) + 'px'; };
+    const up = ev => {
+      document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); temp.remove();
+      let cur = tbSnapMin(ev.clientX - rect.left, sm, px10);
+      let a = Math.max(sm, Math.min(Math.min(startMin, cur), em)), bb = Math.max(sm, Math.min(Math.max(startMin, cur), em));
+      if (bb - a < 10){ _tbSel = null; tbRender(); return; }
+      const label = prompt('作業名（' + (key === 'plan' ? '予定' : '実働') + '  ' + tbMinToLabel(a) + '–' + tbMinToLabel(bb) + '）', '') || '';
+      const nb = { id: tbId(), s: a, e: bb, label: label.trim() };
+      _tb[key].push(nb); _tbSel = { lane: key, id: nb.id }; tbRender();
+    };
+    document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
+  });
+}
+let _tbLastTap = 0;
+function tbWireBar(d, key, b, sm, px10){
+  d.addEventListener('pointerdown', e => {
+    e.stopPropagation(); e.preventDefault();
+    const mode = e.target.classList.contains('tb-h-l') ? 'l' : e.target.classList.contains('tb-h-r') ? 'r' : 'move';
+    const startX = e.clientX, s0 = b.s, e0 = b.e, em = _tb.endH * 60; let moved = false;
+    const move = ev => {
+      const dx = Math.round((ev.clientX - startX) / px10) * 10; if (dx !== 0) moved = true;
+      if (mode === 'move'){ let ns = s0 + dx, ne = e0 + dx; if (ns < sm){ ne += sm - ns; ns = sm; } if (ne > em){ ns -= ne - em; ne = em; } b.s = ns; b.e = ne; }
+      else if (mode === 'l'){ b.s = Math.max(sm, Math.min(s0 + dx, b.e - 10)); }
+      else { b.e = Math.min(em, Math.max(e0 + dx, b.s + 10)); }
+      d.style.left = ((b.s - sm) / 10 * px10) + 'px'; d.style.width = Math.max(px10, ((b.e - b.s) / 10 * px10)) + 'px';
+      d.querySelector('.tb-bar-label').textContent = (b.label || '(無題)') + ' ' + tbMinToLabel(b.s) + '–' + tbMinToLabel(b.e);
+    };
+    const up = () => {
+      document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up);
+      _tbSel = { lane: key, id: b.id };
+      if (moved){ _tbLastTap = 0; tbRender(); return; }
+      const now = Date.now();
+      if (now - _tbLastTap < 350){ _tbLastTap = 0; const label = prompt('作業名', b.label || ''); if (label !== null) b.label = label.trim(); tbRender(); return; }
+      _tbLastTap = now;
+      document.querySelectorAll('#tb-gantt .tb-bar.sel').forEach(x => x.classList.remove('sel')); d.classList.add('sel'); tbBuildSummary();
+    };
+    document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
+  });
+}
+function tbBuildSummary(){
+  if (!_tb) return;
+  const sm = _tb.startH * 60, em = _tb.endH * 60;
+  const bounds = new Set([sm, em]);
+  [..._tb.plan, ..._tb.actual].forEach(b => { if (b.e > sm && b.s < em){ bounds.add(Math.max(sm, b.s)); bounds.add(Math.min(em, b.e)); } });
+  const pts = [...bounds].filter(x => x >= sm && x <= em).sort((a, b) => a - b);
+  const labelAt = (arr, t) => { const b = arr.find(x => x.s <= t && t < x.e); return b ? (b.label || '(無題)') : ''; };
+  let rows = '';
+  for (let i = 0; i < pts.length - 1; i++){ const t0 = pts[i], t1 = pts[i + 1]; if (t1 <= t0) continue; const pl = labelAt(_tb.plan, t0), ac = labelAt(_tb.actual, t0); if (!pl && !ac) continue; rows += `<tr><td>${tbMinToLabel(t0)}–${tbMinToLabel(t1)}</td><td>${escH(pl)}</td><td>${escH(ac)}</td></tr>`; }
+  const totals = arr => { const map = {}; arr.forEach(b => { const k = b.label || '(無題)'; map[k] = (map[k] || 0) + (b.e - b.s); }); return map; };
+  const fmtH = min => (Math.round(min / 60 * 10) / 10).toFixed(1);
+  const tot = totals(_tb.actual), planTot = totals(_tb.plan);
+  const totRows = Object.keys(tot).sort().map(k => `<tr><td>${escH(k)}</td><td>${fmtH(tot[k])}</td></tr>`).join('');
+  const planRows = Object.keys(planTot).sort().map(k => `<tr><td>${escH(k)}</td><td>${fmtH(planTot[k])}</td></tr>`).join('');
+  const grand = Object.values(tot).reduce((a, b) => a + b, 0);
+  document.getElementById('tb-summary').innerHTML =
+    `<div class="tb-sum-sec"><h4>時間帯ごとの予定／実働</h4><table class="tb-sum"><tr><th>時間帯</th><th>予定</th><th>実働</th></tr>${rows || '<tr><td colspan="3" style="color:#999">バーがありません</td></tr>'}</table></div>` +
+    `<div class="tb-sum-row">` +
+      `<div class="tb-sum-sec"><h4>実働の合計（時間）</h4><table class="tb-sum"><tr><th>作業</th><th>時間</th></tr>${totRows || '<tr><td colspan="2" style="color:#999">—</td></tr>'}<tr class="tb-grand"><td>合計</td><td>${fmtH(grand)}</td></tr></table></div>` +
+      `<div class="tb-sum-sec"><h4>予定の合計（時間）</h4><table class="tb-sum"><tr><th>作業</th><th>時間</th></tr>${planRows || '<tr><td colspan="2" style="color:#999">—</td></tr>'}</table></div>` +
+    `</div>`;
+}
+// エディタ操作の配線
+document.getElementById('tb-back').onclick = () => closeTbEditor(false);
+document.getElementById('tb-close').onclick = () => closeTbEditor(true);
+document.getElementById('tb-start').onchange = function(){ const v = +this.value; _tb.startH = Math.min(v, _tb.endH - 1); this.value = _tb.startH; tbRender(); };
+document.getElementById('tb-end').onchange = function(){ const v = +this.value; _tb.endH = Math.max(v, _tb.startH + 1); this.value = _tb.endH; tbRender(); };
+document.getElementById('tb-zoom-in').onclick = () => { _tbPx = Math.min(40, _tbPx * 1.25); tbRender(); };
+document.getElementById('tb-zoom-out').onclick = () => { _tbPx = Math.max(5, _tbPx / 1.25); tbRender(); };
+document.getElementById('tb-del').onclick = () => { if (!_tbSel) return; _tb[_tbSel.lane] = _tb[_tbSel.lane].filter(b => b.id !== _tbSel.id); _tbSel = null; tbRender(); };
+document.addEventListener('keydown', e => { if (document.getElementById('tb-ov').classList.contains('open') && (e.key === 'Delete' || e.key === 'Backspace') && _tbSel && document.activeElement.tagName !== 'INPUT'){ e.preventDefault(); document.getElementById('tb-del').click(); } });
+
 // ── マインドマップ（メモ/フリーボードに埋め込み。表計算と同じ運用）──────────
 const MM_PALETTE = ['#4C7C9D','#E0746A','#E0A85B','#5BA86B','#9B7BD0','#3aa0a0','#c0697f','#555'];
 function mmId(){ return 'n' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
@@ -6674,6 +6918,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   hydrateImages(cnt);   // マーカー画像を遅延読み込み
   hydrateSheetEmbeds(cnt);   // 埋め込みシートをサムネイル化
   hydrateMapEmbeds(cnt);     // 埋め込みマインドマップをサムネイル化
+  hydrateTbEmbeds(cnt);      // 埋め込みタイムブロックをサムネイル化
   if (m.titleLine !== false) {
     const fc = cnt.firstChild;
     const isTable = el => el.nodeType === Node.ELEMENT_NODE &&
@@ -6893,7 +7138,7 @@ async function editSetSide(side){
   editSides[editSide] = sheetStripHtml(editEd.innerHTML);          // 現在の面を退避（dataURLのまま）
   editSide = side;
   editEd.innerHTML = await internalizeHtml(editSides[side] || '');  // 反対の面を表示
-  hydrateSheetEmbeds(editEd); hydrateMapEmbeds(editEd);
+  hydrateSheetEmbeds(editEd); hydrateMapEmbeds(editEd); hydrateTbEmbeds(editEd);
   editEd.querySelectorAll('.cl input[type="checkbox"]').forEach(cb => { cb.contentEditable = 'false'; if (cb.hasAttribute('checked')) cb.checked = true; });
   document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.classList.toggle('on', b.dataset.side === side));
   editEd.focus();
@@ -6905,13 +7150,12 @@ async function openEdit(id) {
   editSide = 'front';
   editSides = { front: m.html || '', back: m.back || '' };
   editEd.innerHTML = await internalizeHtml(m.html);   // 編集中は画像実体を表示
-  hydrateSheetEmbeds(editEd); hydrateMapEmbeds(editEd);
+  hydrateSheetEmbeds(editEd); hydrateMapEmbeds(editEd); hydrateTbEmbeds(editEd);
   editEd.querySelectorAll('.cl input[type="checkbox"]').forEach(cb => { cb.contentEditable = 'false'; if (cb.hasAttribute('checked')) cb.checked = true; });
   document.getElementById('edit-tag-input').value = (m.tags||[]).join(', ');
   renderEditExistingTags();
   document.getElementById('edit-title-line-chk').checked = m.titleLine !== false;
-  document.getElementById('edit-flash-chk').checked = !!m.flash;
-  document.getElementById('edit-flash-tabs').style.display = m.flash ? '' : 'none';
+  document.getElementById('edit-flash-row').style.display = m.flash ? '' : 'none';
   document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.classList.toggle('on', b.dataset.side === 'front'));
   openOv('edit-ov');
   updateJumpBtn();   // 選択中メモに応じてジャンプボタンの活性状態を反映
@@ -6923,10 +7167,8 @@ document.getElementById('edit-save').onclick = async () => {
     const oldTags = (m.tags || []).join(',');
     syncCheckboxAttrs(editEd);
     editSides[editSide] = sheetStripHtml(editEd.innerHTML);                 // 編集中の面を退避
-    const flash = document.getElementById('edit-flash-chk').checked;
     m.html = await externalizeAndStore(editSides.front);                    // 表（画像分離）
-    if (flash) { m.flash = true; m.back = await externalizeAndStore(editSides.back || ''); }
-    else { delete m.flash; delete m.back; }
+    if (m.flash) m.back = await externalizeAndStore(editSides.back || '');  // 単語帳タイプなら裏面も保存
 
     m.tags = parseTags(document.getElementById('edit-tag-input').value);
     m.titleLine = document.getElementById('edit-title-line-chk').checked;
@@ -6937,10 +7179,6 @@ document.getElementById('edit-save').onclick = async () => {
   }
   _newFlashId = null;   // 保存したので破棄対象から外す
   closeOv('edit-ov');
-};
-document.getElementById('edit-flash-chk').onchange = function(){
-  document.getElementById('edit-flash-tabs').style.display = this.checked ? '' : 'none';
-  if (!this.checked && editSide !== 'front') editSetSide('front');
 };
 document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.onclick = () => editSetSide(b.dataset.side));
 document.getElementById('edit-cancel').onclick = () => { closeOv('edit-ov'); discardEmptyNewFlash(); };
@@ -7345,6 +7583,7 @@ async function executePartialImport(d, mergeMap) {
   // 埋め込みのスプレッドシート/マインドマップも取り込む（未所持のIDのみ。既存は保持）
   if (d.sheets){ S.sheets = S.sheets || {}; for (const k in d.sheets) if (!(k in S.sheets)) S.sheets[k] = d.sheets[k]; }
   if (d.mindmaps){ S.mindmaps = S.mindmaps || {}; for (const k in d.mindmaps) if (!(k in S.mindmaps)) S.mindmaps[k] = d.mindmaps[k]; }
+  if (d.timeblocks){ S.timeblocks = S.timeblocks || {}; for (const k in d.timeblocks) if (!(k in S.timeblocks)) S.timeblocks[k] = d.timeblocks[k]; }
   const existGuids = new Set(S.memos.map(m => m.guid).filter(Boolean));
   const existIds   = new Set(S.memos.map(m => m.id));
   let added = 0, skipped = 0;
@@ -8535,6 +8774,7 @@ function qlEnrich(m) {
   hydrateImages(cnt);   // マーカー画像を遅延読み込み
   hydrateSheetEmbeds(cnt);   // 埋め込みシートをサムネイル化
   hydrateMapEmbeds(cnt);     // 埋め込みマインドマップをサムネイル化
+  hydrateTbEmbeds(cnt);      // 埋め込みタイムブロックをサムネイル化
   cnt.querySelectorAll('table').forEach(tbl => {
     if (!tbl.closest('.tbl-wrap')) { const tw = document.createElement('div'); tw.className = 'tbl-wrap'; tbl.parentNode.insertBefore(tw, tbl); tw.appendChild(tbl); }
   });
@@ -8822,6 +9062,7 @@ async function initApp() {
   if (!S.drafts)           S.drafts           = [];
   if (!S.sheets)           S.sheets           = {};
   if (!S.mindmaps)         S.mindmaps         = {};
+  if (!S.timeblocks)       S.timeblocks       = {};
   if (S.showBacklinks === undefined) S.showBacklinks = false;
   if (S.tagBarCollapsed === undefined) S.tagBarCollapsed = false;
   if (!S.pdfBaseDir)       S.pdfBaseDir       = 'PDFs';
@@ -8924,9 +9165,10 @@ function embedText(html){   // 本文に埋め込まれた表計算/マインド
   let s = ''; let m;
   const reS = /data-sheet="([^"]+)"/g; while ((m = reS.exec(html || ''))){ const sh = (S.sheets || {})[m[1]]; if (sh) s += ' ' + sheetText(sh); }
   const reM = /data-map="([^"]+)"/g;   while ((m = reM.exec(html || ''))){ const mp = (S.mindmaps || {})[m[1]]; if (mp) s += ' ' + mapText(mp); }
+  const reT = /data-tb="([^"]+)"/g;    while ((m = reT.exec(html || ''))){ const tb = (S.timeblocks || {})[m[1]]; if (tb) s += ' ' + tbText(tb); }
   return s;
 }
-function boardText(m){ if (!m.board || !m.board.els) return ''; return (m.board.title || '') + ' ' + m.board.els.map(e => e.html ? stripHtml(e.html) : (e.type === 'sheet' ? sheetText(e.sheet) : e.type === 'mindmap' ? mapText(e.map) : '')).join(' '); }
+function boardText(m){ if (!m.board || !m.board.els) return ''; return (m.board.title || '') + ' ' + m.board.els.map(e => e.html ? stripHtml(e.html) : (e.type === 'sheet' ? sheetText(e.sheet) : e.type === 'mindmap' ? mapText(e.map) : e.type === 'timeblock' ? tbText(e.tb) : '')).join(' '); }
 function memoSearchText(m){ return stripHtml(m.html || '') + ' ' + embedText(m.html || '') + (m.back ? ' ' + stripHtml(m.back) + ' ' + embedText(m.back) : '') + ' ' + boardText(m); }
 let _searchQ = '', _searchRe = null;
 function searchHits(text){ if (!_searchQ) return false; return _searchRe ? _searchRe.test(text) : String(text).toLowerCase().includes(_searchQ); }
@@ -9095,6 +9337,16 @@ function fbCreateNode(el){
       thumb.style.width = '100%'; thumb.style.height = '100%'; thumb.style.overflow = 'hidden'; thumb.style.cursor = 'default';
       node.appendChild(thumb);
       const open = (e) => { e.stopPropagation(); openMmEditor(el.map, (res) => { el.map = res; fbRender(); fbCommit(); }); };
+      thumb.addEventListener('dblclick', open);
+      let _lt = 0;
+      thumb.addEventListener('click', e => { const now = Date.now(); if (now - _lt < 350){ open(e); _lt = 0; } else _lt = now; });
+    }
+    if (el.type === 'timeblock'){
+      node.classList.add('fb-sheet');
+      const thumb = tbThumb(el.tb || (el.tb = makeTimeblock()));
+      thumb.style.width = '100%'; thumb.style.height = '100%'; thumb.style.overflow = 'hidden'; thumb.style.cursor = 'default'; thumb.style.maxWidth = 'none';
+      node.appendChild(thumb);
+      const open = (e) => { e.stopPropagation(); openTbEditor(el.tb, (res) => { el.tb = res; fbRender(); fbCommit(); }); };
       thumb.addEventListener('dblclick', open);
       let _lt = 0;
       thumb.addEventListener('click', e => { const now = Date.now(); if (now - _lt < 350){ open(e); _lt = 0; } else _lt = now; });
@@ -9279,6 +9531,7 @@ function fbCreate(type){
   else if (type === 'arrow') el = { id, type, x: cx - 80, y: cy, x2: cx + 80, y2: cy, stroke: fbColor };
   else if (type === 'sheet') el = { id, type, x: cx - 130, y: cy - 80, w: 280, h: 180, sheet: makeSheet(8, 5) };
   else if (type === 'mindmap') el = { id, type, x: cx - 140, y: cy - 90, w: 300, h: 200, map: makeMindmap() };
+  else if (type === 'timeblock') el = { id, type, x: cx - 150, y: cy - 60, w: 320, h: 120, tb: makeTimeblock() };
   fbEls.push(el); fbRender(); fbSelect(id); fbCommit();
 }
 function fbDeleteSel(){ if (!fbSel) return; if (fbEditingId === fbSel) fbEditingId = null; const bar = document.getElementById('fb-fmt-bar'); if (bar) bar.style.display = 'none'; fbEls = fbEls.filter(e => e.id !== fbSel); fbSel = null; fbRender(); fbSyncOrderBtns(); fbCommit(); }
@@ -9294,7 +9547,7 @@ function fbFaint(hex){   // 枠線色の薄い塗り（同系色）。rgba を�
 }
 function fbColorApply(c, noteFill){   // c=線/文字/枠用の色, noteFill=付箋の背景色
   const el = fbEls.find(e => e.id === fbSel); if (!el) return;
-  if (el.type === 'sheet' || el.type === 'mindmap' || el.type === 'image') return;   // 色の概念がないオブジェクトは対象外
+  if (el.type === 'sheet' || el.type === 'mindmap' || el.type === 'timeblock' || el.type === 'image') return;   // 色の概念がないオブジェクトは対象外
   const node = document.querySelector('#fb-world [data-id="' + el.id + '"]');
   if (el.type === 'text'){ el.color = c; const t = node && node.querySelector('.fb-text'); if (t) t.style.color = c; }
   else if (el.type === 'note'){ el.fill = noteFill; if (node) node.style.background = noteFill; }
@@ -9464,6 +9717,7 @@ function fbThumbEl(e, minx, miny, s){
   else if (e.type === 'image'){ const img = document.createElement('img'); img.src = e.src; img.style.cssText = 'width:100%;height:100%;object-fit:cover'; d.appendChild(img); }
   else if (e.type === 'sheet'){ d.style.overflow = 'hidden'; d.style.background = '#fff'; const t = sheetThumb(e.sheet || makeSheet(), 6, 5); t.style.transform = 'scale(' + Math.max(0.3, s) + ')'; t.style.transformOrigin = 'top left'; d.appendChild(t); }
   else if (e.type === 'mindmap'){ d.style.overflow = 'hidden'; d.style.background = '#fff'; const t = mmThumb(e.map || makeMindmap()); t.style.transform = 'scale(' + Math.max(0.3, s) + ')'; t.style.transformOrigin = 'top left'; d.appendChild(t); }
+  else if (e.type === 'timeblock'){ d.style.overflow = 'hidden'; d.style.background = '#fff'; const t = tbThumb(e.tb || makeTimeblock()); t.style.width = '320px'; t.style.transform = 'scale(' + Math.max(0.3, s) + ')'; t.style.transformOrigin = 'top left'; d.appendChild(t); }
   return d;
 }
 function fbThumb(m){
