@@ -6511,7 +6511,8 @@ function tbTouchStart(e, key, sm, px10, lane){
       let a = Math.min(createStart, cur), bb = Math.max(createStart, cur);
       if (bb - a < 10){ a = createStart; bb = Math.min(em, createStart + 30); }   // 長押しのみ→30分
       if (bb - a < 10){ tbRender(); return; }
-      const nb = { id: tbId(), s: a, e: bb, label: '', cat: '' }; tbEditBar(key, nb);
+      const nb = { id: tbId(), s: a, e: bb, label: '', cat: '' };
+      if (!tbEditBar(key, nb)){ tbRender(); return; }   // 入力キャンセル→作成しない
       _tb[key].push(nb); _tbSel = { lane: key, id: nb.id }; tbRender(); return;
     }
     if (mode === 'scroll'){ if (performance.now() - lastT < 60) tbMomentum(wrap, velX); return; }   // 指を離した瞬間の速度で慣性
@@ -6536,7 +6537,7 @@ function tbWireLaneCreate(lane, key, sm, px10){
       let a = Math.max(sm, Math.min(Math.min(startMin, cur), em)), bb = Math.max(sm, Math.min(Math.max(startMin, cur), em));
       if (bb - a < 10){ _tbSel = null; tbRender(); return; }
       const nb = { id: tbId(), s: a, e: bb, label: '', cat: '' };
-      tbEditBar(key, nb);
+      if (!tbEditBar(key, nb)){ _tbSel = null; tbRender(); return; }   // 入力キャンセル→作成しない
       _tb[key].push(nb); _tbSel = { lane: key, id: nb.id }; tbRender();
     };
     document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
@@ -10276,10 +10277,4 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
     const wx = (e.clientX - r.left - gView.x) / gView.scale, wy = (e.clientY - r.top - gView.y) / gView.scale;
     gView.scale = ns; gView.x = e.clientX - r.left - wx * ns; gView.y = e.clientY - r.top - wy * ns; applyGView();
   }, { passive: false });
-  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('g-preview').classList.contains('show')) gClosePreview(); else if ($('g-ov').classList.contains('open')) gClose(); });
-})();
-
-initApp();
-</script>
-</body>
-</html>
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('g-preview').classList.contains('show')) gCloseP
