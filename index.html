@@ -353,7 +353,7 @@ header {
 .bc s, .bc del, .bc strike { text-decoration: line-through; }
 .bc mark { background: #ffeb3b; padding: 0 2px; border-radius: 2px; }
 .bc a { color: var(--c6); text-decoration: underline; }
-.bc code { background: var(--code-bg); border: 1px solid var(--code-bdr); color: var(--code-fg); padding: 1.5px 6px; border-radius: 6px; font-family: 'Consolas', 'SFMono-Regular', monospace; font-size: 0.85em; font-weight: 600; overflow-wrap: break-word; }
+.bc code { background: var(--code-bg); border: 1px solid var(--code-bdr); color: var(--code-fg); padding: 2px 3px; border-radius: 6px; font-family: 'Consolas', 'SFMono-Regular', monospace; font-size: 0.9em; font-weight: 600; overflow-wrap: break-word; }
 .pre-wrap { position: relative; margin: 5px 0; }
 .pre-wrap pre { margin: 0; }
 .copy-btn {
@@ -693,7 +693,7 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 #editor:empty::before { content: attr(data-placeholder); color: #bbb; pointer-events: none; }
 #editor pre { background: #2c2c2c; color: #f0e8d8; padding: 9px; border-radius: 7px; font-family: 'Consolas', monospace; font-size: 0.88em; white-space: pre-wrap; }
 /* 編集画面のインラインコード（一覧表示の .bc code と同じ見た目に） */
-#editor code, #edit-ed code { background: var(--code-bg); border: 1px solid var(--code-bdr); color: var(--code-fg); padding: 1.5px 6px; border-radius: 6px; font-family: 'Consolas', 'SFMono-Regular', monospace; font-size: 0.85em; font-weight: 600; }
+#editor code, #edit-ed code { background: var(--code-bg); border: 1px solid var(--code-bdr); color: var(--code-fg); padding: 2px 3px; border-radius: 6px; font-family: 'Consolas', 'SFMono-Regular', monospace; font-size: 0.9em; font-weight: 600; }
 #editor pre code, #edit-ed pre code { background: none; border: none; color: inherit; padding: 0; font-weight: normal; }
 /* 水平線 */
 .bc hr, #editor hr, #edit-ed hr { border: none; border-top: 1.5px solid var(--th-sep, #d8e8ef); margin: 9px 0; }
