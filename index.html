@@ -706,7 +706,11 @@ body.theme-sepia .cork-card-fade { background: linear-gradient(transparent, #c89
 .fmt-bar {
   display: flex; align-items: center; gap: 1px; flex-wrap: wrap;
   padding: 4px 8px; background: var(--th-toolbar); border-bottom: 1px solid var(--th-tbdr); row-gap: 2px;
+  flex-shrink: 0;   /* キーボード表示等で縦が詰まってもツールバーを潰さない（潰れて切れるのを防ぐ） */
 }
+/* 入力系の行はフレックス縮小で潰れないようにし、足りない時はモーダル側をスクロール */
+.modal .edit-tag-row, .modal .title-line-row, .modal .mact,
+.input-wrapper .tag-row, .compose-modal .tag-row, .compose-modal .title-line-row { flex-shrink: 0; }
 .fb {
   background: transparent; border: none; border-radius: 4px;
   padding: 3px 6px; cursor: pointer; font-size: 0.8rem; color: var(--c3);
@@ -1023,6 +1027,9 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 .fb-handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid var(--c1);border-radius:50%;pointer-events:auto;z-index:5}
 .fb-handle.fb-br{right:-7px;bottom:-7px;cursor:nwse-resize}
 .fb-handle.fb-p1,.fb-handle.fb-p2{transform:translate(-50%,-50%);cursor:move}
+.fb-handle.fb-pc{transform:translate(-50%,-50%);cursor:grab;background:#E0A85B;border-color:#b5792a;border-radius:3px}
+.fb-handle.fb-pt{transform:translate(-50%,-50%);cursor:move}
+.fb-handle.fb-seg{transform:translate(-50%,-50%);width:14px;height:14px;background:#5BA86B;border-color:#3d7a4e;cursor:copy;opacity:.85}
 /* タッチ機ではハンドルを大きくして操作しやすく */
 @media (pointer: coarse){
   .fb-handle{width:26px;height:26px;border-width:3px}
@@ -2190,7 +2197,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button data-add="rect">▭ 四角</button>
     <button data-add="ellipse">⬭ 円</button>
     <button data-add="line">／ 線</button>
-    <button data-add="arrow">→ 矢印</button>
+    <button data-add="polyline">⤳ 連続線</button>
     <button data-add="image">🖼 画像</button>
     <button data-add="sheet">📊 表計算</button>
     <button data-add="mindmap">🧠 マインドマップ</button>
@@ -2201,6 +2208,10 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
   <div class="fmt-bar" id="fb-fmt-bar" data-for="fb-editing" style="display:none"></div>
   <div id="fb-canvas"><div id="fb-world"></div></div>
   <div id="fb-el-actions">
+    <button id="fbe-arrow" class="fbe-line" title="矢印の向き（なし→終点→始点→両側）">—</button>
+    <button id="fbe-head" class="fbe-line" title="矢じりの形（三角→開き→丸）">▲</button>
+    <button id="fbe-hsize" class="fbe-line" title="矢じりの大きさ">中</button>
+    <span class="fbe-line" style="width:1px;height:18px;background:rgba(0,0,0,.15)"></span>
     <button id="fbe-front" title="前面へ">⬆</button>
     <button id="fbe-back" title="背面へ">⬇</button>
     <button id="fbe-dup" title="複製">📋</button>
@@ -2369,6 +2380,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <div style="display:flex;gap:14px;font-size:.82rem;color:#555;flex-wrap:wrap">
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="pdfins-mode" value="local" checked style="width:auto;accent-color:var(--c1)"> ローカル（相対）</label>
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="pdfins-mode" value="url" style="width:auto;accent-color:var(--c1)"> URL（SharePoint・Web）</label>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="radio" name="pdfins-mode" value="abs" style="width:auto;accent-color:var(--c1)"> フルパス（絶対）</label>
     </div>
     <div id="pdfins-local">
       <div style="font-size:.78rem;color:#888;line-height:1.5">HTMLファイルと同じ場所からの<b>相対パス</b>で開きます。PDFフォルダをHTMLの隣に置いて一緒にコピー／同期すれば、別PCでも同じ配置でそのまま読めます（完全オフライン）。</div>
@@ -2385,6 +2397,11 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
       <div style="font-size:.78rem;color:#888;line-height:1.5">SharePointやWeb上のPDFのURLを貼り付けます。クリックで<b>別タブ</b>に開きます（別オリジンは埋め込み表示不可のため）。<br>※ ページ指定はブラウザが直接表示する素のPDFでのみ有効。SharePointは独自ビューア経由だと先頭ページになる場合があります。</div>
       <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:#666;margin-top:8px">PDFのURL
         <input id="pdfins-url" type="url" placeholder="https://…/report.pdf"></label>
+    </div>
+    <div id="pdfins-abswrap" style="display:none">
+      <div style="font-size:.78rem;color:#888;line-height:1.5">この端末の<b>絶対パス（フルパス）</b>で開きます（別タブ）。例: <code>C:\Users\me\Docs\report.pdf</code> ／ <code>/home/me/report.pdf</code>。<br>※ 端末のパスに依存するため、別PCでは同じ場所にPDFが無いと開けません。ブラウザのローカルファイルアクセス制限で開けない場合もあります。</div>
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:#666;margin-top:8px">PDFのフルパス
+        <input id="pdfins-abspath" type="text" placeholder="C:\Users\...\report.pdf ／ /home/user/report.pdf"></label>
     </div>
     <div style="display:flex;gap:10px">
       <label style="flex:0 0 110px;display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:#666">ページ
@@ -2938,6 +2955,17 @@ function buildPdfUrl(path, page){
   const rel = String(path).replace(/^\/+/, '');
   return encodeURI(rel) + '#page=' + Math.max(1, parseInt(page) || 1) + '&zoom=page-width';
 }
+function isAbsPdfPath(p){ p = String(p); return /^[a-zA-Z]:[\\/]/.test(p) || /^\\\\/.test(p) || /^\//.test(p) || /^file:/i.test(p); }
+function absPdfToUrl(p, page){
+  p = String(p).trim();
+  let url;
+  if (/^file:/i.test(p)) url = p;
+  else if (/^[a-zA-Z]:[\\/]/.test(p)) url = 'file:///' + p.replace(/\\/g, '/');   // Windows C:\...
+  else if (/^\\\\/.test(p)) url = 'file:' + p.replace(/\\/g, '/');                 // UNC \\server\share
+  else url = 'file://' + p;                                                        // POSIX /...
+  url = url.replace(/%/g, '%25').replace(/ /g, '%20').replace(/#/g, '%23');
+  return url + '#page=' + Math.max(1, parseInt(page) || 1) + '&zoom=page-width';
+}
 function openPdfAt(path, page){
   const p = Math.max(1, parseInt(page) || 1);
   // SharePoint / Web の絶対URL → 別タブで開く（別オリジンは埋め込み不可）
@@ -2946,6 +2974,8 @@ function openPdfAt(path, page){
     window.open(u, '_blank');
     return;
   }
+  // 絶対パス（フルパス） → file:// で別タブに開く
+  if (isAbsPdfPath(path)) { window.open(absPdfToUrl(path, p), '_blank'); return; }
   const url = buildPdfUrl(path, page);
   const name = String(path).split('/').pop();
   if (location.protocol === 'file:') {
@@ -3021,13 +3051,16 @@ function openPdfInsert(isEdit){
     const lr = document.querySelector('input[name="pdfins-mode"][value="local"]'); if (lr) lr.checked = true;
     document.getElementById('pdfins-local').style.display = '';
     document.getElementById('pdfins-urlwrap').style.display = 'none';
+    document.getElementById('pdfins-abswrap').style.display = 'none';
     document.getElementById('pdfins-url').value = '';
+    document.getElementById('pdfins-abspath').value = '';
   }
 }
 document.querySelectorAll('input[name="pdfins-mode"]').forEach(r => r.addEventListener('change', () => {
-  const isUrl = (document.querySelector('input[name="pdfins-mode"]:checked') || {}).value === 'url';
-  document.getElementById('pdfins-local').style.display = isUrl ? 'none' : '';
-  document.getElementById('pdfins-urlwrap').style.display = isUrl ? '' : 'none';
+  const v = (document.querySelector('input[name="pdfins-mode"]:checked') || {}).value || 'local';
+  document.getElementById('pdfins-local').style.display = v === 'local' ? '' : 'none';
+  document.getElementById('pdfins-urlwrap').style.display = v === 'url' ? '' : 'none';
+  document.getElementById('pdfins-abswrap').style.display = v === 'abs' ? '' : 'none';
 }));
 document.getElementById('pdfins-filter').addEventListener('input', applyPdfFilter);
 // クリック/選択でファイル名欄を上書き（同じ項目の再クリックでも反映されるよう複数イベントを購読）
@@ -3045,6 +3078,12 @@ document.getElementById('pdfins-ok').onclick = () => {
     path = url;
     let fn = '';
     try { fn = decodeURIComponent((new URL(url).pathname.split('/').pop()) || ''); } catch(e){}
+    defLabel = '📑 ' + (fn || 'PDF') + ' p.' + page;
+  } else if (mode === 'abs') {
+    const ap = document.getElementById('pdfins-abspath').value.trim();
+    if (!ap) { alert('PDFの絶対パス（フルパス）を入力してください'); return; }
+    path = ap;
+    const fn = ap.replace(/[\\/]+$/, '').split(/[\\/]/).pop();
     defLabel = '📑 ' + (fn || 'PDF') + ' p.' + page;
   } else {
     const base = (document.getElementById('pdfins-base').value.trim().replace(/\/+$/, '')) || 'PDFs';
@@ -3165,11 +3204,19 @@ function openPdfEdit(a, container){
     const r = document.querySelector('input[name="pdfins-mode"][value="url"]'); if (r) r.checked = true;
     document.getElementById('pdfins-local').style.display = 'none';
     document.getElementById('pdfins-urlwrap').style.display = '';
+    document.getElementById('pdfins-abswrap').style.display = 'none';
     document.getElementById('pdfins-url').value = path;
+  } else if (isAbsPdfPath(path)) {
+    const r = document.querySelector('input[name="pdfins-mode"][value="abs"]'); if (r) r.checked = true;
+    document.getElementById('pdfins-local').style.display = 'none';
+    document.getElementById('pdfins-urlwrap').style.display = 'none';
+    document.getElementById('pdfins-abswrap').style.display = '';
+    document.getElementById('pdfins-abspath').value = path;
   } else {
     const r = document.querySelector('input[name="pdfins-mode"][value="local"]'); if (r) r.checked = true;
     document.getElementById('pdfins-local').style.display = '';
     document.getElementById('pdfins-urlwrap').style.display = 'none';
+    document.getElementById('pdfins-abswrap').style.display = 'none';
     const i = path.indexOf('/');
     document.getElementById('pdfins-base').value = i >= 0 ? path.slice(0, i) : 'PDFs';
     document.getElementById('pdfins-name').value = i >= 0 ? path.slice(i + 1) : path;
@@ -3774,6 +3821,18 @@ function mdToHtml(md) {
     // headings
     const hm = line.match(/^(#{1,3})\s+(.+)/);
     if (hm) { out.push(`<h${hm[1].length}>${mdInline(hm[2])}</h${hm[1].length}>`); i++; continue; }
+    // table（| a | b | の次行が区切り行 | --- | --- |）
+    const mdIsSep = s => /^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$/.test(s);
+    if (line.includes('|') && line.trim() !== '' && i + 1 < lines.length && lines[i + 1].includes('|') && mdIsSep(lines[i + 1])) {
+      const splitRow = s => { let t = s.trim().replace(/^\|/, '').replace(/\|$/, ''); return t.split('|').map(c => c.trim()); };
+      const header = splitRow(line);
+      i += 2;   // ヘッダ + 区切り行をスキップ
+      const bodyRows = [];
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim() !== '' && !mdIsSep(lines[i])) { bodyRows.push(splitRow(lines[i])); i++; }
+      const th = header.map(c => `<th>${mdInline(c)}</th>`).join('');
+      const trs = bodyRows.map(r => `<tr>${r.map(c => `<td>${mdInline(c)}</td>`).join('')}</tr>`).join('');
+      out.push(`<table><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`); continue;
+    }
     // blockquote
     if (/^>\s?/.test(line)) {
       const ql = [];
@@ -3820,7 +3879,8 @@ function looksLikeMarkdown(text) {
   return /^#{1,6}\s/m.test(text) || /\*\*.+\*\*/m.test(text) ||
          /^[-*+]\s/m.test(text)  || /^\d+\.\s/m.test(text)   ||
          /^>\s/m.test(text)       || /^```/m.test(text)        ||
-         /~~.+~~/m.test(text)     || /^(?:[-*+]\s+)?\[[ xX]?\]/im.test(text);
+         /~~.+~~/m.test(text)     || /^(?:[-*+]\s+)?\[[ xX]?\]/im.test(text) ||
+         /^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)+\|?\s*$/m.test(text);   // 表の区切り行
 }
 
 // ── 貼り付け処理（画像 / Markdown / コード）──────────────────────────
@@ -9682,23 +9742,50 @@ function fbCreateNode(el){
   fbAttachDrag(node, el);
   return node;
 }
+// 旧データ(line{x,y,x2,y2,cx?} / arrow)を pts 配列へ正規化
+function fbLinePts(el){
+  if (!Array.isArray(el.pts)){
+    const p = [{ x: el.x, y: el.y }];
+    if (el.cx != null) p.push({ x: el.cx, y: el.cy });
+    p.push({ x: el.x2, y: el.y2 });
+    el.pts = p;
+    if (el.type === 'arrow' && !el.arrow) el.arrow = 'end';
+    if (!el.head) el.head = 'tri'; if (el.hsize == null) el.hsize = 14;
+    delete el.cx; delete el.cy;
+  }
+  return el.pts;
+}
+function fbArrowHead(svg, tx, ty, ang, shape, size, col){
+  const a = Math.max(6, size);
+  if (shape === 'dot'){
+    const c = document.createElementNS(FB_SVGNS, 'circle'); c.setAttribute('cx', tx); c.setAttribute('cy', ty); c.setAttribute('r', Math.max(3, a * 0.42)); c.setAttribute('fill', col); svg.appendChild(c); return;
+  }
+  const x1 = tx - a * Math.cos(ang - Math.PI / 6), y1 = ty - a * Math.sin(ang - Math.PI / 6);
+  const x2 = tx - a * Math.cos(ang + Math.PI / 6), y2 = ty - a * Math.sin(ang + Math.PI / 6);
+  if (shape === 'open'){
+    const p = document.createElementNS(FB_SVGNS, 'polyline'); p.setAttribute('points', `${x1},${y1} ${tx},${ty} ${x2},${y2}`); p.setAttribute('fill', 'none'); p.setAttribute('stroke', col); p.setAttribute('stroke-width', '3'); p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round'); svg.appendChild(p);
+  } else {   // tri（塗り三角）
+    const p = document.createElementNS(FB_SVGNS, 'polygon'); p.setAttribute('points', `${tx},${ty} ${x1},${y1} ${x2},${y2}`); p.setAttribute('fill', col); svg.appendChild(p);
+  }
+}
 function fbDrawLine(node, el){
-  const minx = Math.min(el.x, el.x2), miny = Math.min(el.y, el.y2), w = Math.abs(el.x2 - el.x), h = Math.abs(el.y2 - el.y), pad = 12;
+  const pts = fbLinePts(el);
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const minx = Math.min.apply(null, xs), miny = Math.min.apply(null, ys), maxx = Math.max.apply(null, xs), maxy = Math.max.apply(null, ys);
+  const pad = 22, w = maxx - minx, h = maxy - miny;
   node.style.left = (minx - pad) + 'px'; node.style.top = (miny - pad) + 'px'; node.style.width = (w + 2 * pad) + 'px'; node.style.height = (h + 2 * pad) + 'px';
   const svg = node.querySelector('svg'); svg.setAttribute('width', w + 2 * pad); svg.setAttribute('height', h + 2 * pad); svg.innerHTML = '';
-  const x1 = el.x - minx + pad, y1 = el.y - miny + pad, x2 = el.x2 - minx + pad, y2 = el.y2 - miny + pad;
+  const P = pts.map(p => ({ x: p.x - minx + pad, y: p.y - miny + pad }));
   const col = el.stroke || '#4C7C9D';
-  const hit = document.createElementNS(FB_SVGNS, 'line'); hit.setAttribute('x1', x1); hit.setAttribute('y1', y1); hit.setAttribute('x2', x2); hit.setAttribute('y2', y2); hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '16'); hit.style.pointerEvents = 'stroke'; hit.style.cursor = 'move'; svg.appendChild(hit);
-  const ln = document.createElementNS(FB_SVGNS, 'line'); ln.setAttribute('x1', x1); ln.setAttribute('y1', y1); ln.setAttribute('x2', x2); ln.setAttribute('y2', y2); ln.setAttribute('stroke', col); ln.setAttribute('stroke-width', '3'); ln.setAttribute('stroke-linecap', 'round'); svg.appendChild(ln);
-  if (el.type === 'arrow'){
-    const ang = Math.atan2(y2 - y1, x2 - x1), a = 13;
-    const head = document.createElementNS(FB_SVGNS, 'polyline');
-    head.setAttribute('points', (x2 - a * Math.cos(ang - Math.PI / 6)) + ',' + (y2 - a * Math.sin(ang - Math.PI / 6)) + ' ' + x2 + ',' + y2 + ' ' + (x2 - a * Math.cos(ang + Math.PI / 6)) + ',' + (y2 - a * Math.sin(ang + Math.PI / 6)));
-    head.setAttribute('fill', 'none'); head.setAttribute('stroke', col); head.setAttribute('stroke-width', '3'); head.setAttribute('stroke-linecap', 'round'); svg.appendChild(head);
-  }
-  const p1 = node.querySelector('.fb-p1'), p2 = node.querySelector('.fb-p2');
-  if (p1){ p1.style.left = x1 + 'px'; p1.style.top = y1 + 'px'; }
-  if (p2){ p2.style.left = x2 + 'px'; p2.style.top = y2 + 'px'; }
+  const d = 'M ' + P.map(p => `${p.x} ${p.y}`).join(' L ');
+  const hit = document.createElementNS(FB_SVGNS, 'path'); hit.setAttribute('d', d); hit.setAttribute('fill', 'none'); hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '16'); hit.style.pointerEvents = 'stroke'; hit.style.cursor = 'move'; svg.appendChild(hit);
+  const ln = document.createElementNS(FB_SVGNS, 'path'); ln.setAttribute('d', d); ln.setAttribute('fill', 'none'); ln.setAttribute('stroke', col); ln.setAttribute('stroke-width', '3'); ln.setAttribute('stroke-linecap', 'round'); ln.setAttribute('stroke-linejoin', 'round'); svg.appendChild(ln);
+  const dir = el.arrow || 'none', shape = el.head || 'tri', size = el.hsize || 14, n = P.length;
+  if ((dir === 'end' || dir === 'both') && n >= 2){ const t = P[n - 1], p = P[n - 2]; fbArrowHead(svg, t.x, t.y, Math.atan2(t.y - p.y, t.x - p.x), shape, size, col); }
+  if ((dir === 'start' || dir === 'both') && n >= 2){ const t = P[0], p = P[1]; fbArrowHead(svg, t.x, t.y, Math.atan2(t.y - p.y, t.x - p.x), shape, size, col); }
+  // 点ハンドル・区切り点ハンドルの再配置
+  node.querySelectorAll('.fb-pt').forEach(h => { const i = +h.dataset.pi; if (P[i]){ h.style.left = P[i].x + 'px'; h.style.top = P[i].y + 'px'; } });
+  node.querySelectorAll('.fb-seg').forEach(h => { const i = +h.dataset.si; if (P[i] && P[i + 1]){ h.style.left = (P[i].x + P[i + 1].x) / 2 + 'px'; h.style.top = (P[i].y + P[i + 1].y) / 2 + 'px'; } });
 }
 function fbFitBoxText(node){
   const t = node && node.querySelector('.fb-text'); if (!t) return;
@@ -9722,15 +9809,25 @@ function fbAttachDrag(node, el){
     if (e.target.classList.contains('fb-handle')) return;
     e.stopPropagation();
     fbSelect(el.id);
-    const sx = e.clientX, sy = e.clientY, ox = el.x, oy = el.y, ox2 = el.x2, oy2 = el.y2;
+    const isLine = (el.type === 'line' || el.type === 'arrow');
+    const sx = e.clientX, sy = e.clientY, ox = el.x, oy = el.y;
+    const opts = isLine ? fbLinePts(el).map(p => ({ x: p.x, y: p.y })) : null;
+    let moved = false;
     const mv = ev => {
       if (fbPinch) return;   // 2本指ピンチ中はオブジェクト移動を止める
+      if (!moved){ if (Math.abs(ev.clientX - sx) > 4 || Math.abs(ev.clientY - sy) > 4) moved = true; else return; }   // 微動はドラッグ扱いにしない
       const dx = (ev.clientX - sx) / fbView.scale, dy = (ev.clientY - sy) / fbView.scale;
-      el.x = fbSnapV(ox + dx); el.y = fbSnapV(oy + dy);
-      if (el.type === 'line' || el.type === 'arrow'){ el.x2 = fbSnapV(ox2 + dx); el.y2 = fbSnapV(oy2 + dy); }
+      if (isLine){ el.pts.forEach((p, i) => { p.x = fbSnapV(opts[i].x + dx); p.y = fbSnapV(opts[i].y + dy); }); }
+      else { el.x = fbSnapV(ox + dx); el.y = fbSnapV(oy + dy); }
       fbPositionNode(node, el); fbUpdateHandles(node, el); fbPositionElActions();
     };
-    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); fbCommit(); };
+    const up = () => {
+      document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+      if (!moved && !fbPreview && fbEditingId !== el.id && (el.type === 'note' || el.type === 'text' || el.type === 'boxtext')){
+        const t = node.querySelector('.fb-text'); if (t){ fbStartEdit(el, t); return; }   // タップ（移動なし）＝入力モード（ドラッグと区別）
+      }
+      fbCommit();
+    };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
 }
@@ -9754,7 +9851,25 @@ function fbSyncOrderBtns(){
   const el = i >= 0 ? fbEls[i] : null;
   const f = document.getElementById('fbe-front'); if (f) f.disabled = (i < 0) || (i === fbEls.length - 1);  // 既に最前面なら無効
   const b = document.getElementById('fbe-back');  if (b) b.disabled = (i < 0) || (i === 0);                 // 既に最背面なら無効
+  fbUpdateLineOpts(el);
   fbPositionElActions();
+}
+function fbUpdateLineOpts(el){
+  const isLine = el && (el.type === 'line' || el.type === 'arrow');
+  document.querySelectorAll('#fb-el-actions .fbe-line').forEach(b => b.style.display = isLine ? '' : 'none');
+  if (!isLine) return;
+  const arrow = el.arrow || 'none', head = el.head || 'tri', hs = el.hsize || 14;
+  const ab = document.getElementById('fbe-arrow'); if (ab) ab.textContent = arrow === 'end' ? '→' : arrow === 'start' ? '←' : arrow === 'both' ? '↔' : '—';
+  const hb = document.getElementById('fbe-head'); if (hb) hb.textContent = head === 'open' ? '⌵' : head === 'dot' ? '●' : '▲';
+  const sb = document.getElementById('fbe-hsize'); if (sb) sb.textContent = hs <= 10 ? '小' : hs <= 14 ? '中' : hs <= 20 ? '大' : '特';
+}
+function fbLineOptChange(kind){
+  const el = fbSel ? fbEls.find(e => e.id === fbSel) : null; if (!el || !(el.type === 'line' || el.type === 'arrow')) return;
+  if (kind === 'arrow'){ const seq = ['none', 'end', 'start', 'both']; el.arrow = seq[(seq.indexOf(el.arrow || 'none') + 1) % seq.length]; }
+  else if (kind === 'head'){ const seq = ['tri', 'open', 'dot']; el.head = seq[(seq.indexOf(el.head || 'tri') + 1) % seq.length]; }
+  else if (kind === 'hsize'){ const seq = [10, 14, 20, 28]; el.hsize = seq[(seq.indexOf(el.hsize || 14) + 1) % seq.length]; }
+  const node = document.querySelector('#fb-world [data-id="' + el.id + '"]'); if (node) fbDrawLine(node, el);
+  fbUpdateLineOpts(el); fbCommit();
 }
 function fbPositionElActions(){
   const box = document.getElementById('fb-el-actions'); if (!box) return;
@@ -9770,11 +9885,13 @@ function fbPositionElActions(){
 }
 function fbBringFront(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.push(fbEls.splice(i, 1)[0]); fbRender(); fbCommit(); }   // 最前面へ
 function fbSendBack(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.unshift(fbEls.splice(i, 1)[0]); fbRender(); fbCommit(); }   // 最背面へ
-function fbDuplicateSel(){ if (!fbSel) return; const el = fbEls.find(e => e.id === fbSel); if (!el) return; const copy = Object.assign({}, el, { id: fbNewId(), x: (el.x || 0) + 16, y: (el.y || 0) + 16 }); if (el.x2 != null){ copy.x2 = el.x2 + 16; copy.y2 = el.y2 + 16; } fbEls.push(copy); fbRender(); fbSelect(copy.id); fbCommit(); }
+function fbDuplicateSel(){ if (!fbSel) return; const el = fbEls.find(e => e.id === fbSel); if (!el) return; const copy = Object.assign({}, el, { id: fbNewId(), x: (el.x || 0) + 16, y: (el.y || 0) + 16 }); if (el.x2 != null){ copy.x2 = el.x2 + 16; copy.y2 = el.y2 + 16; } if (Array.isArray(el.pts)){ copy.pts = el.pts.map(p => ({ x: p.x + 16, y: p.y + 16 })); } fbEls.push(copy); fbRender(); fbSelect(copy.id); fbCommit(); }
 function fbAddHandles(node){
   const el = fbEls.find(e => e.id === node.dataset.id); if (!el) return;
   if (el.type === 'line' || el.type === 'arrow'){
-    ['p1', 'p2'].forEach(p => { const h = document.createElement('div'); h.className = 'fb-handle fb-' + p; node.appendChild(h); fbEndpointDrag(h, el, p, node); });
+    const pts = fbLinePts(el);
+    pts.forEach((p, i) => { const h = document.createElement('div'); h.className = 'fb-handle fb-pt'; h.dataset.pi = i; h.title = 'ドラッグで移動／ダブルクリックで点を削除'; node.appendChild(h); fbPointDrag(h, el, i, node); });
+    for (let i = 0; i < pts.length - 1; i++){ const h = document.createElement('div'); h.className = 'fb-handle fb-seg'; h.dataset.si = i; h.title = 'クリックで折れ点を追加'; node.appendChild(h); fbSegInsert(h, el, i, node); }
     fbDrawLine(node, el);
   } else {
     const h = document.createElement('div'); h.className = 'fb-handle fb-br'; node.appendChild(h); fbResizeDrag(h, el, node);
@@ -9788,6 +9905,44 @@ function fbResizeDrag(h, el, node){
     const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); fbCommit(); };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
+}
+function fbPointDrag(h, el, i, node){
+  h.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    const mv = ev => {
+      if (fbPinch) return;
+      const rect = document.getElementById('fb-canvas').getBoundingClientRect();
+      el.pts[i] = { x: fbSnapV((ev.clientX - rect.left - fbView.x) / fbView.scale), y: fbSnapV((ev.clientY - rect.top - fbView.y) / fbView.scale) };
+      fbDrawLine(node, el);
+    };
+    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); fbCommit(); };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  });
+  h.addEventListener('dblclick', e => { e.stopPropagation(); if (el.pts.length > 2){ el.pts.splice(i, 1); fbRender(); fbSelect(el.id); fbCommit(); } });   // 折れ点を削除（端点2つは残す）
+}
+function fbSegInsert(h, el, i, node){
+  h.addEventListener('pointerdown', e => e.stopPropagation());   // 線ドラッグに奪われない
+  h.addEventListener('click', e => {
+    e.stopPropagation();
+    const a = el.pts[i], b = el.pts[i + 1];
+    el.pts.splice(i + 1, 0, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });   // 中点に折れ点を追加
+    fbRender(); fbSelect(el.id); fbCommit();
+  });
+}
+function fbControlDrag(h, el, node){
+  h.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    const mv = ev => {
+      if (fbPinch) return;
+      const rect = document.getElementById('fb-canvas').getBoundingClientRect();
+      el.cx = fbSnapV((ev.clientX - rect.left - fbView.x) / fbView.scale);
+      el.cy = fbSnapV((ev.clientY - rect.top - fbView.y) / fbView.scale);
+      fbDrawLine(node, el);
+    };
+    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); fbCommit(); };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  });
+  h.addEventListener('dblclick', e => { e.stopPropagation(); delete el.cx; delete el.cy; fbDrawLine(node, el); fbCommit(); });   // ダブルクリックで直線に戻す
 }
 function fbEndpointDrag(h, el, which, node){
   h.addEventListener('pointerdown', e => {
@@ -9853,8 +10008,8 @@ function fbCreate(type){
   else if (type === 'note') el = { id, type, x: cx - 80, y: cy - 60, w: 160, h: 120, html: 'メモ', fill: '#FFF9C4', fontSize: 16, color: '#3a3220' };
   else if (type === 'rect') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: fbFaint(fbColor), stroke: fbColor };
   else if (type === 'ellipse') el = { id, type, x: cx - 70, y: cy - 45, w: 140, h: 90, fill: fbFaint(fbColor), stroke: fbColor };
-  else if (type === 'line') el = { id, type, x: cx - 80, y: cy, x2: cx + 80, y2: cy, stroke: fbColor };
-  else if (type === 'arrow') el = { id, type, x: cx - 80, y: cy, x2: cx + 80, y2: cy, stroke: fbColor };
+  else if (type === 'line') el = { id, type: 'line', pts: [{ x: cx - 80, y: cy }, { x: cx + 80, y: cy }], stroke: fbColor, arrow: 'none', head: 'tri', hsize: 14 };
+  else if (type === 'polyline') el = { id, type: 'line', pts: [{ x: cx - 90, y: cy + 30 }, { x: cx, y: cy - 30 }, { x: cx + 90, y: cy + 30 }], stroke: fbColor, arrow: 'none', head: 'tri', hsize: 14 };
   else if (type === 'sheet') el = { id, type, x: cx - 130, y: cy - 80, w: 280, h: 180, sheet: makeSheet(8, 5) };
   else if (type === 'mindmap') el = { id, type, x: cx - 140, y: cy - 90, w: 300, h: 200, map: makeMindmap() };
   else if (type === 'timeblock') el = { id, type, x: cx - 150, y: cy - 60, w: 320, h: 120, tb: makeTimeblock() };
@@ -10109,6 +10264,9 @@ function renderBoardBubble(m, q, showRoom, container){
   if ($('fbe-dup')) $('fbe-dup').onclick = fbDuplicateSel;
   if ($('fbe-front')) $('fbe-front').onclick = fbBringFront;
   if ($('fbe-back')) $('fbe-back').onclick = fbSendBack;
+  if ($('fbe-arrow')) $('fbe-arrow').onclick = () => fbLineOptChange('arrow');
+  if ($('fbe-head')) $('fbe-head').onclick = () => fbLineOptChange('head');
+  if ($('fbe-hsize')) $('fbe-hsize').onclick = () => fbLineOptChange('hsize');
   $('fb-zoom-in').onclick = () => fbZoomBy(1.2);
   $('fb-zoom-out').onclick = () => fbZoomBy(1 / 1.2);
   $('fb-zoom-fit').onclick = fbZoomFit;
@@ -10136,11 +10294,27 @@ function renderBoardBubble(m, q, showRoom, container){
   });
   $('fb-img-input').addEventListener('change', async function(){
     const f = this.files[0]; this.value = ''; if (!f) return;
-    const src = await resizeImg(f);
-    const { cx, cy } = fbCenterWorld();
-    const im = new Image(); im.onload = () => { let w = im.width, h = im.height; const mx = 260; if (w > mx || h > mx){ const r = Math.min(mx / w, mx / h); w *= r; h *= r; } const id = fbNewId(); fbEls.push({ id, type: 'image', x: cx - w / 2, y: cy - h / 2, w, h, src }); fbRender(); fbSelect(id); fbCommit(); }; im.src = src;
+    fbAddImageSrc(await resizeImg(f));
+  });
+  // クリップボードに画像があるとき、フリーボードで Ctrl+V → 画像として追加（付箋編集中・入力欄では通常の貼り付け）
+  document.addEventListener('paste', async e => {
+    const ov = document.getElementById('fb-ov'); if (!ov || !ov.classList.contains('open')) return;
+    if (fbEditingId) return;
+    const ae = document.activeElement; if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return;
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    let file = null;
+    for (const it of items){ if (it.kind === 'file' && /^image\//.test(it.type)){ file = it.getAsFile(); break; } }
+    if (!file) return;
+    e.preventDefault();
+    try { fbAddImageSrc(await resizeImg(file)); } catch (_) {}
   });
 })();
+function fbAddImageSrc(src){
+  const { cx, cy } = fbCenterWorld();
+  const im = new Image();
+  im.onload = () => { let w = im.width, h = im.height; const mx = 260; if (w > mx || h > mx){ const r = Math.min(mx / w, mx / h); w *= r; h *= r; } const id = fbNewId(); fbEls.push({ id, type: 'image', x: cx - w / 2, y: cy - h / 2, w, h, src }); fbRender(); fbSelect(id); fbCommit(); };
+  im.src = src;
+}
 
 // ── タグ・グラフ（力学シミュレーションでゆらゆら配置） ───────────────
 const G_NS = 'http://www.w3.org/2000/svg';
