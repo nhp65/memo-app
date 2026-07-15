@@ -399,7 +399,7 @@ header {
 .bc table td.sheet-calc { background: rgba(76,124,157,0.08); }
 .bc .live-count { color: var(--c1); font-weight: 700; background: rgba(76,124,157,0.08); border-radius: 4px; padding: 0 4px; }
 body.theme-dark .bc table td.sheet-calc, body.theme-sepia .bc table td.sheet-calc { background: rgba(255,255,255,0.06); }
-.bc img { max-width: 100%; border-radius: 8px; display: block; margin: 3px 0; cursor: zoom-in; max-height: 280px; object-fit: contain; }
+.bc img { max-width: var(--img-thumb-w, 100%); border-radius: 8px; display: block; margin: 3px 0; cursor: zoom-in; max-height: var(--img-thumb-max, 280px); object-fit: contain; }
 .map-wrap { margin: 6px 0; border-radius: 10px; overflow: hidden; border: 1px solid #cce5f0; }
 .map-wrap iframe { display: block; width: 100%; border: none; }
 .map-caption { font-size: 0.78rem; color: var(--c1); padding: 4px 9px; background: #f0f7fa; display: flex; align-items: center; gap: 5px; }
@@ -2015,6 +2015,16 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
       <div id="img-quality-row" style="display:flex;gap:6px;flex-wrap:wrap"></div>
       <div style="font-size:.76rem;color:#aaa">次回以降の添付・ペースト時に適用されます。原寸はデータ量が大きくなる場合があります。</div>
       <hr style="border:none;border-top:1px solid #e8f0f5">
+      <div class="cfg-label">🖼 画像サムネイルの大きさ</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="img-thumb-row">
+        <button class="rm-h-btn" data-th="150">小</button>
+        <button class="rm-h-btn" data-th="280">標準</button>
+        <button class="rm-h-btn" data-th="420">大</button>
+        <button class="rm-h-btn" data-th="640">特大</button>
+        <button class="rm-h-btn" data-th="0">原寸</button>
+      </div>
+      <div style="font-size:.76rem;color:#aaa">メモ一覧の画像の最大サイズ（幅・高さ）です。列の幅より大きくはなりません。拡大表示・原寸はそのまま。</div>
+      <hr style="border:none;border-top:1px solid #e8f0f5">
       <div class="cfg-label">💬 バブル幅</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="bubble-w-row">
         <button class="rm-h-btn" data-w="50">狭（50%）</button>
@@ -3583,18 +3593,9 @@ function applyFmt(cmd, targetEl, e) {
     case 'codeblock': {
       const sel = window.getSelection();
       if (!sel || !sel.rangeCount) break;
-      const range = sel.getRangeAt(0);
-      const txt = range.toString();
-      const pre = document.createElement('pre');
-      const code = document.createElement('code');
-      code.textContent = txt || ' ';
-      pre.appendChild(code);
-      range.deleteContents();
-      range.insertNode(pre);
-      const br = document.createElement('br');
-      pre.after(br);
-      range.setStart(br, 0); range.collapse(true);
-      sel.removeAllRanges(); sel.addRange(range);
+      const txt = sel.getRangeAt(0).toString();
+      // execCommand 経由で挿入し、ブラウザの「元に戻す」（Ctrl+Z）の対象にする
+      document.execCommand('insertHTML', false, '<pre><code>' + (escH(txt) || ' ') + '</code></pre><br>');
       break;
     }
     case 'map':
@@ -9196,6 +9197,16 @@ document.querySelectorAll('#bubble-w-row .rm-h-btn').forEach(b => {
     b.classList.add('active');
   };
 });
+// 画像サムネイルの大きさ
+function applyImgThumbMax(v){
+  const has = v && v > 0;
+  document.documentElement.style.setProperty('--img-thumb-max', has ? (v + 'px') : 'none');   // 最大高さ
+  document.documentElement.style.setProperty('--img-thumb-w', has ? ('min(100%, ' + v + 'px)') : '100%');   // 最大幅（列幅を超えない）
+  document.querySelectorAll('#img-thumb-row .rm-h-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.th) === (v || 0)));
+}
+document.querySelectorAll('#img-thumb-row .rm-h-btn').forEach(b => {
+  b.onclick = () => { S.imgThumbMax = Number(b.dataset.th); persist(); applyImgThumbMax(S.imgThumbMax); };
+});
 
 // ── Theme ──────────────────────────────────────────────────────────
 const THEMES = ['light', 'dark', 'sepia'];
@@ -9592,6 +9603,7 @@ async function initApp() {
   if (!S.hiddenTags)       S.hiddenTags       = [];
   if (!S.tagOrder)         S.tagOrder         = [];
   if (!S.imgQuality)       S.imgQuality       = 'std';
+  if (S.imgThumbMax == null) S.imgThumbMax     = 280;
   if (!S.templates)        S.templates        = [];
   if (!S.backupReminder)   S.backupReminder   = { enabled: false, intervalDays: 7, lastBackedAt: null };
   if (!S.readMore)         S.readMore         = { enabled: false, maxHeight: 250, mode: 'off' };
@@ -9636,6 +9648,7 @@ async function initApp() {
 
   document.getElementById('pdf-tab-btn').style.display = '';  // 出典PDFは相対パス方式なので常に利用可
   applyBubbleWidth(S.bubbleWidth);
+  applyImgThumbMax(S.imgThumbMax);
   applyTitleFontSize(S.titleFontSize || 1.25);
   applyTitleBold(S.titleBold !== false);
   applyTitleColor(S.titleColor ?? '#1e3a5f');
@@ -9971,6 +9984,7 @@ function fbPositionNode(node, el){
 function fbAttachDrag(node, el){
   node.addEventListener('pointerdown', e => {
     if (fbPreview) return;   // プレビュー中は移動・選択しない
+    if (e.button > 0) return;   // 右クリック・中クリックは無視（編集の巻き戻り防止）
     if (e.target.isContentEditable) return;
     if (e.target.classList.contains('fb-handle')) return;
     e.stopPropagation();
@@ -10127,6 +10141,7 @@ function fbEndpointDrag(h, el, which, node){
 let fbEditingId = null;
 function fbStartEdit(el, t){
   if (fbPreview) return;   // プレビュー中は編集しない
+  if (fbEditingId === el.id) return;   // 既に編集中の付箋なら再初期化しない（入力内容の巻き戻り防止）
   if (fbEditingId && fbEditingId !== el.id) fbEndEdit();
   fbEditingId = el.id;
   t.innerHTML = el.html || '';   // 検索ハイライトのmarkを除いた素のHTMLで編集
@@ -10803,25 +10818,4 @@ function gClose(){ if (gRAF) cancelAnimationFrame(gRAF); gRAF = null; document.g
       gView.y = gGesture.vy + (pts[0].y - gGesture.sy);
       applyGView();
     } else if (gGesture.mode === 'pinch' && pts.length >= 2) {
-      const r = svg.getBoundingClientRect(), a = pts[0], b = pts[1];
-      const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1;
-      const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
-      const ns = Math.min(6, Math.max(0.2, gGesture.scale * (dist / gGesture.dist)));
-      gView.scale = ns; gView.x = mx - gGesture.wx * ns; gView.y = my - gGesture.wy * ns; applyGView();
-    }
-  });
-  const gPtrEnd = e => { gPtrs.delete(e.pointerId); gGesture = gPtrs.size ? gSnap() : null; };
-  svg.addEventListener('pointerup', gPtrEnd);
-  svg.addEventListener('pointercancel', gPtrEnd);
-  svg.addEventListener('wheel', e => {
-    e.preventDefault(); const r = svg.getBoundingClientRect(), f = e.deltaY < 0 ? 1.1 : 1 / 1.1, ns = Math.min(6, Math.max(0.2, gView.scale * f));
-    const wx = (e.clientX - r.left - gView.x) / gView.scale, wy = (e.clientY - r.top - gView.y) / gView.scale;
-    gView.scale = ns; gView.x = e.clientX - r.left - wx * ns; gView.y = e.clientY - r.top - wy * ns; applyGView();
-  }, { passive: false });
-  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('g-preview').classList.contains('show')) gClosePreview(); else if ($('g-ov').classList.contains('open')) gClose(); });
-})();
-
-initApp();
-</script>
-</body>
-</html>
+      const r = svg.getBoundingClientRect(), a = pts[0], b = pts[1
