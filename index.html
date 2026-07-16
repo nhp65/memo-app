@@ -9885,7 +9885,7 @@ function fbCreateNode(el){
         }
       });
     }
-    if (el.type === 'image'){ const img = document.createElement('img'); img.src = el.src || ''; img.draggable = false; node.appendChild(img); }
+    if (el.type === 'image'){ const img = document.createElement('img'); img.src = el.src || ''; img.draggable = false; node.appendChild(img); img.addEventListener('click', e => { if (!fbPreview) return; e.stopPropagation(); _lbImgEl = img; lbImg.src = el.src || img.src; lb.classList.add('open'); }); }   // プレビュー中はクリックで原寸ライトボックス
     if (el.type === 'sheet'){
       node.classList.add('fb-sheet');
       const thumb = sheetThumb(el.sheet || (el.sheet = makeSheet()), 12, 8);
