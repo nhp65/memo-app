@@ -4590,6 +4590,21 @@ document.addEventListener('click', e => {
   e.stopImmediatePropagation(); e.preventDefault();
   openSlideLightbox(im);
 }, true);
+// フリーボードの通常画像もクリックで原寸ライトボックス（編集・プレビュー両方。ドラッグ後はclickが出ないので移動/パンと両立）
+document.addEventListener('click', e => {
+  const node = e.target.closest && e.target.closest('#fb-world .fb-el.fb-image'); if (!node) return;
+  const img = node.querySelector('img'); if (!img) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  const el = (typeof fbEls !== 'undefined') ? fbEls.find(x => x.id === node.dataset.id) : null;
+  _lbImgEl = img; lbImg.src = (el && el.src) || img.src; lb.classList.add('open');
+}, true);
+// フリーボードの付箋内の画像もクリックで原寸ライトボックス（付箋の編集中でも有効）
+document.addEventListener('click', e => {
+  const img = e.target.closest && e.target.closest('#fb-world .fb-text img'); if (!img) return;
+  if (img.closest('.slide-block')) return;                 // スライドは別処理
+  e.stopImmediatePropagation(); e.preventDefault();
+  _lbImgEl = img; lbImg.src = img.src; lb.classList.add('open');
+}, true);
 { // ライトボックス内スライドUIの操作
   const ui = document.getElementById('lb-slide-ui');
   if (ui){
@@ -9885,7 +9900,7 @@ function fbCreateNode(el){
         }
       });
     }
-    if (el.type === 'image'){ const img = document.createElement('img'); img.src = el.src || ''; img.draggable = false; node.appendChild(img); img.addEventListener('click', e => { if (!fbPreview) return; e.stopPropagation(); _lbImgEl = img; lbImg.src = el.src || img.src; lb.classList.add('open'); }); }   // プレビュー中はクリックで原寸ライトボックス
+    if (el.type === 'image'){ const img = document.createElement('img'); img.src = el.src || ''; img.draggable = false; node.appendChild(img); }
     if (el.type === 'sheet'){
       node.classList.add('fb-sheet');
       const thumb = sheetThumb(el.sheet || (el.sheet = makeSheet()), 12, 8);
