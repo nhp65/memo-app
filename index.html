@@ -883,6 +883,8 @@ body.input-collapsed .input-area { border-top: 1px solid #e8ddc8; }
 #edit-ed .tg-head { padding: 6px 12px; background: #f0f7fa; font-weight: 700; color: var(--c8); font-size: 0.9rem; }
 #edit-ed .tg-head::before { content: '▶ '; font-size: 0.6rem; color: var(--c5); }
 #edit-ed .tg-body { display: block; padding: 6px 12px; }
+#editor ul, #editor ol, #edit-ed ul, #edit-ed ol { padding-left: 1.5em; margin: 5px 0; }
+#editor li, #edit-ed li { overflow-wrap: anywhere; }
 #edit-ed .cl { list-style: none; padding-left: 2px; margin: 3px 0; }
 #edit-ed .cl li { display: block; position: relative; padding-left: 25px; margin: 4px 0; line-height: 1.6; min-height: 1.5em; }
 #edit-ed .cl li input[type="checkbox"] { position: absolute; left: 2px; top: 0.28em; margin: 0; width: 15px; height: 15px; cursor: pointer; accent-color: var(--c1); }
@@ -3512,22 +3514,20 @@ function applyFmt(cmd, targetEl, e) {
         ul0.replaceWith(frag0);
         break;
       }
-      const frag = clRange.extractContents();
-      const lineFrags = fragToLines(frag);
-      if (lineFrags.length === 0) lineFrags.push(document.createDocumentFragment());
-      const ul = document.createElement('ul'); ul.className = 'cl';
-      lineFrags.forEach(lf => {
-        const li = document.createElement('li');
-        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.contentEditable = 'false';
-        li.appendChild(cb);
-        li.appendChild(document.createTextNode('\u00a0'));
-        li.appendChild(lf);
-        ul.appendChild(li);
-      });
-      clRange.insertNode(ul);
-      const after = document.createElement('br'); ul.after(after);
-      clRange.setStart(after, 0); clRange.collapse(true);
-      clSel.removeAllRanges(); clSel.addRange(clRange);
+      // \u30d6\u30e9\u30a6\u30b6\u306e\u30ea\u30b9\u30c8\u5316\uff08\u884c\u5358\u4f4d\u30fbundo\u5bfe\u5fdc\uff09\u3092\u4f7f\u3044\u3001\u305d\u306e\u5f8c\u30c1\u30a7\u30c3\u30af\u30dc\u30c3\u30af\u30b9\u3067\u88c5\u98fe\u3059\u308b
+      document.execCommand('insertUnorderedList', false, null);
+      let node = window.getSelection().rangeCount ? window.getSelection().getRangeAt(0).commonAncestorContainer : null;
+      const ul = node && ((node.nodeType === 3 ? node.parentElement : node).closest ? (node.nodeType === 3 ? node.parentElement : node).closest('ul') : null);
+      if (ul && targetEl.contains(ul)){
+        ul.classList.add('cl');
+        ul.querySelectorAll(':scope > li').forEach(li => {
+          if (!li.querySelector('input[type="checkbox"]')){
+            const cb = document.createElement('input'); cb.type = 'checkbox'; cb.contentEditable = 'false';
+            li.insertBefore(document.createTextNode('\u00a0'), li.firstChild);
+            li.insertBefore(cb, li.firstChild);
+          }
+        });
+      }
       break;
     }
     case 'quote':         document.execCommand('formatBlock', false, 'blockquote'); break;
@@ -3744,6 +3744,26 @@ document.querySelectorAll('.fmt-bar').forEach(bar => {
 });
 
 // Keyboard shortcuts
+// チェックリストの空項目: Enter でリストを抜ける / Backspace で項目を削除（ユーザーフレンドリー化）
+[editor, editEd].forEach(el => {
+  el.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== 'Backspace') return;
+    const sel = window.getSelection(); if (!sel.rangeCount || !sel.isCollapsed) return;
+    const cont = sel.getRangeAt(0).startContainer;
+    const base = cont.nodeType === 3 ? cont.parentElement : cont;
+    const li = base && base.closest ? base.closest('ul.cl > li') : null;
+    if (!li || !el.contains(li)) return;
+    const empty = li.textContent.replace(/ /g, '').trim() === '';
+    if (!empty) return;   // 内容がある項目は通常動作（文字を消してから空にできる）
+    e.preventDefault();
+    const ul = li.parentElement;
+    const line = document.createElement('div'); line.innerHTML = '<br>';
+    if (e.key === 'Enter'){ ul.after(line); li.remove(); if (!ul.querySelector('li')) ul.remove(); }
+    else { const prev = li.previousElementSibling; li.remove(); if (!ul.querySelector('li')){ ul.replaceWith(line); } else if (prev){ line.remove(); } else { ul.before(line); } }
+    const target = document.body.contains(line) ? line : (ul.querySelector('li:last-child') || el);
+    const r = document.createRange(); r.selectNodeContents(target); r.collapse(true); sel.removeAllRanges(); sel.addRange(r);
+  });
+});
 [editor, editEd].forEach(el => {
   el.addEventListener('keydown', e => {
     if ((e.ctrlKey||e.metaKey) && e.key==='b') { e.preventDefault(); applyFmt('bold', el); }
