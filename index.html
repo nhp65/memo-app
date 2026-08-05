@@ -3408,6 +3408,20 @@ function reconcileCl(root){
     }
   });
 }
+// チェックリストの1項目だけを外して通常行にする（前後のチェック項目は保持＝リストを分割）
+function clRemoveLi(li){
+  const ul = li.parentElement; if (!ul) return;
+  li.querySelectorAll('input[type="checkbox"]').forEach(i => i.remove());
+  const div = document.createElement('div');
+  div.innerHTML = (li.innerHTML || '').replace(/^\s+/, '') || '<br>';
+  let ul2 = null, sib = li.nextElementSibling;
+  if (sib){ ul2 = document.createElement('ul'); ul2.className = ul.className; while (sib){ const nx = sib.nextElementSibling; ul2.appendChild(sib); sib = nx; } }
+  li.remove();
+  ul.after(div);
+  if (ul2) div.after(ul2);
+  if (!ul.querySelector('li')) ul.remove();
+  try { const sel = window.getSelection(); const r = document.createRange(); r.selectNodeContents(div); r.collapse(true); sel.removeAllRanges(); sel.addRange(r); } catch (e) {}
+}
 // ── Block-element helper ──────────────────────────────────────────
 function isEditorBlock(node) {
   if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
@@ -3455,8 +3469,7 @@ function applyFmt(cmd, targetEl, e) {
       if (curLi && curUl && curUl.classList.contains('cl') && targetEl.contains(curLi)) {
         // \u73fe\u5728\u884c\u3060\u3051\u3092\u5bfe\u8c61\u306b\u30c8\u30b0\u30eb\uff08\u4e00\u89a7\u5168\u4f53\u306b\u306f\u5f71\u97ff\u3055\u305b\u306a\u3044\uff09
         if (curLi.querySelector('input[type="checkbox"]')) {
-          document.execCommand('insertUnorderedList', false, null);   // \u3053\u306e\u884c\u3092\u30ea\u30b9\u30c8\u304b\u3089\u5916\u3059\uff1d\u30c1\u30a7\u30c3\u30af\u89e3\u9664
-          reconcileCl(targetEl);
+          clRemoveLi(curLi);   // \u3053\u306e\u884c\u3060\u3051\u3092\u5916\u3059\uff08\u524d\u5f8c\u306e\u30c1\u30a7\u30c3\u30af\u9805\u76ee\u306f\u4fdd\u6301\uff09
         } else {
           const nb = document.createElement('input'); nb.type = 'checkbox'; nb.contentEditable = 'false';
           curLi.insertBefore(document.createTextNode(' '), curLi.firstChild);
