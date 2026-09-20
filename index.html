@@ -858,9 +858,20 @@ body.input-collapsed .input-area { border-top: 1px solid #e8ddc8; }
 #ie-head select { padding: 3px 6px; border-radius: 6px; border: none; font-size: .8rem; }
 #ie-head button:not(.ie-tool) { background: rgba(255,255,255,.16); color: #fff; border: none; border-radius: 7px; padding: 5px 11px; cursor: pointer; font-size: .82rem; }
 #ie-head #ie-save { background: #d8b071; color: #322; font-weight: 700; }
+#ie-hint { font-size: .74rem; color: #cbb; padding: 5px 12px; background: #2b2825; flex-shrink: 0; }
 #ie-stage { flex: 1; min-height: 0; position: relative; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 12px; }
-#ie-canvas { max-width: 100%; max-height: 100%; box-shadow: 0 4px 24px rgba(0,0,0,.5); background: #fff; touch-action: none; cursor: crosshair; }
-#ie-crop-sel { position: fixed; border: 2px dashed #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,.35); pointer-events: none; z-index: 4; }
+#ie-imgwrap { position: relative; display: inline-block; max-width: 100%; max-height: 100%; box-shadow: 0 4px 24px rgba(0,0,0,.5); }
+#ie-img { display: block; max-width: 100%; max-height: calc(100vh - 130px); background: #fff; user-select: none; -webkit-user-drag: none; }
+#ie-svg { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+#ie-svg.ie-select { cursor: default; }
+#ie-head #ie-bold, #ie-head #ie-italic, #ie-head #ie-underline { font-size: .9rem; width: 30px; }
+#ie-head #ie-bold.on, #ie-head #ie-italic.on, #ie-head #ie-underline.on { background: #d8b071; color: #322; }
+.ia-handle { fill: #fff; stroke: #4C7C9D; stroke-width: 2; cursor: pointer; }
+.ia-selbox { fill: none; stroke: #4C7C9D; stroke-width: 1.5; stroke-dasharray: 5 4; }
+/* メモ表示内の注釈オーバーレイ */
+.ia-wrap { position: relative; display: inline-block; max-width: 100%; line-height: 0; margin: 3px 0; }
+.ia-wrap img { margin: 0 !important; }
+.ia-wrap > svg.ia-ov { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .lb.open { display: flex; animation: lbFadeIn 0.15s ease; }
 .lb img { max-width: 94vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 4px 32px rgba(0,0,0,0.5); animation: lbImgIn 0.15s ease; }
 @keyframes lbFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1595,8 +1606,9 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
 <div class="ov" id="link-ov">
   <div class="modal">
     <h3>🔗 リンクを挿入</h3>
-    <input type="url" id="link-url" placeholder="リンクURL（https://...）">
-    <input type="text" id="link-text" placeholder="表示テキスト（省略時はURLをそのまま表示）">
+    <input type="text" id="link-url" placeholder="URL またはローカルパス（C:\資料\メモ.pdf）" aria-label="URL またはローカルパス">
+    <input type="text" id="link-text" placeholder="表示テキスト（省略時はURL・パスをそのまま表示）">
+    <p style="font-size:.8rem;color:var(--th-muted);line-height:1.6">ファイル・フォルダーのフルパスを貼り付けられます（引用符付きにも対応）。リンクをクリックするとエクスプローラーで開きます。ファイルは保存先で選択表示します。初回のみ同じフォルダーの setup-local-path.cmd を実行してください。ブラウザーに確認が出たら「開く」を選びます。</p>
     <div class="mact">
       <button class="bcl" id="link-cancel">キャンセル</button>
       <button class="bpr" id="link-ok">挿入</button>
@@ -2167,6 +2179,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button id="fbe-arrow" class="fbe-line" title="矢印の向き（なし→終点→始点→両側）">—</button>
     <button id="fbe-head" class="fbe-line" title="矢じりの形（三角→開き→丸）">▲</button>
     <button id="fbe-hsize" class="fbe-line" title="矢じりの大きさ">中</button>
+    <button id="fbe-sw" class="fbe-line" title="線の太さ">太さ</button>
     <span class="fbe-line" style="width:1px;height:18px;background:rgba(0,0,0,.15)"></span>
     <button id="fbe-front" title="前面へ">⬆</button>
     <button id="fbe-back" title="背面へ">⬇</button>
@@ -2293,32 +2306,38 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
     <button type="button" id="lb-collapse" title="バーを隠す">▼</button>
   </div>
   <button type="button" id="lb-slide-show" title="スライドバーを表示" style="display:none">▲</button>
-  <button type="button" id="lb-edit" title="画像を編集">✏</button>
+  <button type="button" id="lb-edit" title="注釈を編集">✏</button>
+  <svg id="lb-annot-ov" xmlns="http://www.w3.org/2000/svg" style="position:fixed;pointer-events:none;display:none;z-index:2"></svg>
 </div>
 
 <!-- 画像編集（破壊編集） -->
 <div id="imgedit-ov">
   <div id="ie-head">
     <div id="ie-tools">
+      <button class="ie-tool" data-tool="select" title="選択・移動・変形">▭ 選択</button>
       <button class="ie-tool on" data-tool="pen">✏ ペン</button>
       <button class="ie-tool" data-tool="marker">🖍 蛍光</button>
       <button class="ie-tool" data-tool="line">／ 線</button>
+      <button class="ie-tool" data-tool="arrow">→ 矢印</button>
       <button class="ie-tool" data-tool="rect">▭ 四角</button>
       <button class="ie-tool" data-tool="ellipse">◯ 円</button>
       <button class="ie-tool" data-tool="text">A 文字</button>
-      <button class="ie-tool" data-tool="crop">⛶ トリミング</button>
     </div>
     <input type="color" id="ie-color" value="#e53935" title="色">
     <select id="ie-size" title="太さ／文字サイズ">
       <option value="3">細</option><option value="6" selected>中</option><option value="12">太</option><option value="22">極太</option>
     </select>
-    <button id="ie-undo" title="元に戻す">↶ 戻す</button>
-    <button id="ie-crop-apply" style="display:none">✂ 切り抜き適用</button>
+    <button id="ie-bold" title="太字（文字）"><b>B</b></button>
+    <button id="ie-italic" title="斜体（文字）"><i>I</i></button>
+    <button id="ie-underline" title="下線（文字）"><u>U</u></button>
+    <button id="ie-del" title="選択オブジェクトを削除">🗑</button>
+    <button id="ie-undo" title="元に戻す">↶</button>
     <span style="flex:1"></span>
     <button id="ie-cancel">キャンセル</button>
     <button id="ie-save">✓ 保存</button>
   </div>
-  <div id="ie-stage"><canvas id="ie-canvas"></canvas><div id="ie-crop-sel" style="display:none"></div></div>
+  <div id="ie-hint">ツールで注釈を追加／「選択」でオブジェクトを移動・変形・削除。文字はダブルクリックで再編集。画像自体は変更しません（非破壊）。</div>
+  <div id="ie-stage"><div id="ie-imgwrap"><img id="ie-img" alt=""><svg id="ie-svg" xmlns="http://www.w3.org/2000/svg"></svg></div></div>
 </div>
 
 <!-- Quick look (拡大表示) -->
@@ -3321,6 +3340,7 @@ function buildToolbar(barId) {
     <button class="fb" data-c="toggle" title="折りたたみ">⊟</button>
     <div class="fs"></div>
     <button class="fb" data-c="link"   title="リンク">🔗</button>
+    <button class="fb" data-c="localpath" title="ローカルのファイル・フォルダーへのリンクを挿入">📁</button>
     <button class="fb" data-c="map"    title="地図を挿入">📍</button>
     <button class="fb" data-c="yt"     title="YouTubeを埋め込み（指定時間リンク付き）">▶YT</button>
     <button class="fb" data-c="pdfref" title="出典PDF（該当ページ）を挿入">📑</button>
@@ -3589,6 +3609,7 @@ function applyFmt(cmd, targetEl, e) {
       pdfTargetEl = targetEl;
       openPdfInsert();
       break;
+    case 'localpath':
     case 'link': {
       savedRange = window.getSelection()?.rangeCount ? window.getSelection().getRangeAt(0).cloneRange() : null;
       linkTargetEl = targetEl;
@@ -4090,13 +4111,82 @@ document.getElementById('map-cancel').onclick = () => { closeOv('map-ov'); resto
 document.getElementById('map-ov').addEventListener('click', e => { if (e.target===document.getElementById('map-ov')) { closeOv('map-ov'); restoreRange(mapTargetEl); } });
 
 // ── Link modal ────────────────────────────────────────────────────
+
+// フルパスのみを file: URL に変換する。URL の %xx は二重エンコードしない。
+function normalizeLocalPath(value) {
+  let path = String(value || '').trim();
+  if ((path.startsWith('"') && path.endsWith('"')) || (path.startsWith("'") && path.endsWith("'"))) path = path.slice(1, -1);
+  return path;
+}
+function localPathToUrl(value) {
+  const path = normalizeLocalPath(value);
+  if (!/^(?:file:|[a-z]:[\\/]|\\\\|\/)/i.test(path)) return null;
+  if (/[\u0000-\u001f\u007f]/.test(path)) throw new Error('パスに改行や制御文字を含めることはできません。');
+  if (/^file:/i.test(path)) {
+    const url = new URL(path);
+    if (url.protocol !== 'file:') throw new Error('file: URLを入力してください。');
+    return url.href;
+  }
+  const normalized = path.replace(/\\/g, '/');
+  const encodePath = p => p.split('/').map(part => encodeURIComponent(part)).join('/');
+  if (/^[a-z]:\//i.test(normalized)) return 'file:///' + normalized.slice(0, 2) + encodePath(normalized.slice(2));
+  if (normalized.startsWith('//')) {
+    const match = /^\/\/([^/]+)(\/.*)$/.exec(normalized);
+    if (!match || !/^[\p{L}\p{N}._-]+$/u.test(match[1])) throw new Error('共有パスは \\\\server\\share の形式で入力してください。');
+    return new URL('file://' + match[1] + encodePath(match[2])).href;
+  }
+  return 'file://' + encodePath(normalized);
+}
+function explorerLinkUrl(fileUrl) {
+  return 'chatmemo-local://open/' + btoa(fileUrl).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function memoLinkHtml(value, label) {
+  const path = normalizeLocalPath(value);
+  const localUrl = localPathToUrl(path);
+  const href = localUrl ? explorerLinkUrl(localUrl) : path;
+  if (/^(?:javascript|data|vbscript):/i.test(href)) throw new Error('この形式のリンクは使用できません。');
+  return '<a href="' + escAttr(href) + '" target="_blank" rel="noopener"' +
+    (localUrl ? ' class="local-path-ref" contenteditable="false" data-local-path="' + escAttr(path) + '" title="エクスプローラーで開く"' : '') +
+    '>' + escH(label || path) + '</a>';
+}
+// 専用URLの通常リンクとして起動する。追加のダイアログは表示しない。
+document.addEventListener('click', e => {
+  const a = e.target.closest?.('a');
+  if (!a || a.dataset.localLaunch || a.classList.contains('pdf-ref')) return;
+  let path = a.dataset.localPath || a.getAttribute('href') || '';
+  let url;
+  try {
+    const protocol = /^chatmemo-local:\/\/open\/([A-Za-z0-9_-]+)$/.exec(path);
+    if (protocol) path = atob(protocol[1].replace(/-/g, '+').replace(/_/g, '/'));
+    url = localPathToUrl(path);
+  } catch (error) { e.preventDefault(); alert(error.message); return; }
+  if (!url) return;
+  a.href = explorerLinkUrl(url);
+  a.target = '_self';
+  if (a.isContentEditable) {
+    e.preventDefault();
+    const launch = document.createElement('a');
+    launch.href = a.href;
+    document.body.appendChild(launch);
+    // 再度このハンドラーで処理せず、ブラウザーの通常クリック処理へ渡す。
+    launch.dataset.localLaunch = 'true';
+    launch.click();
+    launch.remove();
+  }
+}, true);
+
 document.getElementById('link-ok').onclick = () => {
   const url = document.getElementById('link-url').value.trim();
   const text = document.getElementById('link-text').value.trim();
   if (url) {
     restoreRange(linkTargetEl);
-    const label = escH(text || url);
-    insertHtmlAtCaret(`<a href="${url.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">${label}</a>`);
+    try {
+      insertHtmlAtCaret(memoLinkHtml(url, text));
+    } catch (error) {
+      alert(error.message);
+      document.getElementById('link-url').focus();
+      return;
+    }
   }
   closeOv('link-ov');
 };
@@ -4413,7 +4503,8 @@ function openSlideEdit(block){
   _slideEditBlock = block;
   _slideItems = [...block.querySelectorAll('.slide-img')].map(im => {
     const src = im.getAttribute('data-cimg') || im.getAttribute('src') || '';   // マーカー優先（再保存不要）
-    return `<img src="${src.replace(/"/g, '&quot;')}">`;
+    const ia = im.getAttribute('data-ia');   // 注釈も維持（並べ替え・追加時に消えないように）
+    return `<img src="${src.replace(/"/g, '&quot;')}"` + (ia ? ` data-ia="${ia.replace(/"/g, '&quot;')}"` : '') + `>`;
   });
   renderSlideList();
   openOv('slide-ov');
@@ -4505,6 +4596,37 @@ function slideSet(block, idx){
   imgs.forEach((im, i) => im.classList.toggle('cur', i === idx));
   const cnt = block.querySelector('.slide-count'); if (cnt) cnt.textContent = (idx + 1) + ' / ' + n;
   const rng = block.querySelector('.slide-range'); if (rng && +rng.value !== idx) rng.value = idx;
+  slideAnnotSync(block);
+}
+// 現在表示中のスライド画像の注釈を、画像のcontain実表示域にぴったり重ねて描画
+function slideAnnotSync(block){
+  if (!block) return; const track = block.querySelector('.slide-track'); if (!track) return;
+  let ov = track.querySelector(':scope > svg.slide-annot-ov');
+  const img = block.querySelector('.slide-img.cur') || block.querySelector('.slide-img');
+  let d = null;
+  if (img && img.dataset.ia){ try { d = JSON.parse(decodeURIComponent(img.dataset.ia)); } catch (_) {} }
+  if (!img || !d || !d.objs || !d.objs.length){ if (ov) ov.style.display = 'none'; return; }
+  if (!ov){ ov = document.createElementNS(IA_NS, 'svg'); ov.setAttribute('class', 'slide-annot-ov'); ov.setAttribute('preserveAspectRatio', 'none'); ov.style.cssText = 'position:absolute;pointer-events:none;z-index:1'; track.appendChild(ov); }
+  ov.innerHTML = ''; ov.setAttribute('viewBox', '0 0 ' + (d.W || 100) + ' ' + (d.H || 100));
+  d.objs.forEach(o => { const e = iaObjToEl(o); if (e) ov.appendChild(e); });
+  const ir = img.getBoundingClientRect(), tr = track.getBoundingClientRect();
+  if (!ir.width || !ir.height){ ov.style.display = 'none'; return; }
+  const scale = Math.min(ir.width / (d.W || 1), ir.height / (d.H || 1));
+  const cw = (d.W || 1) * scale, ch = (d.H || 1) * scale;
+  ov.style.display = ''; ov.style.left = ((ir.left - tr.left) + (ir.width - cw) / 2) + 'px'; ov.style.top = ((ir.top - tr.top) + (ir.height - ch) / 2) + 'px'; ov.style.width = cw + 'px'; ov.style.height = ch + 'px';
+}
+// レンダー後にスライド注釈を初期化（ResizeObserverで読み込み/リサイズ追従）
+function hydrateSlideAnnots(root){
+  (root || document).querySelectorAll('.slide-block').forEach(block => {
+    if (!block.querySelector('.slide-img[data-ia]')) return;
+    slideAnnotSync(block);
+    if (!block._iaObs && typeof ResizeObserver !== 'undefined'){
+      const ro = new ResizeObserver(() => slideAnnotSync(block));
+      const track = block.querySelector('.slide-track'); if (track) ro.observe(track);
+      block._iaObs = ro;
+      block.querySelectorAll('.slide-img').forEach(im => im.addEventListener('load', () => slideAnnotSync(block)));
+    }
+  });
 }
 // スライド内のクリック（編集 / ページ送り / 最初へ）
 document.addEventListener('click', e => {
@@ -4535,6 +4657,7 @@ async function lbShowSlide(){
   const n = _lbSlide.imgs.length;
   const rng = document.getElementById('lb-range'); rng.max = Math.max(0, n - 1); rng.value = _lbSlide.idx;
   document.getElementById('lb-count').textContent = (_lbSlide.idx + 1) + ' / ' + n;
+  if (typeof lbShowAnnot === 'function') lbShowAnnot();
 }
 function lbSlideGo(d){ if (!_lbSlide) return; const n = _lbSlide.imgs.length; _lbSlide.idx = d === 'first' ? 0 : (((_lbSlide.idx + d) % n) + n) % n; lbShowSlide(); lbBarShow(); }
 // スライドバーの自動非表示（一定時間後に隠し、▲で再表示）
@@ -5874,6 +5997,7 @@ function highlightIn(scope){
 function cleanCodeForSave(cnt){
   const clone = cnt.cloneNode(true);
   restoreMarkers(clone);   // 遅延読み込み画像をマーカーへ戻し、本体を軽量に保つ
+  clone.querySelectorAll('svg.slide-annot-ov').forEach(s => s.remove());   // スライド注釈は動的生成のため保存しない（data-iaで復元）
   clone.querySelectorAll('pre').forEach(pre => {
     const text = extractCodeText(pre.querySelector('code') || pre);
     pre.removeAttribute('data-hl');
@@ -7242,6 +7366,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   hydrateSheetEmbeds(cnt);   // 埋め込みシートをサムネイル化
   hydrateMapEmbeds(cnt);     // 埋め込みマインドマップをサムネイル化
   hydrateTbEmbeds(cnt);      // 埋め込みタイムブロックをサムネイル化
+  hydrateSlideAnnots(cnt);   // スライドの注釈オーバーレイを配置
   if (m.titleLine !== false) {
     const fc = cnt.firstChild;
     const isTable = el => el.nodeType === Node.ELEMENT_NODE &&
@@ -8369,114 +8494,232 @@ document.getElementById('tmpl-close').onclick = () => { closeOv('tmpl-ov'); rest
 document.getElementById('tmpl-ov').addEventListener('click', e => { if (e.target === document.getElementById('tmpl-ov')) { closeOv('tmpl-ov'); restoreRange(tmplTargetEl); } });
 
 // ── Lightbox ──────────────────────────────────────────────────────
-function lbClose(){ lb.classList.remove('open'); _lbSlide = null; clearTimeout(_lbBarTimer); const ui = document.getElementById('lb-slide-ui'); if (ui) ui.style.display = 'none'; const sb = document.getElementById('lb-slide-show'); if (sb) sb.style.display = 'none'; }
+function lbClose(){ lb.classList.remove('open'); _lbSlide = null; clearTimeout(_lbBarTimer); const ui = document.getElementById('lb-slide-ui'); if (ui) ui.style.display = 'none'; const sb = document.getElementById('lb-slide-show'); if (sb) sb.style.display = 'none'; const ao = document.getElementById('lb-annot-ov'); if (ao) ao.style.display = 'none'; }
 
 // ── 画像編集（破壊編集: ペン/蛍光/図形/文字/トリミング）───────────────
-let _ie = null;   // { canvas, ctx, tool, color, size, undo:[], base, start, cropRect }
-function openImgEditor(src){
+// ── 画像アノテーション（非破壊・ベクター。オブジェクトはメモデータに保存）──
+const IA_NS = 'http://www.w3.org/2000/svg';
+let _ia = null;   // { objects, sel, tool, color, size, bold, W, H, undo:[], svg, drawing, moving, resizing }
+function iaId(){ return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+let _iaCanvas;
+function iaMeasure(text, size, bold){
+  if (!_iaCanvas) _iaCanvas = document.createElement('canvas').getContext('2d');
+  _iaCanvas.font = (bold ? '700 ' : '400 ') + size + 'px sans-serif';
+  return _iaCanvas.measureText(text || '').width;
+}
+// 折り返し幅 w（viewBox単位）が指定されていれば行に分割。未指定なら改行のみで分割。
+function iaWrapLines(text, size, bold, w){
+  const out = [];
+  (text || '').split('\n').forEach(para => {
+    if (!w){ out.push(para); return; }
+    let cur = '';
+    for (let i = 0; i < para.length; i++){
+      const ch = para[i];
+      if (cur && iaMeasure(cur + ch, size, bold) > w){
+        const sp = cur.lastIndexOf(' ');
+        if (sp > 0){ out.push(cur.slice(0, sp)); cur = cur.slice(sp + 1) + ch; }
+        else { out.push(cur); cur = ch; }
+      } else cur += ch;
+    }
+    out.push(cur);
+  });
+  return out.length ? out : [''];
+}
+function iaObjToEl(o){
+  const mk = t => document.createElementNS(IA_NS, t); let el;
+  if (o.type === 'pen' || o.type === 'marker'){
+    el = mk('polyline'); el.setAttribute('points', (o.pts || []).map(p => p.x + ',' + p.y).join(' '));
+    el.setAttribute('fill', 'none'); el.setAttribute('stroke', o.color); el.setAttribute('stroke-width', o.width);
+    el.setAttribute('stroke-linecap', 'round'); el.setAttribute('stroke-linejoin', 'round');
+    if (o.type === 'marker') el.setAttribute('stroke-opacity', '0.4');
+  } else if (o.type === 'line' || o.type === 'arrow'){
+    el = mk('g');
+    const ln = mk('line'); ln.setAttribute('x1', o.x1); ln.setAttribute('y1', o.y1); ln.setAttribute('x2', o.x2); ln.setAttribute('y2', o.y2); ln.setAttribute('stroke', o.color); ln.setAttribute('stroke-width', o.width); ln.setAttribute('stroke-linecap', 'round'); el.appendChild(ln);
+    if (o.type === 'arrow'){ const a = Math.max(8, o.width * 3), ang = Math.atan2(o.y2 - o.y1, o.x2 - o.x1); const hp = mk('polyline'); hp.setAttribute('points', (o.x2 - a * Math.cos(ang - Math.PI / 6)) + ',' + (o.y2 - a * Math.sin(ang - Math.PI / 6)) + ' ' + o.x2 + ',' + o.y2 + ' ' + (o.x2 - a * Math.cos(ang + Math.PI / 6)) + ',' + (o.y2 - a * Math.sin(ang + Math.PI / 6))); hp.setAttribute('fill', 'none'); hp.setAttribute('stroke', o.color); hp.setAttribute('stroke-width', o.width); hp.setAttribute('stroke-linecap', 'round'); hp.setAttribute('stroke-linejoin', 'round'); el.appendChild(hp); }
+  } else if (o.type === 'rect'){
+    el = mk('rect'); el.setAttribute('x', Math.min(o.x, o.x2)); el.setAttribute('y', Math.min(o.y, o.y2)); el.setAttribute('width', Math.abs(o.x2 - o.x)); el.setAttribute('height', Math.abs(o.y2 - o.y)); el.setAttribute('fill', 'none'); el.setAttribute('stroke', o.color); el.setAttribute('stroke-width', o.width); el.setAttribute('rx', '2');
+  } else if (o.type === 'ellipse'){
+    el = mk('ellipse'); el.setAttribute('cx', (o.x + o.x2) / 2); el.setAttribute('cy', (o.y + o.y2) / 2); el.setAttribute('rx', Math.abs(o.x2 - o.x) / 2); el.setAttribute('ry', Math.abs(o.y2 - o.y) / 2); el.setAttribute('fill', 'none'); el.setAttribute('stroke', o.color); el.setAttribute('stroke-width', o.width);
+  } else if (o.type === 'text'){
+    el = mk('text'); el.setAttribute('x', o.x); el.setAttribute('y', o.y); el.setAttribute('fill', o.color); el.setAttribute('font-size', o.size); el.setAttribute('font-family', 'sans-serif'); el.setAttribute('font-weight', o.bold ? '700' : '400'); el.setAttribute('dominant-baseline', 'hanging');
+    if (o.italic) el.setAttribute('font-style', 'italic');
+    if (o.underline) el.setAttribute('text-decoration', 'underline');
+    const lines = iaWrapLines(o.text, o.size, o.bold, o.w);
+    if (lines.length <= 1 && !o.w){ el.textContent = o.text || ''; }
+    else { lines.forEach((ln, i) => { const ts = mk('tspan'); ts.setAttribute('x', o.x); ts.setAttribute('dy', i === 0 ? 0 : (o.size * 1.2)); ts.textContent = ln === '' ? ' ' : ln; el.appendChild(ts); }); }
+  }
+  if (el) el.setAttribute('data-oid', o.id);
+  return el;
+}
+function iaSvgMarkup(objects, W, H){
+  const tmp = document.createElementNS(IA_NS, 'svg');
+  tmp.setAttribute('xmlns', IA_NS); tmp.setAttribute('viewBox', '0 0 ' + W + ' ' + H); tmp.setAttribute('preserveAspectRatio', 'none'); tmp.setAttribute('class', 'ia-ov');
+  (objects || []).forEach(o => { const el = iaObjToEl(o); if (el) tmp.appendChild(el); });
+  return tmp.outerHTML;
+}
+function iaBBox(o){
+  if (o.type === 'text'){ const lines = iaWrapLines(o.text, o.size, o.bold, o.w); const w = o.w || Math.max(1, Math.max.apply(null, lines.map(l => iaMeasure(l, o.size, o.bold)))); return { x: o.x, y: o.y, w: w, h: lines.length * o.size * 1.2 }; }
+  if (o.type === 'pen' || o.type === 'marker'){ const xs = o.pts.map(p => p.x), ys = o.pts.map(p => p.y); const x = Math.min.apply(null, xs), y = Math.min.apply(null, ys); return { x, y, w: Math.max.apply(null, xs) - x, h: Math.max.apply(null, ys) - y }; }
+  if (o.type === 'line' || o.type === 'arrow'){ const x = Math.min(o.x1, o.x2), y = Math.min(o.y1, o.y2); return { x, y, w: Math.abs(o.x2 - o.x1), h: Math.abs(o.y2 - o.y1) }; }
+  return { x: Math.min(o.x, o.x2), y: Math.min(o.y, o.y2), w: Math.abs(o.x2 - o.x), h: Math.abs(o.y2 - o.y) };
+}
+function iaSelObj(){ return _ia && _ia.sel != null ? _ia.objects.find(o => o.id === _ia.sel) : null; }
+function iaRender(){
+  if (!_ia) return; const svg = _ia.svg; svg.innerHTML = '';
+  _ia.objects.forEach(o => { const el = iaObjToEl(o); if (el){ el.style.pointerEvents = 'none'; svg.appendChild(el); } });
+  const o = iaSelObj(); if (!o) return;
+  const rect = svg.getBoundingClientRect(); const sc = rect.width ? (_ia.W / rect.width) : 1;
+  const b = iaBBox(o);
+  const box = document.createElementNS(IA_NS, 'rect'); box.setAttribute('class', 'ia-selbox'); box.setAttribute('x', b.x - 4 * sc); box.setAttribute('y', b.y - 4 * sc); box.setAttribute('width', b.w + 8 * sc); box.setAttribute('height', b.h + 8 * sc); box.setAttribute('stroke-width', 1.5 * sc); box.style.pointerEvents = 'none'; svg.appendChild(box);
+  const add = (x, y, name) => { const c = document.createElementNS(IA_NS, 'circle'); c.setAttribute('class', 'ia-handle'); c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 7 * sc); c.setAttribute('stroke-width', 2 * sc); c.setAttribute('data-handle', name); svg.appendChild(c); };
+  if (o.type === 'line' || o.type === 'arrow'){ add(o.x1, o.y1, 'p1'); add(o.x2, o.y2, 'p2'); }
+  else if (o.type === 'rect' || o.type === 'ellipse'){ add(Math.max(o.x, o.x2), Math.max(o.y, o.y2), 'br'); }
+  else if (o.type === 'text'){ add(o.x + b.w, o.y + b.h / 2, 'tw'); }
+}
+function iaMoveObj(o, dx, dy){
+  if (o.type === 'pen' || o.type === 'marker') o.pts.forEach(p => { p.x += dx; p.y += dy; });
+  else if (o.type === 'line' || o.type === 'arrow'){ o.x1 += dx; o.y1 += dy; o.x2 += dx; o.y2 += dy; }
+  else if (o.type === 'text'){ o.x += dx; o.y += dy; }
+  else { o.x += dx; o.y += dy; o.x2 += dx; o.y2 += dy; }
+}
+function iaPushUndo(){ if (_ia){ _ia.undo.push(JSON.stringify(_ia.objects)); if (_ia.undo.length > 30) _ia.undo.shift(); } }
+function iaPt(ev){ const r = _ia.svg.getBoundingClientRect(); return { x: (ev.clientX - r.left) * (_ia.W / r.width), y: (ev.clientY - r.top) * (_ia.H / r.height) }; }
+function openImgEditor(src, model){
   if (!src) return;
-  const canvas = document.getElementById('ie-canvas'), ctx = canvas.getContext('2d');
+  const img = document.getElementById('ie-img'), svg = document.getElementById('ie-svg');
   const im = new Image();
   im.onload = () => {
-    const maxPx = 2000; let w = im.naturalWidth, h = im.naturalHeight;
-    if (w > maxPx || h > maxPx){ const r = Math.min(maxPx / w, maxPx / h); w = Math.round(w * r); h = Math.round(h * r); }
-    canvas.width = w; canvas.height = h; ctx.clearRect(0, 0, w, h); ctx.drawImage(im, 0, 0, w, h);
-    _ie = { canvas, ctx, tool: 'pen', color: document.getElementById('ie-color').value, size: +document.getElementById('ie-size').value, undo: [], base: null, start: null };
+    const W = im.naturalWidth || im.width || 800, H = im.naturalHeight || im.height || 600;
+    img.src = src; svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('preserveAspectRatio', 'none');
+    _ia = { objects: (model || []).map(o => JSON.parse(JSON.stringify(o))), sel: null, tool: 'pen', color: document.getElementById('ie-color').value, size: +document.getElementById('ie-size').value, bold: false, italic: false, underline: false, W, H, undo: [], svg };
+    document.querySelectorAll('#ie-tools .ie-tool').forEach(x => x.classList.toggle('on', x.dataset.tool === 'pen'));
+    document.getElementById('ie-bold').classList.remove('on'); document.getElementById('ie-italic').classList.remove('on'); document.getElementById('ie-underline').classList.remove('on'); svg.classList.remove('ie-select');
     document.getElementById('imgedit-ov').classList.add('open');
+    setTimeout(iaRender, 30);
   };
   im.onerror = () => alert('画像を読み込めませんでした');
-  im.src = src;
+  img.src = ''; im.src = src;
 }
-function iePushUndo(){ if (!_ie) return; try { _ie.undo.push(_ie.canvas.toDataURL('image/png')); if (_ie.undo.length > 20) _ie.undo.shift(); } catch (e) {} }
-function iePt(ev){ const c = _ie.canvas, r = c.getBoundingClientRect(); return { x: (ev.clientX - r.left) * (c.width / r.width), y: (ev.clientY - r.top) * (c.height / r.height) }; }
-function ieStroke(){ const ctx = _ie.ctx; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = _ie.color; ctx.fillStyle = _ie.color; ctx.lineWidth = _ie.size; ctx.globalAlpha = 1; if (_ie.tool === 'marker'){ ctx.globalAlpha = 0.35; ctx.lineWidth = _ie.size * 2.4; } }
 (function(){
-  const canvas = document.getElementById('ie-canvas');
-  if (!canvas) return;
-  const sel = document.getElementById('ie-crop-sel');
-  canvas.addEventListener('pointerdown', ev => {
-    if (!_ie) return; ev.preventDefault();
-    const p = iePt(ev); _ie.start = p;
-    if (_ie.tool === 'text'){
-      const txt = prompt('文字を入力'); if (txt){ iePushUndo(); const ctx = _ie.ctx; const fs = _ie.size * 6; ctx.globalAlpha = 1; ctx.fillStyle = _ie.color; ctx.textBaseline = 'top'; ctx.font = '700 ' + fs + 'px sans-serif'; ctx.fillText(txt, p.x, p.y); }
-      _ie.start = null; return;
+  const svg = document.getElementById('ie-svg'); if (!svg) return;
+  svg.addEventListener('pointerdown', ev => {
+    if (!_ia) return; ev.preventDefault();
+    const p = iaPt(ev);
+    if (_ia.tool === 'select'){
+      const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+      if (hit && hit.getAttribute && hit.getAttribute('data-handle')){ iaPushUndo(); _ia.resizing = { o: iaSelObj(), name: hit.getAttribute('data-handle') }; return; }
+      const rect = svg.getBoundingClientRect(); const sc = _ia.W / rect.width; let found = null;
+      for (let i = _ia.objects.length - 1; i >= 0; i--){ const b = iaBBox(_ia.objects[i]); if (p.x >= b.x - 6 * sc && p.x <= b.x + b.w + 6 * sc && p.y >= b.y - 6 * sc && p.y <= b.y + b.h + 6 * sc){ found = _ia.objects[i]; break; } }
+      if (found){ _ia.sel = found.id; iaRender(); iaPushUndo(); _ia.moving = { o: found, px: p.x, py: p.y }; }
+      else { _ia.sel = null; iaRender(); }
+      return;
     }
-    if (_ie.tool === 'crop'){ _ie.cropStartClient = { x: ev.clientX, y: ev.clientY }; sel.style.display = ''; sel.style.left = ev.clientX + 'px'; sel.style.top = ev.clientY + 'px'; sel.style.width = '0px'; sel.style.height = '0px'; return; }
-    iePushUndo();
-    if (_ie.tool === 'pen' || _ie.tool === 'marker'){ ieStroke(); _ie.ctx.beginPath(); _ie.ctx.moveTo(p.x, p.y); }
-    else { _ie.base = _ie.ctx.getImageData(0, 0, _ie.canvas.width, _ie.canvas.height); }   // 図形はドラッグ中プレビューのため下地を保持
-  });
-  canvas.addEventListener('pointermove', ev => {
-    if (!_ie || !_ie.start) return; ev.preventDefault();
-    if (_ie.tool === 'crop'){ const a = _ie.cropStartClient; const x = Math.min(a.x, ev.clientX), y = Math.min(a.y, ev.clientY), w = Math.abs(ev.clientX - a.x), h = Math.abs(ev.clientY - a.y); sel.style.left = x + 'px'; sel.style.top = y + 'px'; sel.style.width = w + 'px'; sel.style.height = h + 'px'; return; }
-    const p = iePt(ev), ctx = _ie.ctx;
-    if (_ie.tool === 'pen' || _ie.tool === 'marker'){ ctx.lineTo(p.x, p.y); ctx.stroke(); return; }
-    ctx.putImageData(_ie.base, 0, 0); ieStroke(); const s = _ie.start;
-    if (_ie.tool === 'line'){ ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(p.x, p.y); ctx.stroke(); }
-    else if (_ie.tool === 'rect'){ ctx.strokeRect(Math.min(s.x, p.x), Math.min(s.y, p.y), Math.abs(p.x - s.x), Math.abs(p.y - s.y)); }
-    else if (_ie.tool === 'ellipse'){ ctx.beginPath(); ctx.ellipse((s.x + p.x) / 2, (s.y + p.y) / 2, Math.abs(p.x - s.x) / 2, Math.abs(p.y - s.y) / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
-  });
-  const endDraw = ev => {
-    if (!_ie) return;
-    if (_ie.tool === 'crop' && _ie.cropStartClient){
-      const rSel = sel.getBoundingClientRect(); document.getElementById('ie-crop-apply').style.display = (rSel.width > 6 && rSel.height > 6) ? '' : 'none';
-      _ie.cropStartClient = null; _ie.start = null; return;
+    if (_ia.tool === 'text'){
+      const t = prompt('文字を入力'); if (t){ iaPushUndo(); const o = { id: iaId(), type: 'text', color: _ia.color, size: _ia.size * 6, bold: _ia.bold, italic: _ia.italic, underline: _ia.underline, x: p.x, y: p.y, text: t }; _ia.objects.push(o); _ia.sel = o.id; iaRender(); }
+      return;
     }
-    _ie.ctx.globalAlpha = 1; _ie.start = null; _ie.base = null;
-  };
-  canvas.addEventListener('pointerup', endDraw);
-  canvas.addEventListener('pointerleave', endDraw);
+    iaPushUndo(); let o;
+    if (_ia.tool === 'pen' || _ia.tool === 'marker') o = { id: iaId(), type: _ia.tool, color: _ia.color, width: _ia.size * (_ia.tool === 'marker' ? 2.4 : 1), pts: [{ x: p.x, y: p.y }] };
+    else if (_ia.tool === 'line' || _ia.tool === 'arrow') o = { id: iaId(), type: _ia.tool, color: _ia.color, width: _ia.size, x1: p.x, y1: p.y, x2: p.x, y2: p.y };
+    else o = { id: iaId(), type: _ia.tool, color: _ia.color, width: _ia.size, x: p.x, y: p.y, x2: p.x, y2: p.y };
+    _ia.objects.push(o); _ia.drawing = o; iaRender();
+  });
+  svg.addEventListener('pointermove', ev => {
+    if (!_ia) return; const p = iaPt(ev);
+    if (_ia.drawing){ const o = _ia.drawing; if (o.type === 'pen' || o.type === 'marker') o.pts.push({ x: p.x, y: p.y }); else { o.x2 = p.x; o.y2 = p.y; } iaRender(); return; }
+    if (_ia.moving){ iaMoveObj(_ia.moving.o, p.x - _ia.moving.px, p.y - _ia.moving.py); _ia.moving.px = p.x; _ia.moving.py = p.y; iaRender(); return; }
+    if (_ia.resizing){ const o = _ia.resizing.o, n = _ia.resizing.name; if (n === 'p1'){ o.x1 = p.x; o.y1 = p.y; } else if (n === 'p2'){ o.x2 = p.x; o.y2 = p.y; } else if (n === 'tw'){ o.w = Math.max(20, p.x - o.x); } else { o.x2 = p.x; o.y2 = p.y; } iaRender(); return; }
+  });
+  const end = () => { if (_ia){ _ia.drawing = null; _ia.moving = null; _ia.resizing = null; } };
+  svg.addEventListener('pointerup', end); svg.addEventListener('pointerleave', end);
+  svg.addEventListener('dblclick', ev => {
+    if (!_ia) return;
+    const p = iaPt(ev); const rect = svg.getBoundingClientRect(); const sc = rect.width ? (_ia.W / rect.width) : 1;
+    let o = null;
+    for (let i = _ia.objects.length - 1; i >= 0; i--){ const ob = _ia.objects[i]; if (ob.type !== 'text') continue; const b = iaBBox(ob); if (p.x >= b.x - 6 * sc && p.x <= b.x + b.w + 6 * sc && p.y >= b.y - 6 * sc && p.y <= b.y + b.h + 6 * sc){ o = ob; break; } }
+    if (o){ _ia.sel = o.id; const nt = prompt('文字を編集', o.text); if (nt != null){ iaPushUndo(); o.text = nt; } iaRender(); }
+  });
 })();
 document.querySelectorAll('#ie-tools .ie-tool').forEach(b => b.onclick = () => {
-  if (!_ie) return; _ie.tool = b.dataset.tool;
+  if (!_ia) return; _ia.tool = b.dataset.tool;
   document.querySelectorAll('#ie-tools .ie-tool').forEach(x => x.classList.toggle('on', x === b));
-  const cropOn = _ie.tool === 'crop'; document.getElementById('ie-crop-sel').style.display = 'none'; document.getElementById('ie-crop-apply').style.display = 'none';
-  document.getElementById('ie-canvas').style.cursor = cropOn ? 'crosshair' : (_ie.tool === 'text' ? 'text' : 'crosshair');
+  _ia.svg.classList.toggle('ie-select', _ia.tool === 'select');
+  if (_ia.tool !== 'select'){ _ia.sel = null; iaRender(); }
 });
-document.getElementById('ie-color').oninput = function(){ if (_ie) _ie.color = this.value; };
-document.getElementById('ie-size').onchange = function(){ if (_ie) _ie.size = +this.value; };
-document.getElementById('ie-undo').onclick = () => { if (!_ie || !_ie.undo.length) return; const d = _ie.undo.pop(); const im = new Image(); im.onload = () => { _ie.ctx.clearRect(0, 0, _ie.canvas.width, _ie.canvas.height); _ie.ctx.drawImage(im, 0, 0); }; im.src = d; };
-document.getElementById('ie-crop-apply').onclick = () => {
-  if (!_ie) return; const c = _ie.canvas, sel = document.getElementById('ie-crop-sel');
-  const cr = c.getBoundingClientRect(), sr = sel.getBoundingClientRect();
-  const sx = Math.max(0, (sr.left - cr.left) * (c.width / cr.width)), sy = Math.max(0, (sr.top - cr.top) * (c.height / cr.height));
-  const sw = Math.min(c.width - sx, sr.width * (c.width / cr.width)), sh = Math.min(c.height - sy, sr.height * (c.height / cr.height));
-  if (sw < 4 || sh < 4) return;
-  iePushUndo();
-  const tmp = document.createElement('canvas'); tmp.width = Math.round(sw); tmp.height = Math.round(sh);
-  tmp.getContext('2d').drawImage(c, sx, sy, sw, sh, 0, 0, tmp.width, tmp.height);
-  c.width = tmp.width; c.height = tmp.height; _ie.ctx.drawImage(tmp, 0, 0);
-  sel.style.display = 'none'; document.getElementById('ie-crop-apply').style.display = 'none';
-};
-document.getElementById('ie-cancel').onclick = () => { document.getElementById('imgedit-ov').classList.remove('open'); _ie = null; };
-document.getElementById('ie-save').onclick = async () => {
-  if (!_ie) return;
-  let dataURL;
-  try { dataURL = _ie.canvas.toDataURL('image/png'); }
-  catch (e){ alert('この画像は保護（外部URLなど）されているため保存できません'); return; }
-  let compact = dataURL;
-  try { compact = await resizeImg(await (await fetch(dataURL)).blob()); } catch (e) {}   // 画質プリセットで軽量化
-  await lbSaveEdited(compact);
-  document.getElementById('imgedit-ov').classList.remove('open'); _ie = null;
-};
-async function lbSaveEdited(dataURL){
-  const img = _lbImgEl;
-  const id = img && img.getAttribute('data-cimg');
-  if (id){   // マーカー画像 → 実体を上書き（全参照に反映＝破壊編集）
-    try { await idbImgPut(id, dataURL); } catch (e) {}
-    try { imgMemCache.set(id, dataURL); } catch (e) {}
-    document.querySelectorAll('img[data-cimg]').forEach(im => { if (im.getAttribute('data-cimg') === id) im.src = dataURL; });
-    lbImg.src = dataURL;
-    renderMemos();
-  } else if (img){   // dataURL画像（フリーボード等）
-    img.src = dataURL; lbImg.src = dataURL;
-    const node = img.closest && img.closest('#fb-world .fb-el');
-    if (node && typeof fbEls !== 'undefined'){ const el = fbEls.find(e => e.id === node.dataset.id); if (el){ el.src = dataURL; if (typeof fbCommit === 'function') fbCommit(); } }
-  } else {
-    lbImg.src = dataURL;
+document.getElementById('ie-color').oninput = function(){ if (!_ia) return; _ia.color = this.value; const o = iaSelObj(); if (o){ o.color = this.value; iaRender(); } };
+document.getElementById('ie-size').onchange = function(){ if (!_ia) return; _ia.size = +this.value; const o = iaSelObj(); if (o){ if (o.type === 'text') o.size = _ia.size * 6; else o.width = _ia.size * (o.type === 'marker' ? 2.4 : 1); iaRender(); } };
+document.getElementById('ie-bold').onclick = function(){ if (!_ia) return; _ia.bold = !_ia.bold; this.classList.toggle('on', _ia.bold); const o = iaSelObj(); if (o && o.type === 'text'){ o.bold = _ia.bold; iaRender(); } };
+document.getElementById('ie-italic').onclick = function(){ if (!_ia) return; _ia.italic = !_ia.italic; this.classList.toggle('on', _ia.italic); const o = iaSelObj(); if (o && o.type === 'text'){ o.italic = _ia.italic; iaRender(); } };
+document.getElementById('ie-underline').onclick = function(){ if (!_ia) return; _ia.underline = !_ia.underline; this.classList.toggle('on', _ia.underline); const o = iaSelObj(); if (o && o.type === 'text'){ o.underline = _ia.underline; iaRender(); } };
+document.getElementById('ie-del').onclick = () => { const o = iaSelObj(); if (!o) return; iaPushUndo(); _ia.objects = _ia.objects.filter(x => x.id !== o.id); _ia.sel = null; iaRender(); };
+document.getElementById('ie-undo').onclick = () => { if (!_ia || !_ia.undo.length) return; try { _ia.objects = JSON.parse(_ia.undo.pop()); } catch (e) {} _ia.sel = null; iaRender(); };
+document.addEventListener('keydown', e => { if (document.getElementById('imgedit-ov').classList.contains('open') && (e.key === 'Delete') && iaSelObj()){ e.preventDefault(); document.getElementById('ie-del').click(); } });
+document.getElementById('ie-cancel').onclick = () => { document.getElementById('imgedit-ov').classList.remove('open'); _ia = null; };
+document.getElementById('ie-save').onclick = () => { if (!_ia) return; iaSaveAnnot(_lbImgEl, _ia.objects, _ia.W, _ia.H); document.getElementById('imgedit-ov').classList.remove('open'); _ia = null; if (lb.classList.contains('open')) lbShowAnnot(); };
+// 画像を .ia-wrap で包み、注釈SVGを重ねてメモ/ボードに保存（非破壊）
+function iaSaveAnnot(img, objects, W, H){
+  if (!img) return;
+  const model = objects.map(o => JSON.parse(JSON.stringify(o)));
+  // スライド内画像 → 画像要素に data-ia を持たせて保存（オーバーレイで表示）
+  if (img.classList && img.classList.contains('slide-img')){
+    if (model.length) img.setAttribute('data-ia', encodeURIComponent(JSON.stringify({ W, H, objs: model })));
+    else img.removeAttribute('data-ia');
+    const block = img.closest('.slide-block'); if (block) slideAnnotSync(block);
+    const memoWrap = img.closest('[id^="memo-"]');
+    const blockIdx = (memoWrap && block) ? [...memoWrap.querySelectorAll('.slide-block')].indexOf(block) : -1;
+    const imgIdx = block ? [...block.querySelectorAll('.slide-img')].indexOf(img) : -1;
+    if (memoWrap){ const m = S.memos.find(x => 'memo-' + x.id === memoWrap.id); const bc = img.closest('.bc'); if (m && bc){ if (bc.classList.contains('flash-back')) m.back = cleanCodeForSave(bc); else m.html = cleanCodeForSave(bc); m.updatedAt = new Date().toISOString(); persist(); renderMemos(); }
+      // 再描画後の新しい要素へ参照を貼り直す（ライトボックス表示・再編集のため）
+      const fresh = document.getElementById(memoWrap.id);
+      const fb2 = fresh && blockIdx >= 0 ? fresh.querySelectorAll('.slide-block')[blockIdx] : null;
+      if (fb2){ const fi = imgIdx >= 0 ? fb2.querySelectorAll('.slide-img')[imgIdx] : null; if (fi){ _lbImgEl = fi; if (_lbSlide) _lbSlide.imgs = [...fb2.querySelectorAll('.slide-img')]; } }
+    }
+    return;
+  }
+  // フリーボード画像
+  const fbNode = img.closest && img.closest('#fb-world .fb-el.fb-image');
+  if (fbNode && typeof fbEls !== 'undefined'){ const el = fbEls.find(e => e.id === fbNode.dataset.id); if (el){ el.annot = model; el.annotW = W; el.annotH = H; fbRender(); if (typeof fbCommit === 'function') fbCommit(); _lbImgEl = document.querySelector('#fb-world [data-id="' + el.id + '"] img') || _lbImgEl; } return; }
+  // メモ本文の画像 → .ia-wrap で包んで保存
+  let wrap = img.closest('.ia-wrap');
+  if (!wrap){ wrap = document.createElement('span'); wrap.className = 'ia-wrap'; wrap.setAttribute('contenteditable', 'false'); img.parentNode.insertBefore(wrap, img); wrap.appendChild(img); }
+  wrap.setAttribute('data-ia', encodeURIComponent(JSON.stringify({ W, H, objs: model })));
+  wrap.querySelectorAll('svg.ia-ov').forEach(s => s.remove());
+  if (model.length) wrap.insertAdjacentHTML('beforeend', iaSvgMarkup(model, W, H));
+  const memoWrap = img.closest('[id^="memo-"]');
+  const key = img.getAttribute('data-cimg') || img.getAttribute('src');
+  if (memoWrap){ const m = S.memos.find(x => 'memo-' + x.id === memoWrap.id); const bc = img.closest('.bc'); if (m && bc){ if (bc.classList.contains('flash-back')) m.back = cleanCodeForSave(bc); else m.html = cleanCodeForSave(bc); m.updatedAt = new Date().toISOString(); persist(); renderMemos(); }
+    const fresh = document.getElementById(memoWrap.id);
+    const cand = fresh ? [...fresh.querySelectorAll('img')].find(im => (im.getAttribute('data-cimg') || im.getAttribute('src')) === key) : null;
+    if (cand) _lbImgEl = cand;
   }
 }
-document.getElementById('lb-edit').onclick = (e) => { e.stopPropagation(); if (lbImg.src) openImgEditor(lbImg.src); };
+document.getElementById('lb-edit').onclick = (e) => {
+  e.stopPropagation(); if (!lbImg.src) return;
+  openImgEditor(lbImg.src, lbAnnotModel().objs || []);
+};
+// ライトボックスに表示中の画像の注釈モデルを取得
+function lbAnnotModel(){
+  if (_lbImgEl && _lbImgEl.classList && _lbImgEl.classList.contains('slide-img') && _lbImgEl.dataset.ia){ try { return JSON.parse(decodeURIComponent(_lbImgEl.dataset.ia)); } catch (_) {} }
+  const wrap = _lbImgEl && _lbImgEl.closest && _lbImgEl.closest('.ia-wrap');
+  if (wrap && wrap.dataset.ia){ try { return JSON.parse(decodeURIComponent(wrap.dataset.ia)); } catch (_) {} }
+  const node = _lbImgEl && _lbImgEl.closest && _lbImgEl.closest('#fb-world .fb-el.fb-image');
+  if (node && typeof fbEls !== 'undefined'){ const el = fbEls.find(x => x.id === node.dataset.id); if (el && el.annot) return { objs: el.annot, W: el.annotW, H: el.annotH }; }
+  return { objs: [] };
+}
+function lbShowAnnot(){
+  // フリーボードのプレビュー中は編集（✏）ボタンを隠す
+  const editBtn = document.getElementById('lb-edit');
+  if (editBtn){ const inFb = _lbImgEl && _lbImgEl.closest && _lbImgEl.closest('#fb-world'); editBtn.style.display = (inFb && fbPreview) ? 'none' : ''; }
+  const ov = document.getElementById('lb-annot-ov'); if (!ov) return;
+  const d = lbAnnotModel();
+  if (!d.objs || !d.objs.length || !lb.classList.contains('open')){ ov.style.display = 'none'; return; }
+  ov.innerHTML = ''; ov.setAttribute('viewBox', '0 0 ' + (d.W || 100) + ' ' + (d.H || 100)); ov.setAttribute('preserveAspectRatio', 'none');
+  d.objs.forEach(o => { const el = iaObjToEl(o); if (el) ov.appendChild(el); });
+  const r = lbImg.getBoundingClientRect();
+  ov.style.display = ''; ov.style.left = r.left + 'px'; ov.style.top = r.top + 'px'; ov.style.width = r.width + 'px'; ov.style.height = r.height + 'px';
+}
+lbImg.addEventListener('load', lbShowAnnot);
+window.addEventListener('resize', () => { if (lb.classList.contains('open')) lbShowAnnot(); });
 lb.onclick = lbClose;
 document.addEventListener('keydown', e => {
   if (!lb.classList.contains('open')) return;
@@ -9274,6 +9517,7 @@ function qlEnrich(m) {
   hydrateSheetEmbeds(cnt);   // 埋め込みシートをサムネイル化
   hydrateMapEmbeds(cnt);     // 埋め込みマインドマップをサムネイル化
   hydrateTbEmbeds(cnt);      // 埋め込みタイムブロックをサムネイル化
+  hydrateSlideAnnots(cnt);   // スライドの注釈オーバーレイを配置
   cnt.querySelectorAll('table').forEach(tbl => {
     if (!tbl.closest('.tbl-wrap')) { const tw = document.createElement('div'); tw.className = 'tbl-wrap'; tbl.parentNode.insertBefore(tw, tbl); tw.appendChild(tbl); }
   });
@@ -9849,7 +10093,13 @@ function fbCreateNode(el){
         }
       });
     }
-    if (el.type === 'image'){ const img = document.createElement('img'); img.src = el.src || ''; img.draggable = false; node.appendChild(img); }
+    if (el.type === 'image'){
+      const img = document.createElement('img'); img.src = el.src || ''; img.draggable = false; img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'contain'; node.appendChild(img);
+      if (Array.isArray(el.annot) && el.annot.length){
+        const ov = document.createElementNS(FB_SVGNS, 'svg'); ov.setAttribute('viewBox', '0 0 ' + (el.annotW || 100) + ' ' + (el.annotH || 100)); ov.setAttribute('preserveAspectRatio', 'none'); ov.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
+        el.annot.forEach(o => { const e2 = iaObjToEl(o); if (e2) ov.appendChild(e2); }); node.appendChild(ov); node.style.position = 'absolute';
+      }
+    }
     if (el.type === 'sheet'){
       node.classList.add('fb-sheet');
       const thumb = sheetThumb(el.sheet || (el.sheet = makeSheet()), 12, 8);
@@ -9898,7 +10148,7 @@ function fbLinePts(el){
   }
   return el.pts;
 }
-function fbArrowHead(svg, tx, ty, ang, shape, size, col){
+function fbArrowHead(svg, tx, ty, ang, shape, size, col, sw){
   const a = Math.max(6, size);
   if (shape === 'dot'){
     const c = document.createElementNS(FB_SVGNS, 'circle'); c.setAttribute('cx', tx); c.setAttribute('cy', ty); c.setAttribute('r', Math.max(3, a * 0.42)); c.setAttribute('fill', col); svg.appendChild(c); return;
@@ -9906,7 +10156,7 @@ function fbArrowHead(svg, tx, ty, ang, shape, size, col){
   const x1 = tx - a * Math.cos(ang - Math.PI / 6), y1 = ty - a * Math.sin(ang - Math.PI / 6);
   const x2 = tx - a * Math.cos(ang + Math.PI / 6), y2 = ty - a * Math.sin(ang + Math.PI / 6);
   if (shape === 'open'){
-    const p = document.createElementNS(FB_SVGNS, 'polyline'); p.setAttribute('points', `${x1},${y1} ${tx},${ty} ${x2},${y2}`); p.setAttribute('fill', 'none'); p.setAttribute('stroke', col); p.setAttribute('stroke-width', '3'); p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round'); svg.appendChild(p);
+    const p = document.createElementNS(FB_SVGNS, 'polyline'); p.setAttribute('points', `${x1},${y1} ${tx},${ty} ${x2},${y2}`); p.setAttribute('fill', 'none'); p.setAttribute('stroke', col); p.setAttribute('stroke-width', Math.max(2, sw || 3)); p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round'); svg.appendChild(p);
   } else {   // tri（塗り三角）
     const p = document.createElementNS(FB_SVGNS, 'polygon'); p.setAttribute('points', `${tx},${ty} ${x1},${y1} ${x2},${y2}`); p.setAttribute('fill', col); svg.appendChild(p);
   }
@@ -9920,12 +10170,22 @@ function fbDrawLine(node, el){
   const svg = node.querySelector('svg'); svg.setAttribute('width', w + 2 * pad); svg.setAttribute('height', h + 2 * pad); svg.innerHTML = '';
   const P = pts.map(p => ({ x: p.x - minx + pad, y: p.y - miny + pad }));
   const col = el.stroke || '#4C7C9D';
-  const d = 'M ' + P.map(p => `${p.x} ${p.y}`).join(' L ');
-  const hit = document.createElementNS(FB_SVGNS, 'path'); hit.setAttribute('d', d); hit.setAttribute('fill', 'none'); hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '16'); hit.style.pointerEvents = 'stroke'; hit.style.cursor = 'move'; svg.appendChild(hit);
-  const ln = document.createElementNS(FB_SVGNS, 'path'); ln.setAttribute('d', d); ln.setAttribute('fill', 'none'); ln.setAttribute('stroke', col); ln.setAttribute('stroke-width', '3'); ln.setAttribute('stroke-linecap', 'round'); ln.setAttribute('stroke-linejoin', 'round'); svg.appendChild(ln);
+  const sw = el.sw || 3;
   const dir = el.arrow || 'none', shape = el.head || 'tri', size = el.hsize || 14, n = P.length;
-  if ((dir === 'end' || dir === 'both') && n >= 2){ const t = P[n - 1], p = P[n - 2]; fbArrowHead(svg, t.x, t.y, Math.atan2(t.y - p.y, t.x - p.x), shape, size, col); }
-  if ((dir === 'start' || dir === 'both') && n >= 2){ const t = P[0], p = P[1]; fbArrowHead(svg, t.x, t.y, Math.atan2(t.y - p.y, t.x - p.x), shape, size, col); }
+  const a = Math.max(6, size);
+  const trim = shape === 'tri' ? a * 0.82 : shape === 'dot' ? Math.max(3, a * 0.42) : 0;   // 塗り矢じりは線を根元で止め、先端からの突き出しを防ぐ
+  const PL = P.map(p => ({ x: p.x, y: p.y }));
+  const trimEnd = (prevIdx, endIdx) => { const pv = P[prevIdx], e = P[endIdx]; const dx = e.x - pv.x, dy = e.y - pv.y; const len = Math.hypot(dx, dy) || 1; const t = Math.max(0, (len - trim) / len); PL[endIdx] = { x: pv.x + dx * t, y: pv.y + dy * t }; };
+  if (trim > 0 && n >= 2){
+    if (dir === 'end' || dir === 'both') trimEnd(n - 2, n - 1);
+    if (dir === 'start' || dir === 'both') trimEnd(1, 0);
+  }
+  const d = 'M ' + P.map(p => `${p.x} ${p.y}`).join(' L ');          // 当たり判定は全長
+  const dLine = 'M ' + PL.map(p => `${p.x} ${p.y}`).join(' L ');     // 表示線は矢じり分をトリム
+  const hit = document.createElementNS(FB_SVGNS, 'path'); hit.setAttribute('d', d); hit.setAttribute('fill', 'none'); hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', Math.max(16, sw + 12)); hit.style.pointerEvents = 'stroke'; hit.style.cursor = 'move'; svg.appendChild(hit);
+  const ln = document.createElementNS(FB_SVGNS, 'path'); ln.setAttribute('d', dLine); ln.setAttribute('fill', 'none'); ln.setAttribute('stroke', col); ln.setAttribute('stroke-width', sw); ln.setAttribute('stroke-linecap', 'round'); ln.setAttribute('stroke-linejoin', 'round'); svg.appendChild(ln);
+  if ((dir === 'end' || dir === 'both') && n >= 2){ const t = P[n - 1], p = P[n - 2]; fbArrowHead(svg, t.x, t.y, Math.atan2(t.y - p.y, t.x - p.x), shape, size, col, sw); }
+  if ((dir === 'start' || dir === 'both') && n >= 2){ const t = P[0], p = P[1]; fbArrowHead(svg, t.x, t.y, Math.atan2(t.y - p.y, t.x - p.x), shape, size, col, sw); }
   // 点ハンドル・区切り点ハンドルの再配置
   node.querySelectorAll('.fb-pt').forEach(h => { const i = +h.dataset.pi; if (P[i]){ h.style.left = P[i].x + 'px'; h.style.top = P[i].y + 'px'; } });
   node.querySelectorAll('.fb-seg').forEach(h => { const i = +h.dataset.si; if (P[i] && P[i + 1]){ h.style.left = (P[i].x + P[i + 1].x) / 2 + 'px'; h.style.top = (P[i].y + P[i + 1].y) / 2 + 'px'; } });
@@ -10002,16 +10262,18 @@ function fbUpdateLineOpts(el){
   const isLine = el && (el.type === 'line' || el.type === 'arrow');
   document.querySelectorAll('#fb-el-actions .fbe-line').forEach(b => b.style.display = isLine ? '' : 'none');
   if (!isLine) return;
-  const arrow = el.arrow || 'none', head = el.head || 'tri', hs = el.hsize || 14;
+  const arrow = el.arrow || 'none', head = el.head || 'tri', hs = el.hsize || 14, sw = el.sw || 3;
   const ab = document.getElementById('fbe-arrow'); if (ab) ab.textContent = arrow === 'end' ? '→' : arrow === 'start' ? '←' : arrow === 'both' ? '↔' : '—';
   const hb = document.getElementById('fbe-head'); if (hb) hb.textContent = head === 'open' ? '⌵' : head === 'dot' ? '●' : '▲';
   const sb = document.getElementById('fbe-hsize'); if (sb) sb.textContent = hs <= 10 ? '小' : hs <= 14 ? '中' : hs <= 20 ? '大' : '特';
+  const wb = document.getElementById('fbe-sw'); if (wb) wb.textContent = sw <= 2 ? '細' : sw <= 3 ? '標準' : sw <= 6 ? '太' : '極太';
 }
 function fbLineOptChange(kind){
   const el = fbSel ? fbEls.find(e => e.id === fbSel) : null; if (!el || !(el.type === 'line' || el.type === 'arrow')) return;
   if (kind === 'arrow'){ const seq = ['none', 'end', 'start', 'both']; el.arrow = seq[(seq.indexOf(el.arrow || 'none') + 1) % seq.length]; }
   else if (kind === 'head'){ const seq = ['tri', 'open', 'dot']; el.head = seq[(seq.indexOf(el.head || 'tri') + 1) % seq.length]; }
   else if (kind === 'hsize'){ const seq = [10, 14, 20, 28]; el.hsize = seq[(seq.indexOf(el.hsize || 14) + 1) % seq.length]; }
+  else if (kind === 'sw'){ const seq = [2, 3, 6, 10]; el.sw = seq[(seq.indexOf(el.sw || 3) + 1) % seq.length]; }
   const node = document.querySelector('#fb-world [data-id="' + el.id + '"]'); if (node) fbDrawLine(node, el);
   fbUpdateLineOpts(el); fbCommit();
 }
@@ -10029,7 +10291,7 @@ function fbPositionElActions(){
 }
 function fbBringFront(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.push(fbEls.splice(i, 1)[0]); fbRender(); fbCommit(); }   // 最前面へ
 function fbSendBack(){ if (!fbSel) return; const i = fbEls.findIndex(e => e.id === fbSel); if (i < 0) return; fbEls.unshift(fbEls.splice(i, 1)[0]); fbRender(); fbCommit(); }   // 最背面へ
-function fbDuplicateSel(){ if (!fbSel) return; const el = fbEls.find(e => e.id === fbSel); if (!el) return; const copy = Object.assign({}, el, { id: fbNewId(), x: (el.x || 0) + 16, y: (el.y || 0) + 16 }); if (el.x2 != null){ copy.x2 = el.x2 + 16; copy.y2 = el.y2 + 16; } if (Array.isArray(el.pts)){ copy.pts = el.pts.map(p => ({ x: p.x + 16, y: p.y + 16 })); } if (el.sheet) copy.sheet = JSON.parse(JSON.stringify(el.sheet)); if (el.map) copy.map = JSON.parse(JSON.stringify(el.map)); if (el.tb) copy.tb = JSON.parse(JSON.stringify(el.tb)); fbEls.push(copy); fbRender(); fbSelect(copy.id); fbCommit(); }
+function fbDuplicateSel(){ if (!fbSel) return; const el = fbEls.find(e => e.id === fbSel); if (!el) return; const copy = Object.assign({}, el, { id: fbNewId(), x: (el.x || 0) + 16, y: (el.y || 0) + 16 }); if (el.x2 != null){ copy.x2 = el.x2 + 16; copy.y2 = el.y2 + 16; } if (Array.isArray(el.pts)){ copy.pts = el.pts.map(p => ({ x: p.x + 16, y: p.y + 16 })); } if (el.sheet) copy.sheet = JSON.parse(JSON.stringify(el.sheet)); if (el.map) copy.map = JSON.parse(JSON.stringify(el.map)); if (el.tb) copy.tb = JSON.parse(JSON.stringify(el.tb)); if (el.annot) copy.annot = JSON.parse(JSON.stringify(el.annot)); fbEls.push(copy); fbRender(); fbSelect(copy.id); fbCommit(); }
 function fbAddHandles(node){
   const el = fbEls.find(e => e.id === node.dataset.id); if (!el) return;
   if (el.type === 'line' || el.type === 'arrow'){
@@ -10383,6 +10645,7 @@ function renderBoardBubble(m, q, showRoom, container){
   if ($('fbe-arrow')) $('fbe-arrow').onclick = () => fbLineOptChange('arrow');
   if ($('fbe-head')) $('fbe-head').onclick = () => fbLineOptChange('head');
   if ($('fbe-hsize')) $('fbe-hsize').onclick = () => fbLineOptChange('hsize');
+  if ($('fbe-sw')) $('fbe-sw').onclick = () => fbLineOptChange('sw');
   $('fb-zoom-in').onclick = () => fbZoomBy(1.2);
   $('fb-zoom-out').onclick = () => fbZoomBy(1 / 1.2);
   $('fb-zoom-fit').onclick = fbZoomFit;
