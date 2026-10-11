@@ -1489,7 +1489,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
 
   <div class="search-bar">
     <div class="search-top-row">
-      <input id="search" type="text" placeholder="検索（テキスト または #タグ）">
+      <input id="search" type="text" placeholder="検索（テキスト / #タグ / -除外語）" title="空白区切りで複数検索。例: りんご -果物 -ジュース。語句は &quot; &quot; で囲む。">
       <button id="search-more" class="search-more-btn" title="絞り込み（期間・正規表現）">▼</button>
       <div class="date-filter-wrap">
         <input type="date" id="date-from" title="開始日">
@@ -1818,7 +1818,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
   <div class="modal" style="max-width:640px">
     <h3>⚓ ジャンプ先のメモを選択</h3>
     <div class="jump-tools">
-      <input id="jump-search" type="text" placeholder="検索（テキスト / #タグ）">
+      <input id="jump-search" type="text" placeholder="検索（テキスト / #タグ / -除外語）">
       <span id="jump-selcount">0件選択</span>
       <button class="bcl" id="jump-clear" style="font-size:.78rem;padding:4px 10px">全解除</button>
     </div>
@@ -5227,7 +5227,7 @@ function renderCmdp(){
   cmdpCommands().filter(c => !q || c.label.toLowerCase().includes(q)).forEach(c => cmdpItems.push(c));
   // メモ検索（入力があるとき）
   if (q){
-    const memos = S.memos.filter(m => memoSearchText(m).toLowerCase().includes(q) || (m.tags || []).some(t => t.toLowerCase().includes(q)))
+    const memos = S.memos.filter(m => memoMatchesQuery(m, q))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
     memos.forEach(m => cmdpItems.push({ ico: m.board ? '🧩' : '📄', label: memoFirstLine(m) || '無題', hint: fmtTime(m.createdAt), _sec: 'memo', run: () => navToMemo(m.id) }));
   }
@@ -5708,11 +5708,30 @@ function memoSortCmp(a, b){
   return s.dir === 'asc' ? r : -r;
 }
 
+// 空白区切りの検索語。-語は除外、"語句"はひとまとまりとして扱う。
+function parseMemoQuery(query) {
+  const include = [], exclude = [];
+  for (const match of String(query).matchAll(/(-?)"([^"\n]+)"|([^\s]+)/g)) {
+    const token = match[3];
+    const negative = token ? token.startsWith('-') && token.length > 1 : match[1] === '-';
+    const term = (token ? (negative ? token.slice(1) : token) : match[2]).toLowerCase();
+    if (term) (negative ? exclude : include).push(term);
+  }
+  return { include, exclude };
+}
+function memoMatchesQuery(m, query) {
+  const terms = typeof query === 'string' ? parseMemoQuery(query) : query;
+  const fields = [memoSearchText(m), ...(m.tags || []).map(t => '#' + t)].map(t => t.toLowerCase());
+  const has = term => fields.some(text => text.includes(term));
+  return terms.include.every(has) && !terms.exclude.some(has);
+}
+
 function renderMemos() {
   if (inputArea) inputArea.style.display = (roomId === TRASH_ROOM) ? 'none' : '';
   if (roomId === TRASH_ROOM){ renderTrash(); return; }
   const rawQ = document.getElementById('search').value.trim();
   const q = rawQ.toLowerCase();
+  const queryTerms = parseMemoQuery(rawQ);
   const reSearch = (S.searchRegex && rawQ) ? (() => { try { return new RegExp(rawQ, 'i'); } catch (e) { return null; } })() : null;
   _searchQ = q; _searchRe = reSearch;   // 埋め込みサムネのハイライト判定用
   const dateFrom = document.getElementById('date-from').value;
@@ -5732,7 +5751,7 @@ function renderMemos() {
     const ok1 = includedTags.every(t => memoTags.includes(t)) && excludedTags.every(t => !memoTags.includes(t));
     const ok2 = !q || (reSearch
       ? (reSearch.test(memoSearchText(m)) || (m.tags||[]).some(t => reSearch.test('#'+t) || reSearch.test(t)))
-      : (memoSearchText(m).toLowerCase().includes(q) || (m.tags||[]).some(t => ('#'+t).toLowerCase().includes(q) || t.toLowerCase().includes(q))));
+      : memoMatchesQuery(m, queryTerms));
     const mDate = new Date(m.createdAt).toLocaleDateString('sv');
     const ok3 = (!dateFrom || mDate >= dateFrom) && (!dateTo || mDate <= dateTo);
     return ok1 && ok2 && ok3;
@@ -7491,7 +7510,10 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
     bubble.appendChild(cnt);
   }
   applyLiveCounts(cnt, m);
-  if (q) highlightQuery(cnt, q);
+  if (q) {
+    const terms = S.searchRegex ? [q] : parseMemoQuery(q).include;
+    terms.forEach(term => highlightQuery(cnt, term));
+  }
 
   const _fixedH = (rmMode === 'fixed' && _noteMode);   // 固定モードはタグ無しでも欄を確保
   if (m.tags?.length || _fixedH) {
@@ -7776,7 +7798,7 @@ function jumpMemoMatches(m) {
   for (const t of jumpTags) { if (!(m.tags || []).includes(t)) return false; }   // 選択タグはすべて含む（AND）
   if (jumpQuery) {
     const q = jumpQuery.toLowerCase();
-    const hit = memoSearchText(m).toLowerCase().includes(q) || (m.tags || []).some(t => ('#' + t).toLowerCase().includes(q) || t.toLowerCase().includes(q));
+    const hit = memoMatchesQuery(m, q);
     if (!hit) return false;
   }
   return true;
@@ -9943,7 +9965,7 @@ function embedText(html){   // 本文に埋め込まれた表計算/マインド
 function boardText(m){ if (!m.board || !m.board.els) return ''; return (m.board.title || '') + ' ' + m.board.els.map(e => e.html ? stripHtml(e.html) : (e.type === 'sheet' ? sheetText(e.sheet) : e.type === 'mindmap' ? mapText(e.map) : e.type === 'timeblock' ? tbText(e.tb) : '')).join(' '); }
 function memoSearchText(m){ return stripHtml(m.html || '') + ' ' + embedText(m.html || '') + (m.back ? ' ' + stripHtml(m.back) + ' ' + embedText(m.back) : '') + ' ' + boardText(m); }
 let _searchQ = '', _searchRe = null;
-function searchHits(text){ if (!_searchQ) return false; return _searchRe ? _searchRe.test(text) : String(text).toLowerCase().includes(_searchQ); }
+function searchHits(text){ if (!_searchQ) return false; return _searchRe ? _searchRe.test(text) : parseMemoQuery(_searchQ).include.some(term => String(text).toLowerCase().includes(term)); }
 
 function openBoard(memoId, isNew){
   const m = S.memos.find(x => x.id === memoId); if (!m) return;
@@ -10738,16 +10760,16 @@ function gBuild(){
     });
   } else {
     // 既定: タグのみの共起グラフ。同じメモに付くタグ同士を結ぶ（線の太さ＝共有メモ数、円＝ノート数）
-    const pair = new Map();   // "tagA tagB" -> 共有メモ数
+    const pair = new Map();   // "tagA tagB" -> 共有メモ数
     memos.forEach(m => {
       const mt = [...new Set((m.tags || []).filter(t => gVisibleTags.has(t)))];
       mt.forEach(t => { tagMap[t].deg++; });
       for (let i = 0; i < mt.length; i++) for (let j = i + 1; j < mt.length; j++){
-        const a = mt[i], b = mt[j], key = a < b ? a + ' ' + b : b + ' ' + a;
+        const a = mt[i], b = mt[j], key = a < b ? a + ' ' + b : b + ' ' + a;
         pair.set(key, (pair.get(key) || 0) + 1);
       }
     });
-    pair.forEach((w, key) => { const ab = key.split(' '); if (tagMap[ab[0]] && tagMap[ab[1]]) gEdges.push({ a: tagMap[ab[0]], b: tagMap[ab[1]], w }); });
+    pair.forEach((w, key) => { const ab = key.split(' '); if (tagMap[ab[0]] && tagMap[ab[1]]) gEdges.push({ a: tagMap[ab[0]], b: tagMap[ab[1]], w }); });
   }
   // タグ●の大きさを「最大ノート数に対する割合」で出すため、最大数を記録
   gMaxDeg = 1;
