@@ -5578,7 +5578,7 @@ function renderTagBar() {
   const all = document.createElement('button');
   all.className = 'tag-chip' + (activeTagFilters.size===0 ? ' active' : '');
   all.textContent = 'すべて';
-  all.onclick = () => { activeTagFilters.clear(); renderTagBar(); renderMemos(); };
+  all.onclick = () => { activeTagFilters.clear(); renderTagBar(); renderMemos({ preservePosition: true }); };
   tagBarEl.appendChild(all);
   const hiddenSet = new Set(S.hiddenTags || []);
   allTags().forEach(t => {
@@ -5593,7 +5593,7 @@ function renderTagBar() {
     if (isHidden && isActive) c.title = '（非表示タグ・現在選択中）';
     c.onclick = () => {
       cycleTagFilter(t);
-      renderTagBar(); renderMemos();
+      renderTagBar(); renderMemos({ preservePosition: true });
     };
     // ドラッグで並び替え
     c.draggable = true;
@@ -5743,7 +5743,47 @@ function memoMatchesQuery(m, query) {
   return terms.include.every(has) && !terms.exclude.some(has);
 }
 
-function renderMemos() {
+// 列ごとのDOM順ではなく、ピン留めを含めた一覧の表示順を使う。
+function memoDisplayOrder() {
+  return S.layoutMode === 'note'
+    ? [...renderedMemos.filter(m => m.pinned), ...renderedMemos.filter(m => !m.pinned)]
+    : renderedMemos;
+}
+function captureMemoPosition(memoId = null) {
+  const list = memoDisplayOrder();
+  const viewport = msgs.getBoundingClientRect();
+  let target = memoId ? document.getElementById('memo-' + memoId) : null;
+  if (!target || !msgs.contains(target)) {
+    const visible = list.map(m => document.getElementById('memo-' + m.id)).filter(el => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return r.bottom > viewport.top && r.top < viewport.bottom;
+    });
+    target = visible.sort((a, b) => Math.abs(a.getBoundingClientRect().top - viewport.top) - Math.abs(b.getBoundingClientRect().top - viewport.top))[0];
+  }
+  const id = target ? target.id.slice(5) : memoId;
+  return {
+    id,
+    index: list.findIndex(m => String(m.id) === String(id)),
+    offset: target ? Math.max(0, Math.min(target.getBoundingClientRect().top - viewport.top, Math.max(0, msgs.clientHeight - 80))) : 16,
+    scrollTop: msgs.scrollTop
+  };
+}
+function restoreMemoPosition(anchor) {
+  if (!anchor) return;
+  const list = memoDisplayOrder();
+  const memo = list.find(m => String(m.id) === String(anchor.id)) || list[Math.min(Math.max(0, anchor.index), list.length - 1)];
+  const target = memo && document.getElementById('memo-' + memo.id);
+  if (!target || !msgs.contains(target)) {
+    msgs.scrollTop = Math.min(anchor.scrollTop, Math.max(0, msgs.scrollHeight - msgs.clientHeight));
+    return;
+  }
+  msgs.scrollTop += target.getBoundingClientRect().top - msgs.getBoundingClientRect().top - anchor.offset;
+  target.setAttribute('tabindex', '-1');
+  target.focus({ preventScroll: true });
+}
+function renderMemos({ preservePosition = false } = {}) {
+  const position = preservePosition ? captureMemoPosition() : null;
   if (inputArea) inputArea.style.display = (roomId === TRASH_ROOM) ? 'none' : '';
   if (roomId === TRASH_ROOM){ renderTrash(); return; }
   const rawQ = document.getElementById('search').value.trim();
@@ -5803,7 +5843,7 @@ function renderMemos() {
     const others = list.filter(m => !m.pinned);
     addSection(pinned, '📌 ピン留め');
     addSection(others, pinned.length ? 'その他' : '');
-    msgs.scrollTop = 0;
+    if (!position) msgs.scrollTop = 0;
   } else {
     let lastDateKey = null;
     let lastRoomId  = null;
@@ -5822,7 +5862,7 @@ function renderMemos() {
       placeBubble(m, q, globalSearch);
       lastRoomId = m.roomId;
     });
-    msgs.scrollTop = msgs.scrollHeight;
+    if (!position) msgs.scrollTop = msgs.scrollHeight;
   }
   // 続きを読む: 実際に溢れていないバブルはボタン非表示
   if ((S.readMore?.mode || (S.readMore?.enabled ? 'readmore' : 'off')) === 'readmore') {
@@ -5838,6 +5878,7 @@ function renderMemos() {
       }
     });
   }
+  restoreMemoPosition(position);
 }
 
 function highlightQuery(node, q) {
@@ -7537,7 +7578,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
     const tg = document.createElement('div'); tg.className = 'bubble-tags';
     (m.tags || []).forEach(tag => {
       const s = document.createElement('button'); s.className='b-tag'; s.textContent=tag;
-      s.onclick = () => { setOnlyIncludedTag(tag); renderTagBar(); renderMemos(); };
+      s.onclick = () => { setOnlyIncludedTag(tag); renderTagBar(); renderMemos({ preservePosition: true }); };
       tg.appendChild(s);
     });
     bubble.appendChild(tg);
@@ -7732,6 +7773,7 @@ async function openEdit(id) {
 }
 document.getElementById('edit-save').onclick = async () => {
   const m = S.memos.find(m => m.id===editId);
+  const position = captureMemoPosition(editId);
   if (m) {
     const oldTags = (m.tags || []).join(',');
     syncCheckboxAttrs(editEd);
@@ -7750,6 +7792,7 @@ document.getElementById('edit-save').onclick = async () => {
   _editDirty = false;
   closeOv('edit-ov');
   refreshBookshelfIfOpen();
+  restoreMemoPosition(position);
 };
 document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.onclick = () => editSetSide(b.dataset.side));
 document.getElementById('edit-cancel').onclick = closeEditAsk;
@@ -8147,6 +8190,61 @@ document.getElementById('import-cancel').onclick = () => closeOv('import-ov');
 document.getElementById('import-ov').addEventListener('click', e => { if (e.target===document.getElementById('import-ov')) closeOv('import-ov'); });
 let pendingImportData = null;
 
+// 詳細解説などを同じGUIDのメモへ追記。本文・タグ・ルームを置き換えない。
+function planMemoHtmlAppend(data, existingMemos) {
+  if (!data || data.type !== 'memo_append' || !Array.isArray(data.memos)) throw new Error('Invalid memo append');
+  const byGuid = new Map(existingMemos.map((m, i) => [m.guid, i]).filter(([g]) => g));
+  const byLegacyId = new Map(existingMemos.map((m, i) => [m.id, i]).filter(([, i]) => !existingMemos[i].guid));
+  const seen = new Set();
+  const patches = [];
+  let missing = 0, skipped = 0, repaired = 0, conflicts = 0;
+  for (const entry of data.memos) {
+    if (!entry || typeof entry.guid !== 'string' || !entry.guid || typeof entry.htmlAppend !== 'string' ||
+        typeof entry.appendKey !== 'string' || !/^[a-z0-9-]{1,80}$/.test(entry.appendKey)) throw new Error('Invalid append entry');
+    const identity = entry.guid + ':' + entry.appendKey;
+    if (seen.has(identity)) throw new Error('Duplicate append entry');
+    seen.add(identity);
+    const marker = new RegExp('data-memo-append-key\\s*=\\s*["\']' + entry.appendKey + '["\']');
+    if (!marker.test(entry.htmlAppend)) throw new Error('Missing append marker');
+    const index = byGuid.has(entry.guid) ? byGuid.get(entry.guid) : byLegacyId.get(entry.id);
+    if (index === undefined) { missing++; continue; }
+    const current = existingMemos[index];
+    if (typeof current.html !== 'string') throw new Error('Invalid existing memo');
+    if (marker.test(current.html)) { skipped++; continue; }
+    let body = current.html;
+    // 生成済みの旧解説だけを、期待する本文と一致するときに置換する。
+    // 旧解説内に手書き編集がある場合は、そのメモを変更せず件数を知らせる。
+    if (entry.replaceAppendKey !== undefined) {
+      if (typeof entry.replaceAppendKey !== 'string' || !/^[a-z0-9-]{1,80}$/.test(entry.replaceAppendKey) ||
+          typeof entry.expectedAppendHtml !== 'string') throw new Error('Invalid append replacement');
+      const previous = new RegExp('data-memo-append-key\\s*=\\s*["\']' + entry.replaceAppendKey + '["\']');
+      if (previous.test(body)) {
+        if (!entry.expectedAppendHtml || body.split(entry.expectedAppendHtml).length !== 2) { conflicts++; continue; }
+        body = body.replace(entry.expectedAppendHtml, '');
+      }
+    }
+    for (const fix of entry.textFixes || []) {
+      if (!fix || typeof fix.from !== 'string' || !fix.from || typeof fix.to !== 'string') throw new Error('Invalid text fix');
+      // 元の説明と完全一致する箇所が一つの場合だけ修正。手書きの編集を上書きしない。
+      if (body.split(fix.from).length === 2) { body = body.replace(fix.from, fix.to); repaired++; }
+    }
+    patches.push({ index, html: body + entry.htmlAppend });
+  }
+  return { patches, missing, skipped, repaired, conflicts };
+}
+
+async function executeMemoAppendImport(data) {
+  const plan = planMemoHtmlAppend(data, S.memos);
+  const updatedAt = new Date().toISOString();
+  plan.patches.forEach(p => { S.memos[p.index].html = p.html; S.memos[p.index].updatedAt = updatedAt; });
+  if (plan.patches.length) {
+    persist();
+    renderRooms(); renderTagBar(); renderMemos(); renderExistingTags();
+  }
+  closeOv('import-ov');
+  alert(`${plan.patches.length}件の解説を更新しました${plan.skipped ? `（更新済み${plan.skipped}件は保持）` : ''}${plan.missing ? `。未読込・対象外${plan.missing}件は変更していません` : ''}${plan.conflicts ? `。旧解説に編集がある${plan.conflicts}件は保持しました` : ''}`);
+}
+
 async function executePartialImport(d, mergeMap) {
   // mergeMap: { importRoomId → existingRoomId } for rooms chosen to merge
   const existRoomIds = new Set(S.rooms.map(r => r.id));
@@ -8209,7 +8307,9 @@ document.getElementById('import-file').addEventListener('change', function() {
     try {
       const d = JSON.parse(e.target.result);
       if (!d.rooms || !d.memos) throw 0;
-      if (d.type === 'partial') {
+      if (d.type === 'memo_append') {
+        await executeMemoAppendImport(d);
+      } else if (d.type === 'partial') {
         startMergeImport(d);   // 部分書き出し: マージ取り込み
       } else {
         // 全データバックアップ: 「追加マージ（今のデータを残す）」か「すべて置き換え」を選択
@@ -10008,6 +10108,7 @@ function openBoard(memoId, isNew){
   document.getElementById('fb-ov').classList.add('open');
 }
 function fbClose(save){
+  const position = captureMemoPosition(fbMemoId);
   fbEndEdit();
   if (save){
     const m = S.memos.find(x => x.id === fbMemoId);
@@ -10027,6 +10128,7 @@ function fbClose(save){
   fbSel = null; fbMemoId = null; fbIsNew = false;
   renderTagBar(); renderMemos(); renderRooms();
   if (typeof refreshBookshelfIfOpen === 'function') refreshBookshelfIfOpen();
+  restoreMemoPosition(position);
 }
 function fbApplyView(){
   document.getElementById('fb-world').style.transform = 'translate(' + fbView.x + 'px,' + fbView.y + 'px) scale(' + fbView.scale + ')';
@@ -10777,16 +10879,16 @@ function gBuild(){
     });
   } else {
     // 既定: タグのみの共起グラフ。同じメモに付くタグ同士を結ぶ（線の太さ＝共有メモ数、円＝ノート数）
-    const pair = new Map();   // "tagA tagB" -> 共有メモ数
+    const pair = new Map();   // "tagA tagB" -> 共有メモ数
     memos.forEach(m => {
       const mt = [...new Set((m.tags || []).filter(t => gVisibleTags.has(t)))];
       mt.forEach(t => { tagMap[t].deg++; });
       for (let i = 0; i < mt.length; i++) for (let j = i + 1; j < mt.length; j++){
-        const a = mt[i], b = mt[j], key = a < b ? a + ' ' + b : b + ' ' + a;
+        const a = mt[i], b = mt[j], key = a < b ? a + ' ' + b : b + ' ' + a;
         pair.set(key, (pair.get(key) || 0) + 1);
       }
     });
-    pair.forEach((w, key) => { const ab = key.split(' '); if (tagMap[ab[0]] && tagMap[ab[1]]) gEdges.push({ a: tagMap[ab[0]], b: tagMap[ab[1]], w }); });
+    pair.forEach((w, key) => { const ab = key.split(' '); if (tagMap[ab[0]] && tagMap[ab[1]]) gEdges.push({ a: tagMap[ab[0]], b: tagMap[ab[1]], w }); });
   }
   // タグ●の大きさを「最大ノート数に対する割合」で出すため、最大数を記録
   gMaxDeg = 1;
