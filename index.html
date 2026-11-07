@@ -254,6 +254,12 @@ header {
 /* Tag manage modal rows */
 .tm-row { display: flex; align-items: center; gap: 10px; padding: 7px 3px; border-bottom: 1px solid #f0f7fa; transition: background .1s; border-radius: 5px; }
 .tm-row:last-child { border-bottom: none; }
+.tag-group-tools { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0; }
+.tag-group-tools button { background:#f4f9fc; color:var(--c1); border:1px solid #cfe0ea; border-radius:6px; padding:6px 10px; cursor:pointer; }
+.tag-group-tools button:disabled { opacity:.45; cursor:default; }
+.tag-group-tools input, .tag-group-tools select, .tm-group-select { min-width:0; padding:6px; border:1px solid #cfe0ea; border-radius:6px; }
+.tm-group-select { max-width:130px; }
+@media(max-width:600px) { .tm-row { flex-wrap:wrap; } }
 .tm-row.drag-over { background: #ddf0f8; border-top: 2px solid var(--c5); }
 .tm-row.dragging { opacity: 0.4; }
 .tm-name { flex: 1; font-size: .88rem; color: var(--c3); }
@@ -706,6 +712,8 @@ a.yt-seek .yt-t { font-variant-numeric: tabular-nums; opacity: .75; margin-right
 .et-chip.in:hover { background: #e89f9f; color: #6d1d1d; }
 /* Tag autocomplete */
 .tag-ac-wrap { position: relative; flex-shrink: 0; }
+.tag-candidate-group { display:block; max-width:100%; width:100%; margin-bottom:5px; padding:5px 7px; border:1px solid #cfe0ea; border-radius:6px; background:white; color:#25485d; font-size:.8rem; }
+.tag-candidate-group[hidden] { display:none; }
 .tag-ac-list {
   display: none; position: absolute; bottom: calc(100% + 4px); left: 0;
   background: white; border: 1.5px solid #cce5f0; border-radius: 10px;
@@ -894,6 +902,83 @@ body.force-mobile #edit-exist-tags {
 @keyframes lbFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lbImgIn  { from { transform: scale(0.93); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
+/* ── 集中モード ── */
+#focus-mode { display:none; position:fixed; inset:0; z-index:560; background:var(--th-bg,var(--c4)); color:var(--th-text); }
+#focus-mode.open { display:flex; flex-direction:column; }
+#focus-tabs { display:flex; gap:6px; padding:6px 12px; overflow-x:auto; flex-shrink:0; border-bottom:1px solid #dce5eb; }
+.focus-tab { display:flex; flex-shrink:0; border:1px solid #ccdce7; border-radius:6px; background:#fff; }
+.focus-tab.active { border-color:var(--c1); background:#e8f4fb; }
+.focus-tab button { border:0; background:none; color:#25485d; padding:7px 9px; cursor:pointer; }
+.focus-tab .focus-tab-title { max-width:210px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#focus-secondary { display:flex; flex:1; min-width:0; min-height:0; flex-direction:column; border-left:3px solid #b7cbd9; background:white; color:#263238; }
+#focus-secondary[hidden] { display:none; }
+#focus-secondary-header { display:flex; gap:6px; padding:10px; flex-wrap:wrap; border-bottom:1px solid #dce5eb; }
+#focus-secondary-header button { border:1px solid #cfe0ea; border-radius:6px; background:#fff; color:#25485d; padding:6px 10px; cursor:pointer; }
+#focus-secondary-select { min-width:0; flex:1; padding:6px; }
+#focus-secondary-scroll { overflow:auto; flex:1; padding:28px; }
+#focus-secondary-scroll h1 { font-size:1.5rem; overflow-wrap:anywhere; }
+#focus-secondary-content .bc { font-size:var(--focus-size,18px); line-height:1.9; }
+#focus-mode.split #focus-outline { display:none !important; }
+#focus-mode.split #focus-page { padding:28px 24px 100px; }
+#focus-mode.split #focus-scroll { flex:1; }
+#focus-secondary-content .fb-thumb { height:auto; max-height:none; overflow:auto; }
+#focus-header { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:12px 20px; border-bottom:1px solid var(--th-tbdr,#ddd); background:var(--th-bubble); color:var(--th-text); }
+#focus-header button, #focus-header select { padding:7px 12px; border:1px solid var(--th-tbdr,#ccc); border-radius:7px; background:var(--th-bubble); color:inherit; cursor:pointer; }
+#focus-header button:disabled { opacity:.35; cursor:default; }
+#focus-location { flex:1; min-width:100px; font-size:.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#focus-edit { font-weight:700; }
+#focus-inline-tools { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:10px 20px; border-bottom:1px solid var(--th-tbdr,#ddd); background:var(--th-bubble); }
+#focus-inline-tools[hidden] { display:none; }
+#focus-fmt-bar { flex-basis:100%; max-height:24vh; overflow-y:auto; margin:0; }
+#focus-inline-tools > button { padding:6px 10px; cursor:pointer; border:1px solid var(--th-tbdr,#ccc); border-radius:7px; background:var(--th-bubble); color:var(--th-text); font-size:.85rem; }
+#focus-inline-tools #focus-inline-save { background:var(--c1); color:#fff; }
+#focus-edit-status { margin-left:auto; font-size:.8rem; }
+#focus-content [contenteditable="true"] { min-height:160px; outline:none; cursor:text; }
+#focus-content .focus-side-label { font-size:.8rem; opacity:.65; margin:20px 0 8px; }
+#focus-tag-editor { width:100%; padding:8px; border:1px solid var(--th-tbdr,#ccc); border-radius:6px; background:var(--th-bubble); color:var(--th-text); }
+#focus-tags .tag-ac-wrap { width:100%; min-width:0; }
+#focus-tag-ac-list { top:calc(100% + 4px); bottom:auto; max-width:100%; }
+#focus-tag-ac-list .tag-ac-item { white-space:normal; overflow-wrap:anywhere; }
+#focus-workspace { display:flex; flex:1; min-height:0; position:relative; }
+#focus-search-pane { width:260px; flex-shrink:0; display:flex; flex-direction:column; min-height:0; padding:16px 12px; border-right:1px solid var(--th-tbdr,#ddd); background:var(--th-bg,#f5f6f8); }
+#focus-search-pane[hidden] { display:none; }
+#focus-search-pane label { font-size:.85rem; font-weight:bold; margin-bottom:10px; }
+#focus-search-input { width:100%; box-sizing:border-box; padding:9px; border:1px solid var(--th-tbdr,#ccc); border-radius:6px; }
+#focus-search-tag-ac { top:calc(100% + 4px); bottom:auto; width:100%; box-sizing:border-box; }
+#focus-search-tag-ac .tag-ac-item { white-space:normal; overflow-wrap:anywhere; }
+#focus-search-count { font-size:.75rem; opacity:.7; padding:10px 2px; }
+#focus-search-sort { display:flex; gap:6px; margin-top:10px; flex-shrink:0; }
+#focus-search-sort select { min-width:0; flex:1; padding:6px; border:1px solid var(--th-tbdr,#ccc); border-radius:6px; }
+#focus-search-results { overflow:auto; min-height:0; }
+.focus-search-result { display:block; width:100%; text-align:left; color:inherit; background:none; border:1px solid transparent; border-radius:6px; padding:10px; margin-bottom:4px; cursor:pointer; }
+.focus-search-result:hover { background:var(--th-hover,#dce8ef); }
+.focus-search-result[aria-current="true"] { border-color:var(--c1); background:var(--th-hover,#dce8ef); }
+.focus-search-result strong, .focus-search-result small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.focus-search-result small { margin-top:5px; opacity:.65; }
+#focus-search-results p { font-size:.85rem; padding:10px; }
+#focus-outline { width:220px; flex-shrink:0; padding:28px 16px; overflow:auto; border-right:1px solid var(--th-tbdr,#ddd); }
+#focus-outline h2 { font-size:.82rem; margin:0 0 16px; opacity:.65; }
+#focus-outline button { display:block; width:100%; text-align:left; background:none; color:inherit; border:0; padding:8px; border-radius:6px; cursor:pointer; overflow-wrap:anywhere; }
+#focus-outline button:hover { background:var(--th-hover,#dce8ef); }
+#focus-scroll { background:#f2f4f6; flex:1; min-width:0; overflow:auto; overscroll-behavior:contain; }
+#focus-page { background:#fff; color:#263238; --th-text:#263238; --th-bubble:#fff; --th-muted:#66757f; --th-tbdr:#d5dfe5; min-height:100%; max-width:840px; margin:0 auto; padding:48px 44px 160px; box-sizing:border-box; }
+#focus-mode.wide #focus-page { max-width:1400px; }
+#focus-title { font-size:2rem; line-height:1.4; margin:0 0 12px; overflow-wrap:anywhere; }
+#focus-meta { opacity:.65; font-size:.8rem; margin-bottom:12px; }
+#focus-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:32px; }
+#focus-content .bc { min-height:120px; font-size:var(--focus-size,18px); line-height:1.9; overflow-wrap:anywhere; }
+#focus-content .bc img { max-height:none; max-width:100%; }
+#focus-content h1, #focus-content h2, #focus-content h3 { scroll-margin-top:28px; }
+#focus-mode :focus-visible { outline:2px solid var(--c1); outline-offset:3px; }
+@media(max-width:760px) {
+  #focus-search-pane { position:absolute; inset:0 auto 0 0; width:min(300px, 90%); box-sizing:border-box; z-index:3; box-shadow:4px 0 16px #0002; }
+  #focus-header { padding:8px; gap:6px; }
+  #focus-location { flex-basis:100%; order:2; }
+  #focus-outline { display:none; width:170px; }
+  #focus-mode.show-outline #focus-outline { display:block; }
+  #focus-page { padding:28px 20px 100px; }
+  #focus-title { font-size:1.55rem; }
+}
 /* ── Quick look (拡大表示) ── */
 #ql-ov { display: none; position: fixed; inset: 0; z-index: 550; background: rgba(28,30,40,0.55); backdrop-filter: blur(2px); align-items: center; justify-content: center; padding: 24px; }
 #ql-ov.open { display: flex; animation: lbFadeIn .15s ease; }
@@ -943,6 +1028,10 @@ a.pdf-ref:hover { background: rgba(181,68,58,0.18); }
 /* ── フリーボード（無限キャンバス） ── */
 #fb-ov{display:none;position:fixed;inset:0;z-index:620;background:var(--c4);flex-direction:column}
 #fb-ov.open{display:flex}
+#focus-workspace > #fb-ov { position:relative; inset:auto; z-index:1; flex:1; min-width:0; min-height:0; }
+#focus-mode.focus-board #focus-outline, #focus-mode.focus-board #focus-scroll,
+#focus-mode.focus-board #focus-toc-toggle, #focus-mode.focus-board #focus-width,
+#focus-mode.focus-board #focus-header > label, #focus-mode.focus-board #focus-edit { display:none !important; }
 #fb-head{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--c1);color:#fff;flex-shrink:0;flex-wrap:wrap}
 #fb-title{flex:1;min-width:120px;border:none;border-radius:7px;padding:6px 10px;font-size:.95rem;outline:none;background:rgba(255,255,255,.92);color:var(--c3)}
 #fb-tags-wrap{flex-shrink:0;width:210px;min-width:120px}
@@ -1936,7 +2025,20 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
         <button id="tag-show-all" class="bcl" style="font-size:.8rem;padding:5px 12px">すべて表示</button>
         <button id="tag-hide-all" class="bcl" style="font-size:.8rem;padding:5px 12px">すべて非表示</button>
       </div>
-      <div id="tag-manage-list" style="max-height:260px;overflow-y:auto;border:1px solid #e8f0f5;border-radius:8px;padding:0 10px"></div>
+      <div class="cfg-label">タグの分類</div>
+      <div style="font-size:.82rem;color:#888">グループを作り、各タグの分類を選べます。グループを削除してもタグとメモは残ります。</div>
+      <div class="tag-group-tools">
+        <input id="tag-group-name" placeholder="グループ名（例：仕事）" aria-label="グループ名">
+        <button class="bcl" id="tag-group-add">グループを追加</button>
+      </div>
+      <div class="tag-group-tools">
+        <select id="tag-manage-group" aria-label="表示するタグのグループ"></select>
+        <button class="bcl" id="tag-group-rename">名前を変更</button>
+        <button class="bcl" id="tag-group-delete">グループを削除</button>
+        <input id="tag-manage-search" type="search" placeholder="タグ名で検索" aria-label="タグ名で検索">
+      </div>
+      <div id="tag-group-status" role="status" style="font-size:.82rem"></div>
+      <div id="tag-manage-list" style="max-height:320px;overflow-y:auto;border:1px solid #e8f0f5;border-radius:8px;padding:0 10px"></div>
     </div>
 
     <!-- 表示 -->
@@ -2357,6 +2459,51 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
   <div id="ie-stage"><div id="ie-imgwrap"><img id="ie-img" alt=""><svg id="ie-svg" xmlns="http://www.w3.org/2000/svg"></svg></div></div>
 </div>
 
+<!-- 集中モード：一覧から離れて一つのメモを読む -->
+<section id="focus-mode" aria-label="メモ集中モード">
+  <header id="focus-header">
+    <button id="focus-close" title="一覧に戻る (Esc)">← 一覧へ</button>
+    <span id="focus-location"></span>
+    <button id="focus-prev" aria-label="前のメモ">‹</button>
+    <button id="focus-next" aria-label="次のメモ">›</button>
+    <button id="focus-search-toggle" aria-controls="focus-search-pane" aria-expanded="true">メモ検索</button>
+    <button id="focus-split-toggle" aria-pressed="false">左右に分割</button>
+    <button id="focus-toc-toggle" aria-label="目次を表示・非表示">目次</button>
+    <label>文字 <select id="focus-size" aria-label="集中モードの文字サイズ"><option value="16">小</option><option value="18" selected>標準</option><option value="22">大</option><option value="26">特大</option></select></label>
+    <button id="focus-width" aria-pressed="false">幅を広げる</button>
+    <button id="focus-edit">✏️ 編集</button>
+  </header>
+  <div id="focus-tabs" aria-label="開いているメモ"></div>
+  <div id="focus-inline-tools" hidden aria-label="本文の書式">
+    <div id="focus-fmt-bar" class="fmt-bar" data-for="focus-inline-front" aria-label="すべての編集ツール"></div>
+    <span id="focus-edit-status" role="status">編集中</span>
+    <button id="focus-inline-cancel" type="button">キャンセル</button>
+    <button id="focus-inline-save" type="button">保存 (Ctrl+S)</button>
+  </div>
+  <div id="focus-workspace">
+    <nav id="focus-search-pane" aria-label="メモ検索">
+      <label for="focus-search-input">すべてのメモを検索</label>
+      <div class="tag-ac-wrap">
+        <input id="focus-search-input" type="search" placeholder="本文・タグで検索" autocomplete="off">
+        <ul id="focus-search-tag-ac" class="tag-ac-list" aria-label="検索タグ候補"></ul>
+      </div>
+      <div id="focus-search-sort">
+        <select id="focus-search-sort-by" aria-label="検索結果の並び順"><option value="title">名前順</option><option value="created" selected>作成順</option><option value="updated">更新順</option></select>
+        <select id="focus-search-sort-dir" aria-label="検索結果の昇順・降順"><option value="asc">昇順 ↑</option><option value="desc" selected>降順 ↓</option></select>
+      </div>
+      <div id="focus-search-count" role="status" aria-live="polite"></div>
+      <div id="focus-search-results"></div>
+    </nav>
+    <nav id="focus-outline" aria-label="メモの目次"><h2>このメモの目次</h2><div id="focus-toc"></div></nav>
+    <div id="focus-scroll"><article id="focus-page">
+      <h1 id="focus-title" tabindex="-1"></h1><div id="focus-meta"></div><div id="focus-tags"></div><div id="focus-content"></div>
+    </article></div>
+    <section id="focus-secondary" hidden aria-label="右側のメモ">
+      <div id="focus-secondary-header"><select id="focus-secondary-select" aria-label="右側に表示するメモ"></select><button id="focus-split-swap">左右を入れ替え</button><button id="focus-secondary-close" aria-label="左右分割を閉じる">×</button></div>
+      <div id="focus-secondary-scroll"><h1 id="focus-secondary-title"></h1><div id="focus-secondary-content"></div></div>
+    </section>
+  </div>
+</section>
 <!-- Quick look (拡大表示) -->
 <div id="ql-ov">
   <div id="ql-modal">
@@ -2364,6 +2511,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
       <button id="ql-prev" title="前のメモ (←)">‹</button>
       <button id="ql-next" title="次のメモ (→)">›</button>
       <span class="ql-time" id="ql-time"></span>
+      <button id="ql-focus">📖 集中モード</button>
       <button id="ql-edit">✏️ 編集</button>
       <button id="ql-close" title="閉じる (Esc)">✕</button>
     </div>
@@ -2546,6 +2694,7 @@ body.force-mobile .search-bar.adv-open #search-regex-lbl { display: flex; flex: 
 
 <script>
 // ── IndexedDB ─────────────────────────────────────────────────────
+if (window.chatMemoDesktop) window.prompt = (message, value = '') => window.chatMemoDesktop.prompt(message, value);
 const IDB_NAME  = 'cmemo_idb';
 const IDB_VER   = 2;                 // v2: 画像を別ストア(images)へ分離
 const IDB_STORE = 'state';
@@ -2554,6 +2703,7 @@ const IDB_KEY   = 'main';
 const LS_LEGACY = 'cmemo_v4'; // 旧localStorageキー（移行用）
 let db = null;
 let S  = null;
+let sharedBaseline = null, sharedReady = false, sharedRefreshPending = false;
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -3210,6 +3360,12 @@ async function pdfGenerateOutline(){
 const _pdfOutlineBtn = document.getElementById('pdfins-outline');
 if (_pdfOutlineBtn) _pdfOutlineBtn.onclick = pdfGenerateOutline;
 
+// 通常編集・集中モードで貼り付け、ショートカット、PDF編集を共有する。
+const memoEditorInitializers = [];
+function registerMemoEditor(initialize) {
+  memoEditorInitializers.push(initialize);
+  [editor, editEd].forEach(initialize);
+}
 // 編集エリア内のPDFリンクをタップ → 編集モーダルを開いて修正／削除
 function openPdfEdit(a, container){
   pdfEditingEl = a;
@@ -3263,7 +3419,7 @@ let qlIndex = -1;
 const editor   = document.getElementById('editor');
 const editEd   = document.getElementById('edit-ed');
 // 編集エリア内のPDFリンクをタップ → 編集（editor/editEd 定義後に登録）
-[editor, editEd].forEach(el => {
+registerMemoEditor(el => {
   el.addEventListener('click', e => {
     const a = e.target.closest ? e.target.closest('a.pdf-ref') : null;
     if (a && el.contains(a)) { e.preventDefault(); e.stopPropagation(); openPdfEdit(a, el); }
@@ -3426,6 +3582,13 @@ if (document.getElementById('fb-fmt-bar')) buildToolbar('fb-fmt-bar');
     eb.appendChild(s); eb.appendChild(b);
   } }
 
+// 集中モードも通常編集と同じツール一式を使う（イベントは共通配線）。
+{
+  const bar = document.getElementById('focus-fmt-bar');
+  bar.innerHTML = document.getElementById('edit-fmt-bar').innerHTML;
+  bar.querySelectorAll('[id]').forEach(el => { el.id = 'focus-' + el.id; });
+  bar.insertAdjacentHTML('beforeend', '<div class="fs"></div><button class="fb" data-c="heading2">見出し</button><button class="fb" data-c="paragraph">本文</button>');
+}
 // チェックリストの整合: ul.cl の各項目にチェックボックスを保証し、リスト外に残ったチェックボックスは除去
 function reconcileCl(root){
   if (!root) return;
@@ -3485,6 +3648,8 @@ function wrapTag(tag, attrs, targetEl) {
 function applyFmt(cmd, targetEl, e) {
   targetEl.focus();
   switch (cmd) {
+    case 'heading2': document.execCommand('formatBlock', false, 'h2'); break;
+    case 'paragraph': document.execCommand('formatBlock', false, 'p'); break;
     case 'undo':          document.execCommand('undo', false, null); break;
     case 'redo':          document.execCommand('redo', false, null); break;
     case 'bold':          document.execCommand('bold', false, null); break;
@@ -3703,6 +3868,7 @@ document.querySelectorAll('.fmt-bar').forEach(bar => {
   const getTarget = () => document.getElementById(bar.dataset.for);
 
   bar.addEventListener('click', e => {
+    if (bar.id === 'focus-fmt-bar' && (focusDraftBusy || !focusDraft)) return;
     const btn = e.target.closest('.fb');
     if (btn) {
       const cmd = btn.dataset.c;
@@ -3739,7 +3905,7 @@ document.querySelectorAll('.fmt-bar').forEach(bar => {
 
 // Keyboard shortcuts
 // チェックリストの空項目: Enter でリストを抜ける / Backspace で項目を削除（ユーザーフレンドリー化）
-[editor, editEd].forEach(el => {
+registerMemoEditor(el => {
   el.addEventListener('keydown', e => {
     if (e.key !== 'Enter' && e.key !== 'Backspace') return;
     const sel = window.getSelection(); if (!sel.rangeCount || !sel.isCollapsed) return;
@@ -3758,7 +3924,7 @@ document.querySelectorAll('.fmt-bar').forEach(bar => {
     const r = document.createRange(); r.selectNodeContents(target); r.collapse(true); sel.removeAllRanges(); sel.addRange(r);
   });
 });
-[editor, editEd].forEach(el => {
+registerMemoEditor(el => {
   el.addEventListener('keydown', e => {
     if ((e.ctrlKey||e.metaKey) && e.key==='b') { e.preventDefault(); applyFmt('bold', el); }
     if ((e.ctrlKey||e.metaKey) && e.key==='i') { e.preventDefault(); applyFmt('italic', el); }
@@ -3799,7 +3965,7 @@ document.querySelectorAll('.fmt-bar').forEach(bar => {
 // ── Gap-click: ブロック要素の前後・間の余白クリックで改行を挿入 ─
 // ブロック要素どうしが隣接している／先頭・末尾にある場合、
 // その隙間（editorのpadding/margin領域）をクリックすると <br> を挿入してカーソルを置く
-[editor, editEd].forEach(el => {
+registerMemoEditor(el => {
   el.addEventListener('click', e => {
     if (e.target !== el) return; // 子要素クリックは無視
     const clickY = e.clientY;
@@ -3953,7 +4119,7 @@ function pasteMarkdownIfAny(e, el){
   }
   return false;
 }
-[editor, editEd].forEach(el => {
+registerMemoEditor(el => {
   el.addEventListener('paste', async e => {
     const cd = e.clipboardData || window.clipboardData; if (!cd) return;
     const items = [...(cd.items || [])];
@@ -4178,6 +4344,11 @@ document.addEventListener('click', e => {
     url = localPathToUrl(path);
   } catch (error) { e.preventDefault(); alert(error.message); return; }
   if (!url) return;
+  if (window.chatMemoDesktop) {
+    e.preventDefault(); e.stopPropagation();
+    window.chatMemoDesktop.openLocalPath(url).catch(error => alert('エクスプローラーで開けませんでした。\n' + error.message));
+    return;
+  }
   a.href = explorerLinkUrl(url);
   a.target = '_self';
   if (a.isContentEditable) {
@@ -4466,6 +4637,7 @@ document.addEventListener('click', e => {
   const wrap = sw.closest('[id^="memo-"]');
   if (wrap) m = S.memos.find(x => ('memo-' + x.id) === wrap.id);
   if (!m && sw.closest('#ql-body')) m = renderedMemos[qlIndex];
+  if (!m && sw.closest('#focus-content')) m = S.memos.find(x => x.id === focusMemoId);
   if (!m) return;
   if (sw.closest('.flash-back')) side = 'back';
   openSwitchPicker(sw, m, side);
@@ -4813,10 +4985,28 @@ function tagAcReplaceToken(val, completion) {
   return parts.join(',').replace(/^,\s*/, '') + ', ';
 }
 
-function setupTagAc(inputId, listId, getTagsFn) {
+function setupTagAc(inputId, listId, getTagsFn, searchMode = false) {
   const inp  = document.getElementById(inputId);
   const list = document.getElementById(listId);
   let acIdx  = -1;
+  let blurTimer = null;
+  const groupSelect = document.createElement('select');
+  groupSelect.id = inputId + '-group'; groupSelect.className = 'tag-candidate-group'; groupSelect.hidden = true;
+  groupSelect.setAttribute('aria-label', 'タグ候補のグループ');
+  inp.before(groupSelect);
+  const refreshGroups = () => {
+    if (!S) return;
+    fillTagGroupSelect(groupSelect, groupSelect.value, true);
+    groupSelect.hidden = !(S.tagGroups || []).length;
+  };
+  groupSelect._refreshTagGroups = refreshGroups;
+  refreshGroups();
+  groupSelect.onchange = () => {
+    clearTimeout(blurTimer);
+    if (inputId === 'tag-input') renderExistingTags();
+    if (inputId === 'edit-tag-input') renderEditExistingTags();
+    inp.focus(); update(true);
+  };
 
   function getItems() { return list.querySelectorAll('.tag-ac-item'); }
 
@@ -4826,55 +5016,73 @@ function setupTagAc(inputId, listId, getTagsFn) {
   function highlight(idx) {
     getItems().forEach((el, i) => el.classList.toggle('active', i === idx));
     acIdx = idx;
+    getItems()[idx]?.scrollIntoView({ block: 'nearest' });
   }
 
   function complete(tag) {
-    inp.value = tagAcReplaceToken(inp.value, tag);
+    if (searchMode) {
+      const match = inp.value.match(/(?:^|\s)(-?)(#?)([^\s"]*)$/);
+      if (!match) return;
+      const term = '#' + tag;
+      const quoted = /\s/.test(term) && !term.includes('"') ? '"' + term + '"' : term;
+      inp.value = inp.value.slice(0, inp.value.length - match[1].length - match[2].length - match[3].length) + match[1] + quoted + ' ';
+    } else inp.value = tagAcReplaceToken(inp.value, tag);
     close();
     inp.focus();
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
     // 既存タグチップを再描画
     if (inputId === 'tag-input') renderExistingTags();
   }
 
-  function update() {
-    const token = tagAcCurrentToken(inp.value).replace(/^#/, '').toLowerCase();
+  function update(showGroup = false) {
+    const match = searchMode ? inp.value.match(/(?:^|\s)(-?)(#?)([^\s"]*)$/) : null;
+    const token = (searchMode ? (match?.[3] || '') : tagAcCurrentToken(inp.value).replace(/^#/, '')).toLowerCase();
     list.innerHTML = '';
     acIdx = -1;
-    if (!token) { close(); return; }
-    const already = new Set(parseTags(inp.value).map(t => t.toLowerCase()));
+    if (!token && !(searchMode && match?.[2]) && !(showGroup === true && groupSelect.value)) { close(); return; }
+    const previous = searchMode ? parseMemoQuery(inp.value.slice(0, match?.index ?? inp.value.length)) : null;
+    const already = new Set(searchMode ? [...previous.include, ...previous.exclude].filter(t => t.startsWith('#')).map(t => t.slice(1)) : parseTags(inp.value).map(t => t.toLowerCase()));
     const matches = getTagsFn().filter(t =>
-      t.toLowerCase().includes(token) && !already.has(t.toLowerCase())
+      t.toLowerCase().includes(token) && !already.has(t.toLowerCase()) && tagInGroup(t, groupSelect.value)
     );
     matches.forEach(tag => {
       const li = document.createElement('li');
       li.className = 'tag-ac-item';
+      li.dataset.tag = tag;
+      li.title = tagGroupOf(tag)?.name || '未分類';
       // ハイライト一致部分
       const lo = tag.toLowerCase(), idx2 = lo.indexOf(token);
       li.innerHTML = '#' + (idx2 >= 0
-        ? tag.slice(0, idx2) + '<strong>' + tag.slice(idx2, idx2 + token.length) + '</strong>' + tag.slice(idx2 + token.length)
-        : tag);
+        ? escH(tag.slice(0, idx2)) + '<strong>' + escH(tag.slice(idx2, idx2 + token.length)) + '</strong>' + escH(tag.slice(idx2 + token.length))
+        : escH(tag));
       li.addEventListener('mousedown', e => { e.preventDefault(); complete(tag); });
       list.appendChild(li);
     });
     open(list.querySelectorAll('.tag-ac-item'));
   }
 
-  inp.addEventListener('input', update);
+  inp.addEventListener('input', e => { if (e.isComposing) { close(); return; } update(); });
+  inp.addEventListener('compositionend', update);
+  inp.addEventListener('focus', () => { clearTimeout(blurTimer); refreshGroups(); });
   inp.addEventListener('keydown', e => {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'ArrowDown' && !list.classList.contains('open') && groupSelect.value) update(true);
     const items = getItems();
     if (!list.classList.contains('open')) return;
     if (e.key === 'ArrowDown') {
-      e.preventDefault(); highlight(Math.min(acIdx + 1, items.length - 1));
+      e.preventDefault(); e.stopPropagation(); highlight(Math.min(acIdx + 1, items.length - 1));
     } else if (e.key === 'ArrowUp') {
-      e.preventDefault(); highlight(Math.max(acIdx - 1, 0));
+      e.preventDefault(); e.stopPropagation(); highlight(Math.max(acIdx - 1, 0));
     } else if ((e.key === 'Enter' || e.key === 'Tab') && acIdx >= 0) {
       e.preventDefault();
-      complete(items[acIdx].textContent.replace(/^#/, '').trim());
+      e.stopPropagation();
+      complete(items[acIdx].dataset.tag);
     } else if (e.key === 'Escape') {
+      e.preventDefault(); e.stopPropagation();
       close();
     }
   });
-  inp.addEventListener('blur', () => setTimeout(close, 150));
+  inp.addEventListener('blur', () => { blurTimer = setTimeout(close, 150); });
 }
 
 function renderExistingTags() {
@@ -4883,7 +5091,7 @@ function renderExistingTags() {
   const inp = document.getElementById('tag-input');
   const current = new Set(parseTags(inp.value));
   const hiddenSet2 = new Set(S.hiddenTags || []);
-  allTags().filter(t => current.has(t) || !hiddenSet2.has(t)).forEach(tag => {
+  allTags().filter(t => current.has(t) || (!hiddenSet2.has(t) && tagInGroup(t, document.getElementById('tag-input-group')?.value || ''))).forEach(tag => {
     const inTag = current.has(tag);
     const c = document.createElement('button');
     c.className = 'et-chip' + (inTag ? ' in' : ''); c.textContent = tag;
@@ -4905,7 +5113,7 @@ function renderEditExistingTags() {
   const inp = document.getElementById('edit-tag-input');
   const current = new Set(parseTags(inp.value));
   const hiddenSet2 = new Set(S.hiddenTags || []);
-  allTags().filter(t => current.has(t) || !hiddenSet2.has(t)).forEach(tag => {
+  allTags().filter(t => current.has(t) || (!hiddenSet2.has(t) && tagInGroup(t, document.getElementById('edit-tag-input-group')?.value || ''))).forEach(tag => {
     const inTag = current.has(tag);
     const c = document.createElement('button');
     c.className = 'et-chip' + (inTag ? ' in' : ''); c.textContent = tag;
@@ -5580,12 +5788,20 @@ function renderTagBar() {
   all.textContent = 'すべて';
   all.onclick = () => { activeTagFilters.clear(); renderTagBar(); renderMemos({ preservePosition: true }); };
   tagBarEl.appendChild(all);
+  if ((S.tagGroups || []).length) {
+    const select = document.createElement('select'); select.className = 'sort-sel'; select.id = 'tag-bar-group'; select.setAttribute('aria-label', 'タグのグループ');
+    fillTagGroupSelect(select, tagBarGroup, true);
+    tagBarGroup = select.value;
+    select.onchange = () => { tagBarGroup = select.value; renderTagBar(); };
+    tagBarEl.appendChild(select);
+  } else tagBarGroup = '';
   const hiddenSet = new Set(S.hiddenTags || []);
   allTags().forEach(t => {
     const isHidden = hiddenSet.has(t);
     const mode = activeTagFilters.get(t) || 0;
     const isInclude = mode === 1;
     const isActive = mode !== 0;
+    if (!tagInGroup(t, tagBarGroup) && !isActive) return;
     if (isHidden && !isActive) return; // 非表示かつ未選択はスキップ
     const c = document.createElement('button');
     c.className = 'tag-chip' + (isInclude ? ' active' : '') + (isHidden && isActive ? ' ghost' : '');
@@ -7404,6 +7620,7 @@ function renderBubble(m, q = '', showRoom = false, container = null) {
   [
     { i: m.pinned?'📌':'📍', t: m.pinned?'ピン解除':'ピン留め（左寄せ）', f: ()=>togglePin(m.id) },
     { i: '⤢', t: '拡大表示', f: ()=>openQuickLook(m.id) },
+    { i: '📖', t: '集中モード', f: ()=>openFocusMode(m.id) },
     { i: '✏️', t: '編集', f: ()=>openEdit(m.id) },
     { i: '📋', t: '複製', f: ()=>duplicateMemo(m.id) },
     { i: '🎨', t: '背景色', f: (e)=>showColorPicker(m.id, e), action:'color' },
@@ -7793,6 +8010,7 @@ document.getElementById('edit-save').onclick = async () => {
   closeOv('edit-ov');
   refreshBookshelfIfOpen();
   restoreMemoPosition(position);
+  refreshFocusMode();
 };
 document.querySelectorAll('#edit-flash-tabs .flash-tab').forEach(b => b.onclick = () => editSetSide(b.dataset.side));
 document.getElementById('edit-cancel').onclick = closeEditAsk;
@@ -7803,6 +8021,7 @@ document.getElementById('edit-delete').onclick = () => {
   persist(); closeOv('edit-ov');
   renderTagBar(); renderMemos(); renderExistingTags(); renderRooms();
   if (document.getElementById('g-ov') && document.getElementById('g-ov').classList.contains('open')) gRebuild();
+  refreshFocusMode();
 };
 document.getElementById('edit-ov').addEventListener('click', e => { if (e.target===document.getElementById('edit-ov')) closeEditAsk(); });
 
@@ -8013,6 +8232,44 @@ document.getElementById('exp-txt').onclick = () => {
 };
 
 // ── Tag manage ───────────────────────────────────────────────────
+let tagBarGroup = '';
+function tagGroupOf(tag) { return (S.tagGroups || []).find(g => g.tags.includes(tag)); }
+function tagInGroup(tag, id) { return !id || (id === '__ungrouped' ? !tagGroupOf(tag) : tagGroupOf(tag)?.id === id); }
+function fillTagGroupSelect(select, value, filter = false) {
+  select.replaceChildren();
+  if (filter) select.add(new Option('すべてのグループ', ''));
+  select.add(new Option('未分類', filter ? '__ungrouped' : ''));
+  for (const group of S.tagGroups || []) select.add(new Option(group.name, group.id));
+  select.value = [...select.options].some(o => o.value === value) ? value : '';
+}
+function saveTagGroups(message = '') {
+  persist(); renderTagManage(); renderTagBar();
+  document.querySelectorAll('.tag-candidate-group').forEach(select => select._refreshTagGroups?.());
+  renderExistingTags(); renderEditExistingTags();
+  document.getElementById('tag-group-status').textContent = message;
+}
+document.getElementById('tag-group-add').onclick = () => {
+  const input = document.getElementById('tag-group-name'), name = input.value.trim();
+  if (!name) { input.focus(); return; }
+  S.tagGroups ||= [];
+  if (S.tagGroups.some(g => g.name === name)) { document.getElementById('tag-group-status').textContent = '同じ名前のグループがあります'; return; }
+  S.tagGroups.push({ id:'tg-' + crypto.randomUUID(), name, tags:[] });
+  input.value = ''; saveTagGroups('グループを追加しました');
+};
+document.getElementById('tag-group-rename').onclick = () => {
+  const group = (S.tagGroups || []).find(g => g.id === document.getElementById('tag-manage-group').value);
+  const input = document.getElementById('tag-group-name'), name = input.value.trim();
+  if (!group || !name) { document.getElementById('tag-group-status').textContent = '変更するグループを選び、上の欄に新しい名前を入力してください'; input.focus(); return; }
+  if (S.tagGroups.some(g => g !== group && g.name === name)) { document.getElementById('tag-group-status').textContent = '同じ名前のグループがあります'; return; }
+  group.name = name; input.value = ''; saveTagGroups('グループ名を変更しました');
+};
+document.getElementById('tag-group-delete').onclick = () => {
+  const id = document.getElementById('tag-manage-group').value;
+  S.tagGroups = (S.tagGroups || []).filter(g => g.id !== id);
+  saveTagGroups('グループを削除しました。所属していたタグは未分類に戻りました');
+};
+document.getElementById('tag-manage-group').onchange = () => renderTagManage();
+document.getElementById('tag-manage-search').oninput = () => renderTagManage();
 function allTagsGlobal() {
   const s = new Set();
   S.memos.forEach(m => (m.tags||[]).forEach(t => s.add(t)));
@@ -8020,6 +8277,7 @@ function allTagsGlobal() {
 }
 
 function deleteTag(tag) {
+  (S.tagGroups || []).forEach(g => { g.tags = g.tags.filter(t => t !== tag); });
   S.memos.forEach(m => { if (m.tags) m.tags = m.tags.filter(t => t !== tag); });
   S.hiddenTags = (S.hiddenTags || []).filter(t => t !== tag);
   S.tagOrder = (S.tagOrder || []).filter(t => t !== tag);
@@ -8029,6 +8287,9 @@ function deleteTag(tag) {
 function renameTag(oldTag, newTag) {
   newTag = newTag.trim().replace(/^#/, '');
   if (!newTag || newTag === oldTag) return;
+  const group = tagGroupOf(oldTag), targetGroup = tagGroupOf(newTag);
+  (S.tagGroups || []).forEach(g => { g.tags = g.tags.filter(t => t !== oldTag); });
+  if (group && !targetGroup) group.tags.push(newTag);
   S.memos.forEach(m => {
     if (!m.tags) return;
     if (m.tags.includes(oldTag)) {
@@ -8042,9 +8303,15 @@ function renameTag(oldTag, newTag) {
 
 let tmDragSrc = null;
 function renderTagManage() {
+  const groupSelect = document.getElementById('tag-manage-group');
+  fillTagGroupSelect(groupSelect, groupSelect.value, true);
+  const selectedGroup = (S.tagGroups || []).some(g => g.id === groupSelect.value);
+  document.getElementById('tag-group-rename').disabled = !selectedGroup;
+  document.getElementById('tag-group-delete').disabled = !selectedGroup;
   const list = document.getElementById('tag-manage-list');
   list.innerHTML = '';
-  const tags = allTagsGlobal();
+  const query = document.getElementById('tag-manage-search').value.trim().toLowerCase();
+  const tags = allTagsGlobal().filter(t => tagInGroup(t, groupSelect.value) && t.toLowerCase().includes(query));
   if (!tags.length) {
     list.innerHTML = '<div style="color:#aaa;font-size:.85rem;text-align:center;padding:20px 0">タグがありません</div>';
     return;
@@ -8063,7 +8330,8 @@ function renderTagManage() {
 
     const sw = document.createElement('label'); sw.className = 'tg-sw';
     sw.title = isVisible ? '表示中' : '非表示';
-    sw.innerHTML = `<input type="checkbox" data-tag="${tag}"${isVisible ? ' checked' : ''}><span class="tg-sl"></span>`;
+    sw.innerHTML = `<input type="checkbox"${isVisible ? ' checked' : ''}><span class="tg-sl"></span>`;
+    sw.querySelector('input').dataset.tag = tag;
     sw.querySelector('input').addEventListener('change', function() {
       const t = this.dataset.tag;
       if (this.checked) S.hiddenTags = S.hiddenTags.filter(h => h !== t);
@@ -8108,7 +8376,15 @@ function renderTagManage() {
     actions.className = 'tm-actions';
     actions.appendChild(renameBtn); actions.appendChild(delBtn);
 
-    row.appendChild(handle); row.appendChild(name); row.appendChild(actions); row.appendChild(sw);
+    const groupPicker = document.createElement('select'); groupPicker.className = 'tm-group-select'; groupPicker.setAttribute('aria-label', tag + 'の分類');
+    fillTagGroupSelect(groupPicker, tagGroupOf(tag)?.id || '');
+    groupPicker.onchange = () => {
+      (S.tagGroups || []).forEach(g => { g.tags = g.tags.filter(t => t !== tag); });
+      const group = (S.tagGroups || []).find(g => g.id === groupPicker.value);
+      if (group) group.tags.push(tag);
+      saveTagGroups('タグの分類を保存しました');
+    };
+    row.appendChild(handle); row.appendChild(name); row.appendChild(groupPicker); row.appendChild(actions); row.appendChild(sw);
 
     // Drag & Drop
     row.addEventListener('dragstart', e => {
@@ -8131,7 +8407,9 @@ function renderTagManage() {
       const si = rows.indexOf(tmDragSrc), ti = rows.indexOf(row);
       if (si < ti) row.after(tmDragSrc); else row.before(tmDragSrc);
       row.classList.remove('drag-over');
-      S.tagOrder = [...list.querySelectorAll('.tm-row[data-tag]')].map(r => r.dataset.tag);
+      const reordered = [...list.querySelectorAll('.tm-row[data-tag]')].map(r => r.dataset.tag);
+      const visible = new Set(reordered); let next = 0;
+      S.tagOrder = allTagsGlobal().map(t => visible.has(t) ? reordered[next++] : t);
       persist(); renderTagBar(); renderExistingTags();
     });
 
@@ -8924,10 +9202,95 @@ function persistNow() {
   if (!db || !S) return;
   if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; }
   S.syncUpdatedAt = new Date().toISOString();
+  const snapshot = structuredClone(S), base = structuredClone(sharedBaseline);
   const tx = db.transaction(IDB_STORE, 'readwrite');
-  tx.objectStore(IDB_STORE).put(S, IDB_KEY);
-  if (syncFolder || (isIOS && iosSyncConfigured)) writeSyncFile().catch(() => {});
+  const store = tx.objectStore(IDB_STORE);
+  let saved;
+  const read = store.get(IDB_KEY);
+  read.onsuccess = () => {
+    saved = mergeSharedState(base, snapshot, read.result || base || snapshot);
+    store.put(saved, IDB_KEY);
+  };
+  tx.oncomplete = () => {
+    if (!saved) return;
+    S = mergeSharedState(snapshot, S, saved);
+    sharedBaseline = structuredClone(saved);
+    if (window.chatMemoDesktop?.notifySaved) window.chatMemoDesktop.notifySaved();
+    else sharedChannel?.postMessage('saved');
+    if (syncFolder || (isIOS && iosSyncConfigured)) writeSyncFile().catch(() => {});
+    if (!sharedEditorActive() && JSON.stringify(saved) !== JSON.stringify(snapshot)) refreshSharedViews();
+  };
 }
+// Merge only changes since this window's last snapshot, inside the IDB write transaction.
+// Concurrent edits of the same memo keep the other version as a separate memo.
+function mergeSharedState(base, local, remote, key = '') {
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  if (same(local, base)) return structuredClone(remote);
+  if (same(remote, base) || same(local, remote)) return structuredClone(local);
+  if (local === undefined) return structuredClone(remote);
+  if (remote === undefined) return structuredClone(local);
+  if (Array.isArray(local) && Array.isArray(remote)) {
+    const before = Array.isArray(base) ? base : [];
+    if ([...before, ...local, ...remote].every(v => v && typeof v === 'object' && 'id' in v)) {
+      const bm = new Map(before.map(v => [v.id,v])), lm = new Map(local.map(v => [v.id,v])), rm = new Map(remote.map(v => [v.id,v]));
+      const result = [];
+      for (const id of new Set([...remote.map(v => v.id), ...local.map(v => v.id), ...before.map(v => v.id)])) {
+        const b = bm.get(id), l = lm.get(id), r = rm.get(id);
+        const value = mergeSharedState(b, l, r, key + '.' + id);
+        if (value !== undefined) result.push(value);
+        if (key === 'memos' && b && l && r && ['html','back','board'].some(field => !same(l[field], b[field]) && !same(r[field], b[field]) && !same(l[field], r[field]))) {
+          const copy = structuredClone(r); copy.id = 'conflict-' + crypto.randomUUID(); copy.guid = crypto.randomUUID();
+          copy.tags = [...new Set([...(copy.tags || []), '同時編集の控え'])];
+          copy.updatedAt = new Date().toISOString(); result.push(copy);
+        }
+      }
+      return result;
+    }
+    if ([...before, ...local, ...remote].every(v => typeof v === 'string')) {
+      return [...new Set([...local.filter(v => !before.includes(v) || remote.includes(v)), ...remote.filter(v => !before.includes(v) || local.includes(v))])];
+    }
+    return structuredClone(local);
+  }
+  if (local && remote && typeof local === 'object' && typeof remote === 'object' && !Array.isArray(local) && !Array.isArray(remote)) {
+    const result = {};
+    for (const name of new Set([...Object.keys(base || {}), ...Object.keys(remote), ...Object.keys(local)])) {
+      const value = mergeSharedState(base?.[name], local[name], remote[name], key ? key + '.' + name : name);
+      if (value !== undefined) result[name] = value;
+    }
+    return result;
+  }
+  return structuredClone(local);
+}
+function sharedEditorActive() {
+  return !!(focusDraft || focusDraftBusy || fbMemoId || document.querySelector('.ov.open') || document.activeElement?.isContentEditable);
+}
+function refreshSharedViews() {
+  if (!sharedReady || !S) return;
+  const active = document.activeElement;
+  const selection = active && /INPUT|TEXTAREA/.test(active.tagName) ? [active.selectionStart, active.selectionEnd] : null;
+  if (!S.rooms.some(r => r.id === roomId)) roomId = S.rooms[0]?.id || '';
+  _bubbleCache.clear();
+  renderRooms(); renderTagBar(); renderMemos({ preservePosition:true }); renderExistingTags();
+  if (document.getElementById('focus-mode').classList.contains('open')) renderFocusMemo(true);
+  if (active?.isConnected) {
+    active.focus({ preventScroll:true });
+    if (selection?.[0] != null) { try { active.setSelectionRange(...selection); } catch {} }
+  }
+}
+async function receiveSharedState() {
+  if (!sharedReady || !db || !S) return;
+  if (sharedEditorActive() || persistTimer) { sharedRefreshPending = true; return; }
+  const remote = await loadFromIDB();
+  if (!remote) return;
+  if (sharedEditorActive() || persistTimer) { sharedRefreshPending = true; return; }
+  S = mergeSharedState(sharedBaseline, S, remote);
+  sharedBaseline = structuredClone(remote); sharedRefreshPending = false;
+  refreshSharedViews();
+}
+const sharedChannel = !window.chatMemoDesktop && typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('chatmemo-state') : null;
+if (sharedChannel) sharedChannel.onmessage = () => receiveSharedState();
+window.chatMemoDesktop?.onStateChanged?.(() => receiveSharedState());
+setInterval(() => { if (sharedRefreshPending && !sharedEditorActive() && !persistTimer) receiveSharedState(); }, 500);
 // 連続編集のたびに全状態を書き込むと重いので、400msでまとめて1回にする。
 let persistTimer = null;
 function persist() {
@@ -9648,6 +10011,385 @@ function flashWrap(frontEl, m){
   fwrap.appendChild(bar); fwrap.appendChild(frontEl); fwrap.appendChild(divider); fwrap.appendChild(back);
   return fwrap;
 }
+// ── 集中モード内での直接編集 ────────────────────────────────────
+let focusDraft = null;
+let focusDraftBusy = false;
+function focusDraftChanged() {
+  if (!focusDraft) return false;
+  return [...document.querySelectorAll('#focus-content [data-focus-side]')].some(el => el.innerHTML !== focusDraft.initial[el.dataset.focusSide]) ||
+    document.getElementById('focus-tag-editor')?.value !== focusDraft.tags;
+}
+function leaveFocusDraft() {
+  if (focusDraftBusy) return false;
+  if (!focusDraft) return true;
+  if (focusDraftChanged() && !confirm('編集中の変更を破棄しますか？')) return false;
+  focusDraft = null;
+  document.getElementById('focus-inline-tools').hidden = true;
+  document.getElementById('focus-edit').disabled = false;
+  return true;
+}
+function renderFocusOutline() {
+  const content = document.getElementById('focus-content');
+  const toc = document.getElementById('focus-toc'); toc.replaceChildren();
+  content.querySelectorAll('h1,h2,h3').forEach((heading, index) => {
+    const button = document.createElement('button');
+    button.textContent = heading.textContent.trim() || '見出し ' + (index + 1);
+    button.style.paddingLeft = (8 + (Number(heading.tagName.slice(1)) - 1) * 12) + 'px';
+    button.onclick = () => { heading.scrollIntoView({ block: 'start', behavior: 'smooth' }); if (!focusDraft) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); } };
+    toc.appendChild(button);
+  });
+  if (!toc.childElementCount) { const hint = document.createElement('p'); hint.textContent = '本文に見出しを付けると、ここに目次が表示されます。'; hint.style.cssText = 'font-size:.8rem;opacity:.65;line-height:1.7'; toc.appendChild(hint); }
+}
+async function beginFocusEdit(point = null) {
+  if (focusDraft || focusDraftBusy || !focusMemoId) return;
+  const m = S.memos.find(x => x.id === focusMemoId); if (!m) return;
+  focusDraftBusy = true;
+  document.getElementById('focus-edit').disabled = true;
+  const scroll = document.getElementById('focus-scroll'), top = scroll.scrollTop;
+  try {
+    const front = await internalizeHtml(m.html || '');
+    const back = m.flash ? await internalizeHtml(m.back || '') : null;
+    const content = document.getElementById('focus-content'); content.replaceChildren();
+    focusDraft = { id: m.id, tags: (m.tags || []).join(', '), initial: {} };
+    for (const [side, html] of [['front', front], ['back', back]]) {
+      if (html === null) continue;
+      if (m.flash) { const label = document.createElement('p'); label.className = 'focus-side-label'; label.textContent = side === 'front' ? '表面' : '裏面'; content.appendChild(label); }
+      const ed = document.createElement('div'); ed.className = 'bc'; ed.contentEditable = 'true';
+      ed.id = 'focus-inline-' + side;
+      ed.addEventListener('focusin', () => { document.getElementById('focus-fmt-bar').dataset.for = ed.id; });
+      memoEditorInitializers.forEach(initialize => initialize(ed));
+      ed.dataset.focusSide = side; ed.setAttribute('role', 'textbox'); ed.setAttribute('aria-multiline', 'true');
+      ed.setAttribute('aria-label', side === 'front' ? 'メモ本文を編集' : 'メモ裏面を編集'); ed.innerHTML = html;
+      content.appendChild(ed);
+      hydrateSheetEmbeds(ed); hydrateMapEmbeds(ed); hydrateTbEmbeds(ed);
+      ed.querySelectorAll('.cl input[type="checkbox"]').forEach(cb => { cb.contentEditable = 'false'; cb.checked = cb.hasAttribute('checked'); });
+      ed.addEventListener('change', () => syncCheckboxAttrs(ed));
+      focusDraft.initial[side] = ed.innerHTML;
+    }
+    const tags = document.createElement('input'); tags.id = 'focus-tag-editor'; tags.value = focusDraft.tags;
+    tags.setAttribute('aria-label', 'タグ（カンマ区切り）'); tags.placeholder = 'タグ（カンマ区切り）';
+    tags.autocomplete = 'off';
+    const tagWrap = document.createElement('div'); tagWrap.className = 'tag-ac-wrap';
+    const suggestions = document.createElement('ul'); suggestions.className = 'tag-ac-list'; suggestions.id = 'focus-tag-ac-list';
+    tagWrap.append(tags, suggestions);
+    document.getElementById('focus-tags').replaceChildren(tagWrap);
+    setupTagAc('focus-tag-editor', 'focus-tag-ac-list', allTagsGlobal);
+    renderFocusOutline();
+    document.getElementById('focus-inline-tools').hidden = false;
+    document.getElementById('focus-edit-status').textContent = '編集中・未保存（Ctrl+Sで保存）';
+    const first = content.querySelector('[contenteditable="true"]'); first.focus({ preventScroll: true });
+    scroll.scrollTop = top;
+    if (point) {
+      const range = document.caretRangeFromPoint?.(point.x, point.y);
+      if (range && content.contains(range.startContainer)) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); }
+    }
+  } catch (error) {
+    focusDraft = null; renderFocusMemo(true); document.getElementById('focus-edit').disabled = false;
+    alert('編集を開始できませんでした: ' + error.message);
+  } finally { focusDraftBusy = false; }
+}
+async function saveFocusEdit() {
+  if (!focusDraft || focusDraftBusy) return;
+  const m = S.memos.find(x => x.id === focusDraft.id); if (!m) return;
+  focusDraftBusy = true;
+  const save = document.getElementById('focus-inline-save'); save.disabled = true;
+  const editors = [...document.querySelectorAll('#focus-content [data-focus-side]')];
+  editors.forEach(ed => { syncCheckboxAttrs(ed); ed.contentEditable = 'false'; });
+  const tags = parseTags(document.getElementById('focus-tag-editor').value);
+  document.getElementById('focus-tag-editor').disabled = true;
+  document.getElementById('focus-edit-status').textContent = '保存中…';
+  try {
+    const result = {};
+    for (const ed of editors) result[ed.dataset.focusSide] = await externalizeAndStore(sheetStripHtml(ed.innerHTML));
+    m.html = result.front; if (m.flash) m.back = result.back;
+    m.tags = tags; m.updatedAt = new Date().toISOString(); persist();
+    focusDraft = null;
+    document.getElementById('focus-inline-tools').hidden = true;
+    document.getElementById('focus-edit').disabled = false;
+    renderTagBar(); renderExistingTags(); refreshBookshelfIfOpen();
+    renderFocusMemo(true);
+    document.getElementById('focus-edit').focus({ preventScroll: true });
+  } catch (error) {
+    editors.forEach(ed => { ed.contentEditable = 'true'; });
+    document.getElementById('focus-tag-editor').disabled = false;
+    document.getElementById('focus-edit-status').textContent = '保存できませんでした。再度保存してください。';
+    console.error('focus save:', error);
+  } finally { focusDraftBusy = false; save.disabled = false; }
+}
+document.getElementById('focus-content').addEventListener('click', e => {
+  if (focusDraft || focusDraftBusy || e.target.closest('a,button,input,iframe,img,.sheet-embed,.map-embed,.tb-embed,.tg-head,.memo-switch,.anki-mask')) return;
+  beginFocusEdit({ x: e.clientX, y: e.clientY });
+});
+document.getElementById('focus-content').addEventListener('input', () => { if (focusDraft && !focusDraftBusy) renderFocusOutline(); });
+document.getElementById('focus-inline-save').onclick = saveFocusEdit;
+document.getElementById('focus-inline-cancel').onclick = () => { if (leaveFocusDraft()) renderFocusMemo(true); };
+window.addEventListener('beforeunload', e => { if (focusDraft && (focusDraftBusy || focusDraftChanged())) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (focusBoardHome) { fbEndEdit(); if (focusBoardState() !== focusBoardSnapshot) { e.preventDefault(); e.returnValue = ''; } } });
+// ── 集中モード ───────────────────────────────────────────────────
+let focusMemoId = null;
+let focusMemoIds = [];
+let focusReturnPosition = null;
+let focusBackground = [];
+let focusTabs = [];
+let focusSecondaryId = null;
+function focusLabel(m) { return m.board ? (m.board.title || '無題のボード') : (memoFirstLine(m) || '無題のメモ'); }
+function renderFocusTabs() {
+  focusTabs = focusTabs.filter(id => S.memos.some(m => m.id === id));
+  const bar = document.getElementById('focus-tabs'); bar.replaceChildren();
+  for (const id of focusTabs) {
+    const m = S.memos.find(m => m.id === id);
+    const tab = document.createElement('div'); tab.className = 'focus-tab' + (id === focusMemoId ? ' active' : '');
+    const title = document.createElement('button'); title.className = 'focus-tab-title'; title.textContent = focusLabel(m); title.title = focusLabel(m);
+    title.setAttribute('aria-current', String(id === focusMemoId));
+    title.onclick = () => { if (id !== focusMemoId) openFocusMode(id); };
+    const close = document.createElement('button'); close.textContent = '×'; close.setAttribute('aria-label', focusLabel(m) + 'のタブを閉じる');
+    close.onclick = () => {
+      if (id === focusMemoId) {
+        const next = focusTabs.find(other => other !== id);
+        if (!next) { closeFocusMode(); return; }
+        openFocusMode(next);
+        if (focusMemoId !== next) return;
+      }
+      focusTabs = focusTabs.filter(other => other !== id); renderFocusTabs();
+    };
+    tab.append(title, close); bar.appendChild(tab);
+  }
+}
+function renderFocusSecondary() {
+  const pane = document.getElementById('focus-secondary');
+  pane.hidden = !focusSecondaryId;
+  document.getElementById('focus-mode').classList.toggle('split', !!focusSecondaryId);
+  document.getElementById('focus-split-toggle').setAttribute('aria-pressed', String(!!focusSecondaryId));
+  document.getElementById('focus-split-toggle').textContent = focusSecondaryId ? '分割を閉じる' : '左右に分割';
+  if (!focusSecondaryId) return;
+  const m = S.memos.find(m => m.id === focusSecondaryId);
+  if (!m) { focusSecondaryId = null; renderFocusSecondary(); return; }
+  const select = document.getElementById('focus-secondary-select'); select.replaceChildren();
+  for (const memo of S.memos) select.add(new Option(focusLabel(memo), memo.id));
+  select.value = m.id;
+  document.getElementById('focus-secondary-title').textContent = focusLabel(m);
+  const content = document.getElementById('focus-secondary-content');
+  const scroller = document.getElementById('focus-secondary-scroll'), oldTop = scroller.scrollTop;
+  // The reference pane uses a copy, so checkboxes cannot overwrite an active draft.
+  content.replaceChildren(m.board ? fbThumb(m) : qlEnrich({ ...m }));
+  content.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.disabled = true; });
+  scroller.scrollTop = oldTop;
+  content.querySelectorAll('[data-jump-id]').forEach(a => { a.onclick = e => {
+    e.preventDefault();
+    if (e.altKey) openFocusMode(a.dataset.jumpId, true);
+    else { focusSecondaryId = a.dataset.jumpId; renderFocusSecondary(); }
+  }; });
+}
+document.getElementById('focus-split-toggle').onclick = () => {
+  focusSecondaryId = focusSecondaryId ? null : (focusTabs.find(id => id !== focusMemoId) || S.memos.find(m => m.id !== focusMemoId)?.id || focusMemoId);
+  renderFocusSecondary();
+};
+document.getElementById('focus-secondary-close').onclick = () => { focusSecondaryId = null; renderFocusSecondary(); };
+document.getElementById('focus-secondary-select').onchange = e => { focusSecondaryId = e.target.value; renderFocusSecondary(); document.getElementById('focus-secondary-scroll').scrollTop = 0; };
+document.getElementById('focus-split-swap').onclick = () => {
+  const left = focusMemoId, right = focusSecondaryId;
+  if (!right || right === left) return;
+  openFocusMode(right);
+  if (focusMemoId === right) { focusSecondaryId = left; renderFocusSecondary(); }
+};
+let focusBoardHome = null;
+let focusBoardSnapshot = '';
+function focusBoardState() {
+  return JSON.stringify([document.getElementById('fb-title').value, document.getElementById('fb-tags').value, fbEls]);
+}
+function leaveFocusBoard() {
+  if (!focusBoardHome) return true;
+  fbEndEdit();
+  if (focusBoardState() !== focusBoardSnapshot && !confirm('編集中のボードの変更を破棄しますか？')) return false;
+  const board = document.getElementById('fb-ov');
+  board.classList.remove('open');
+  focusBoardHome.parent.insertBefore(board, focusBoardHome.next);
+  focusBoardHome = null;
+  document.getElementById('focus-mode').classList.remove('focus-board');
+  document.getElementById('fb-close').textContent = '✓ 保存して閉じる';
+  document.getElementById('fb-el-actions').classList.remove('show');
+  fbMemoId = null; fbSel = null;
+  return true;
+}
+function setFocusSearchVisible(visible) {
+  document.getElementById('focus-search-pane').hidden = !visible;
+  document.getElementById('focus-search-toggle').setAttribute('aria-expanded', String(visible));
+}
+function renderFocusSearch() {
+  const query = parseMemoQuery(document.getElementById('focus-search-input').value);
+  const by = document.getElementById('focus-search-sort-by').value;
+  const dir = document.getElementById('focus-search-sort-dir').value;
+  const titleOf = m => m.board ? (m.board.title || '無題のボード') : (memoFirstLine(m) || '無題のメモ');
+  const timeOf = value => Date.parse(value) || 0;
+  const matches = S.memos.filter(m => memoMatchesQuery(m, query)).sort((a, b) => {
+    let diff = by === 'title'
+      ? titleOf(a).localeCompare(titleOf(b), 'ja', { numeric:true, sensitivity:'base' })
+      : by === 'updated'
+        ? timeOf(a.updatedAt || a.createdAt) - timeOf(b.updatedAt || b.createdAt)
+        : timeOf(a.createdAt) - timeOf(b.createdAt);
+    if (!diff) diff = timeOf(a.createdAt) - timeOf(b.createdAt) || String(a.id).localeCompare(String(b.id));
+    return dir === 'asc' ? diff : -diff;
+  });
+  const list = document.getElementById('focus-search-results');
+  const top = list.scrollTop;
+  const fragment = document.createDocumentFragment();
+  document.getElementById('focus-search-count').textContent = matches.length + '件';
+  for (const m of matches) {
+    const button = document.createElement('button');
+    button.className = 'focus-search-result'; button.type = 'button'; button.dataset.memoId = m.id;
+    button.setAttribute('aria-current', String(m.id === focusMemoId));
+    const title = document.createElement('strong'); title.textContent = m.board ? (m.board.title || '無題のボード') : (memoFirstLine(m) || '無題のメモ');
+    const detail = document.createElement('small');
+    detail.textContent = (S.rooms.find(r => r.id === m.roomId)?.name || 'メモ') + (m.board ? ' / ボード' : '') + ((m.tags || []).length ? ' / ' + m.tags.map(t => '#' + t).join(' ') : '');
+    button.append(title, detail);
+    button.title = 'Alt＋クリックで新規タブに開く';
+    button.onclick = e => {
+      if (m.id === focusMemoId) return;
+      openFocusMode(m.id, e.altKey);
+      if (focusMemoId === m.id && matchMedia('(max-width:760px)').matches) setFocusSearchVisible(false);
+    };
+    fragment.appendChild(button);
+  }
+  if (!matches.length) { const empty = document.createElement('p'); empty.textContent = '該当するメモはありません'; fragment.appendChild(empty); }
+  list.replaceChildren(fragment); list.scrollTop = top;
+}
+document.getElementById('focus-search-input').addEventListener('input', renderFocusSearch);
+for (const key of ['focus-search-sort-by', 'focus-search-sort-dir']) {
+  document.getElementById(key).addEventListener('change', () => {
+    S.focusSearchSort = { by:document.getElementById('focus-search-sort-by').value, dir:document.getElementById('focus-search-sort-dir').value };
+    persist(); renderFocusSearch();
+    document.getElementById('focus-search-results').scrollTop = 0;
+  });
+}
+setupTagAc('focus-search-input', 'focus-search-tag-ac', allTagsGlobal, true);
+document.getElementById('focus-search-input').addEventListener('keydown', e => {
+  if (e.defaultPrevented || e.isComposing || e.keyCode === 229) return;
+  if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); e.currentTarget.value = ''; renderFocusSearch(); }
+});
+document.getElementById('focus-search-toggle').onclick = () => {
+  const visible = document.getElementById('focus-search-pane').hidden;
+  setFocusSearchVisible(visible);
+  if (visible) document.getElementById('focus-search-input').focus();
+};
+function renderFocusMemo(keepPosition = false) {
+  const m = S.memos.find(x => x.id === focusMemoId);
+  if (!m) { closeFocusMode(); return; }
+  renderFocusTabs(); renderFocusSecondary();
+  const scroll = document.getElementById('focus-scroll');
+  const oldTop = keepPosition ? scroll.scrollTop : 0;
+  const room = S.rooms.find(x => x.id === m.roomId);
+  document.getElementById('focus-location').textContent = (room?.name || 'メモ') + ' / 集中モード';
+  if (m.board) {
+    renderFocusSearch();
+    const index = focusMemoIds.indexOf(m.id);
+    document.getElementById('focus-prev').disabled = index <= 0;
+    document.getElementById('focus-next').disabled = index < 0 || index >= focusMemoIds.length - 1;
+    return;
+  }
+  document.getElementById('focus-title').textContent = memoFirstLine(m) || '無題のメモ';
+  document.getElementById('focus-meta').textContent = '更新 ' + fmtTime(m.updatedAt || m.createdAt);
+  const tags = document.getElementById('focus-tags'); tags.replaceChildren();
+  (m.tags || []).forEach(tag => { const el = document.createElement('span'); el.className = 'b-tag'; el.textContent = tag; tags.appendChild(el); });
+  const content = document.getElementById('focus-content'); content.replaceChildren(qlEnrich(m));
+  renderFocusOutline();
+  renderFocusSearch();
+  content.querySelectorAll('a[data-jump-id]').forEach(a => {
+    a.onclick = e => { e.preventDefault(); const next = S.memos.find(x => x.id === a.dataset.jumpId); if (next) openFocusMode(next.id, e.altKey); };
+  });
+  focusMemoIds = focusMemoIds.filter(id => S.memos.some(x => x.id === id));
+  const index = focusMemoIds.indexOf(m.id);
+  document.getElementById('focus-prev').disabled = index <= 0;
+  document.getElementById('focus-next').disabled = index < 0 || index >= focusMemoIds.length - 1;
+  scroll.scrollTop = oldTop;
+}
+function openFocusMode(id, newTab = false) {
+  if (focusBoardHome && id === focusMemoId) return;
+  if (!leaveFocusDraft()) return;
+  const m = S.memos.find(x => x.id === id); if (!m) return;
+  if (!leaveFocusBoard()) return;
+  const panel = document.getElementById('focus-mode');
+  if (!panel.classList.contains('open')) {
+    focusTabs = []; focusSecondaryId = null;
+    document.getElementById('focus-search-input').value = '';
+    const searchSort = S.focusSearchSort || { by:'created', dir:'desc' };
+    document.getElementById('focus-search-sort-by').value = ['title', 'created', 'updated'].includes(searchSort.by) ? searchSort.by : 'created';
+    document.getElementById('focus-search-sort-dir').value = searchSort.dir === 'asc' ? 'asc' : 'desc';
+    setFocusSearchVisible(!matchMedia('(max-width:760px)').matches);
+    focusReturnPosition = captureMemoPosition(id);
+    focusMemoIds = memoDisplayOrder().map(x => x.id);
+    focusBackground = ['main', 'sidebar'].map(key => document.getElementById(key)).filter(Boolean).map(el => ({ el, inert: el.inert }));
+    focusBackground.forEach(({ el }) => { el.inert = true; });
+  }
+  if (!focusMemoIds.includes(id)) focusMemoIds.push(id);
+  if (!focusTabs.includes(id)) {
+    const index = focusTabs.indexOf(focusMemoId);
+    if (!newTab && index >= 0) focusTabs[index] = id;
+    else focusTabs.push(id);
+  }
+  focusMemoId = id;
+  closeOv('ql-ov');
+  panel.classList.add('open');
+  if (m.board) {
+    const board = document.getElementById('fb-ov');
+    focusBoardHome = { parent: board.parentNode, next: board.nextSibling };
+    document.getElementById('focus-workspace').insertBefore(board, document.getElementById('focus-secondary'));
+    panel.classList.add('focus-board');
+    openBoard(id);
+    document.getElementById('fb-close').textContent = '✓ 保存';
+    document.getElementById('fb-back').textContent = '変更を取り消す';
+    focusBoardSnapshot = focusBoardState();
+  }
+  markViewed(id);
+  renderFocusMemo();
+  document.getElementById(m.board ? 'fb-title' : 'focus-title').focus({ preventScroll: true });
+}
+function closeFocusMode() {
+  if (!leaveFocusDraft()) return;
+  if (!leaveFocusBoard()) return;
+  const panel = document.getElementById('focus-mode');
+  if (!panel.classList.contains('open')) return;
+  panel.classList.remove('open');
+  focusBackground.forEach(({ el, inert }) => { el.inert = inert; });
+  focusBackground = [];
+  renderMemos();
+  restoreMemoPosition(focusReturnPosition);
+  focusMemoId = null; focusMemoIds = [];
+  focusTabs = []; focusSecondaryId = null; renderFocusSecondary();
+}
+function refreshFocusMode() {
+  if (focusDraft || focusDraftBusy) return;
+  if (!document.getElementById('focus-mode').classList.contains('open')) return;
+  renderFocusMemo(true);
+  if (focusMemoId) document.getElementById('focus-edit').focus({ preventScroll: true });
+}
+document.getElementById('focus-close').onclick = closeFocusMode;
+document.getElementById('focus-edit').onclick = () => beginFocusEdit();
+for (const [key, step] of [['focus-prev', -1], ['focus-next', 1]]) {
+  document.getElementById(key).onclick = () => { const id = focusMemoIds[focusMemoIds.indexOf(focusMemoId) + step]; if (id) openFocusMode(id); };
+}
+document.getElementById('focus-size').onchange = e => document.getElementById('focus-mode').style.setProperty('--focus-size', e.target.value + 'px');
+document.getElementById('focus-width').onclick = e => {
+  const wide = document.getElementById('focus-mode').classList.toggle('wide');
+  e.currentTarget.textContent = wide ? '幅を標準に' : '幅を広げる'; e.currentTarget.setAttribute('aria-pressed', String(wide));
+};
+document.getElementById('focus-toc-toggle').onclick = e => {
+  const outline = document.getElementById('focus-outline');
+  const visible = getComputedStyle(outline).display !== 'none';
+  outline.style.display = visible ? 'none' : 'block'; e.currentTarget.setAttribute('aria-expanded', String(!visible));
+};
+document.getElementById('ql-focus').onclick = () => { const m = renderedMemos[qlIndex]; if (m) openFocusMode(m.id); };
+document.getElementById('focus-mode').addEventListener('keydown', e => {
+  if (focusBoardHome && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); e.stopPropagation(); fbClose(true); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && focusDraft) { e.preventDefault(); saveFocusEdit(); return; }
+  if (e.key === 'Escape' && focusDraft) { e.preventDefault(); e.stopPropagation(); if (leaveFocusDraft()) renderFocusMemo(true); return; }
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeFocusMode(); }
+  if (e.key === 'Tab') {
+    const controls = [...document.querySelectorAll('#focus-mode button:not(:disabled), #focus-mode select, #focus-mode a[href], #focus-mode input, #focus-mode [contenteditable="true"]')].filter(el => el.getClientRects().length);
+    const first = controls[0], last = controls[controls.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement.id === 'focus-title')) { e.preventDefault(); last?.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+  }
+});
 // ── Quick look (拡大表示) & Compare (並べて表示) ───────────────────
 // メモHTMLを enrich して .bc 要素を返す（拡大・比較で共通利用）
 function qlEnrich(m) {
@@ -9947,6 +10689,7 @@ async function initApp() {
   }
 
   S = loaded || { rooms: [{ id: '1', name: 'メモ', createdAt: new Date().toISOString() }], memos: [] };
+  sharedBaseline = structuredClone(S);
   if (!S.hiddenTags)       S.hiddenTags       = [];
   if (!S.tagOrder)         S.tagOrder         = [];
   if (!S.imgQuality)       S.imgQuality       = 'std';
@@ -10021,6 +10764,8 @@ async function initApp() {
 
   // ドラッグスクロール（既存タグ入力欄のみ。タグバーは折り返し＋並び替えドラッグに変更）
   setupDragScroll(document.getElementById('exist-tags'));
+  sharedReady = true;
+  document.querySelectorAll('.tag-candidate-group').forEach(select => select._refreshTagGroups?.());
 }
 
 function setupDragScroll(el) {
@@ -10091,7 +10836,7 @@ function openBoard(memoId, isNew){
   const back = document.getElementById('fb-back');
   if (back) back.textContent = fbIsNew ? '✕ 作成しない' : '← 保存せず戻る';
   fbMemoId = memoId;
-  fbEls = (m.board.els || []).map(e => ({ ...e }));
+  fbEls = JSON.parse(JSON.stringify(m.board.els || []));
   fbView = { ...(m.board.view || { x: 60, y: 60, scale: 1 }) };
   fbSel = null; fbMatch = []; fbMatchIdx = -1;
   document.getElementById('fb-title').value = m.board.title || '';
@@ -10108,6 +10853,24 @@ function openBoard(memoId, isNew){
   document.getElementById('fb-ov').classList.add('open');
 }
 function fbClose(save){
+  if (focusBoardHome) {
+    fbEndEdit();
+    const m = S.memos.find(x => x.id === fbMemoId);
+    if (!m) return;
+    if (save) {
+      m.board = { title: document.getElementById('fb-title').value.trim() || '無題のボード', els: JSON.parse(JSON.stringify(fbEls)), view: { ...fbView } };
+      m.tags = parseTags(document.getElementById('fb-tags').value);
+      m.updatedAt = new Date().toISOString(); persist();
+      focusBoardSnapshot = focusBoardState();
+      renderTagBar(); renderRooms(); renderFocusSearch(); renderFocusTabs(); renderFocusSecondary();
+    } else {
+      if (focusBoardState() !== focusBoardSnapshot && !confirm('編集中のボードの変更を破棄しますか？')) return;
+      openBoard(m.id);
+      document.getElementById('fb-back').textContent = '変更を取り消す';
+      focusBoardSnapshot = focusBoardState();
+    }
+    return;
+  }
   const position = captureMemoPosition(fbMemoId);
   fbEndEdit();
   if (save){
